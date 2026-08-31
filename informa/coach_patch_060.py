@@ -3,7 +3,7 @@ import json
 import guide_patch as base
 
 app = base.app
-base.base.VERSION = "0.6.4"
+base.base.VERSION = "0.6.5"
 
 EXERCISES_PAGE = '''
 <section class="page" data-page="exercises-static">
