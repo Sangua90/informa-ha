@@ -1,5 +1,7 @@
 from pathlib import Path
 from flask import Response, jsonify, request, send_from_directory
+from PIL import Image, ImageFilter
+from io import BytesIO
 import base64
 import re
 from datetime import datetime, date, timedelta
@@ -43,14 +45,30 @@ def _extract_default_jpeg(name):
         return None
 
 
+def _enhance_default_jpeg(data):
+    """Create a larger local JPEG so mobile/desktop zoom does not expose coarse source pixels."""
+    try:
+        with Image.open(BytesIO(data)) as img:
+            img = img.convert("RGB")
+            target_w = max(1200, img.width * 4)
+            target_h = round(img.height * (target_w / img.width))
+            img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            img = img.filter(ImageFilter.UnsharpMask(radius=1.6, percent=115, threshold=3))
+            out = BytesIO()
+            img.save(out, format="JPEG", quality=95, subsampling=0, optimize=True)
+            return out.getvalue()
+    except Exception:
+        return data
+
+
 def seed_default_guides():
-    """Install the bundled non-stylized guide images once; user replacements are never overwritten."""
+    """Install bundled non-stylized guides once; user replacements are never overwritten."""
     for name in ALLOWED_GUIDES:
         if _user_guide_path(name):
             continue
         data = _extract_default_jpeg(name)
         if data:
-            (USER_GUIDE_DIR / f"{name}.jpg").write_bytes(data)
+            (USER_GUIDE_DIR / f"{name}.jpg").write_bytes(_enhance_default_jpeg(data))
 
 
 def init_coach_db():
@@ -96,7 +114,7 @@ def guide_jpeg(name):
     data = _extract_default_jpeg(safe)
     if not data:
         return Response("Not found", status=404)
-    return Response(data, mimetype="image/jpeg", headers={"Cache-Control": "no-store"})
+    return Response(_enhance_default_jpeg(data), mimetype="image/jpeg", headers={"Cache-Control": "no-store"})
 
 @app.get("/guide-hd/<name>.svg")
 def guide_hd(name):
@@ -150,7 +168,7 @@ def guide_delete(name):
     if path: path.unlink()
     data = _extract_default_jpeg(safe)
     if data:
-        (USER_GUIDE_DIR / f"{safe}.jpg").write_bytes(data)
+        (USER_GUIDE_DIR / f"{safe}.jpg").write_bytes(_enhance_default_jpeg(data))
     return jsonify(ok=True, guide=safe, restored_default=bool(data))
 
 @app.post("/api/coach/checkin")
