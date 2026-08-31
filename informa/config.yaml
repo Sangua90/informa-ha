@@ -1,5 +1,5 @@
 name: "InFormha"
-version: "0.7.2"
+version: "0.7.3"
 slug: "informa"
 description: "Coach fitness personale adattivo per Home Assistant."
 url: "https://github.com/Sangua90/informa-ha"
