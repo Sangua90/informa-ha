@@ -1,5 +1,5 @@
 name: "InFormha"
-version: "0.2.3"
+version: "0.2.4"
 slug: "informa"
 description: "Coach fitness personale adattivo per Home Assistant."
 url: "https://github.com/Sangua90/informa-ha"
@@ -11,6 +11,7 @@ startup: application
 boot: auto
 ingress: true
 ingress_port: 8099
+homeassistant_api: true
 panel_icon: "mdi:dumbbell"
 panel_title: "InFormha"
 panel_admin: false
