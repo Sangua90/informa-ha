@@ -3,7 +3,16 @@ import json
 import guide_patch as base
 
 app = base.app
-base.base.VERSION = "0.6.1"
+base.base.VERSION = "0.6.3"
+
+
+@app.after_request
+def no_cache_ui(response):
+    if base.request.path in ('/', '/app.js', '/style.css'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
 
 
 def init_state_db():
