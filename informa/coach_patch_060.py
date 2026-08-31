@@ -3,7 +3,7 @@ import json
 import guide_patch as base
 
 app = base.app
-base.base.VERSION = "0.6.0"
+base.base.VERSION = "0.6.1"
 
 
 def init_state_db():
