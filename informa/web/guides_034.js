@@ -1,0 +1,11 @@
+// InFormha 0.3.4 - guide visuali test
+const GUIDE_IMAGES_034={chest:'guides/chest.svg',lat:'guides/lat.svg',pushdown:'guides/pushdown.svg',curl:'guides/curl.svg'};
+function visualBlock(id){const src=GUIDE_IMAGES_034[id];if(!src)return'';return `<div class="guide-photo-wrap"><img class="guide-photo" src="${src}" alt="Guida visuale ${GUIDES[id]?.title||id}"><div class="guide-photo-note">Tocca l'immagine per ingrandire</div></div>`}
+(function(){
+ const style=document.createElement('style');style.textContent='.guide-photo-wrap{margin:14px 0}.guide-photo{width:100%;height:auto;display:block;border-radius:20px;border:1px solid #30343b;background:#fff;cursor:zoom-in}.guide-photo-note{text-align:center;font-size:12px;color:#99a1ac;margin-top:7px}.guide-photo.fullscreen{position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;background:#000;border:0;border-radius:0;z-index:9999;padding:8px;cursor:zoom-out}';document.head.appendChild(style);
+ document.addEventListener('click',e=>{const img=e.target.closest('.guide-photo');if(!img)return;img.classList.toggle('fullscreen');document.body.style.overflow=img.classList.contains('fullscreen')?'hidden':''});
+ if(GUIDES.lat){GUIDES.lat.hook='Aggancio alto, sopra il sedile';GUIDES.lat.setup='ORIENTAMENTO: faccia verso la macchina. Siediti sotto la barra, petto leggermente in fuori e schiena neutra.'}
+ if(GUIDES.pushdown){GUIDES.pushdown.hook='Aggancio alto, sopra il sedile';GUIDES.pushdown.setup='ORIENTAMENTO: faccia verso la macchina. In piedi centrato davanti alla Fassi, leggermente arretrato per avere spazio. Il cavo scende davanti al corpo; gomiti vicini ai fianchi.'}
+ if(GUIDES.curl){GUIDES.curl.hook='Aggancio basso, sotto il sedile';GUIDES.curl.setup='ORIENTAMENTO: faccia verso la macchina. Stai centrato davanti al sedile; il cavo esce dal punto basso sotto il sedile, non da un lato.'}
+ const labels=[...document.querySelectorAll('[data-page="workout"] .ey')];const ey=labels.find(x=>x.textContent.includes('Tutorial visuali'));const card=ey?.closest('.card');const sub=card?.querySelector('.sub');if(sub)sub.textContent='Quattro guide test con manichino neutro, macchina e orientamento visibili. Aprine una e controlla che sia tutto chiaro sul telefono.';
+})();
