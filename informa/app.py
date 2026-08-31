@@ -5,7 +5,7 @@ from datetime import datetime
 
 app = Flask(__name__, static_folder=None)
 DB = Path("/data/informa.db")
-VERSION = "0.2.2"
+VERSION = "0.2.3"
 
 def db():
     conn = sqlite3.connect(DB)
