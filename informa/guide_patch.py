@@ -4,7 +4,7 @@ import base64
 import re
 import app as base
 
-base.VERSION = "0.4.0"
+base.VERSION = "0.4.1"
 app = base.app
 GUIDE_DIR = Path("/app/web/guides")
 GUIDE_HD_DIR = Path("/app/web/guides_hd")
