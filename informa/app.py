@@ -4,13 +4,15 @@ import sqlite3
 from datetime import datetime, date
 import json
 import os
+import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 
 app = Flask(__name__, static_folder=None)
 DB = Path("/data/informa.db")
 PHOTO_DIR = Path("/data/meal_photos")
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 
 def db():
@@ -107,8 +109,32 @@ def init_db():
 init_db()
 
 
+def supervisor_token():
+    return os.environ.get("SUPERVISOR_TOKEN")
+
+
+def hass_request(path, method="GET", payload=None, timeout=20):
+    token = supervisor_token()
+    if not token:
+        raise RuntimeError("SUPERVISOR_TOKEN non disponibile")
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = urllib.request.Request(
+        f"http://supervisor/core/api/{path.lstrip('/')}",
+        data=data,
+        method=method,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            raw = response.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Home Assistant API {exc.code}: {body[:500]}") from exc
+
+
 def hass_states():
-    token = os.environ.get("SUPERVISOR_TOKEN")
+    token = supervisor_token()
     if not token:
         return []
     req = urllib.request.Request(
@@ -242,7 +268,36 @@ def nutrition_plate_photo():
 
 @app.get("/api/homestock/status")
 def homestock_status():
-    return jsonify(connected=False, ready=True, message="InFormha è pronto. Attendo l'endpoint catalogo di HomeStock per prodotti, barcode e valori nutrizionali.")
+    try:
+        data = hass_request("food_scanner/informha/catalog")
+        return jsonify(connected=True, ready=True, source="HomeStock", domain="food_scanner", count=data.get("count", len(data.get("items", []))))
+    except Exception as exc:
+        return jsonify(connected=False, ready=True, source="HomeStock", domain="food_scanner", count=0, error=str(exc)), 200
+
+@app.get("/api/homestock/catalog")
+def homestock_catalog():
+    try:
+        return jsonify(hass_request("food_scanner/informha/catalog"))
+    except Exception as exc:
+        return jsonify(source="HomeStock", domain="food_scanner", count=0, items=[], error=str(exc)), 502
+
+@app.get("/api/homestock/barcode/<barcode>")
+def homestock_barcode(barcode):
+    code = "".join(ch for ch in str(barcode or "") if ch.isdigit())
+    if not code:
+        return jsonify(found=False, error="Barcode non valido"), 400
+    try:
+        return jsonify(hass_request(f"food_scanner/informha/barcode/{urllib.parse.quote(code)}"))
+    except Exception as exc:
+        return jsonify(found=False, barcode=code, error=str(exc)), 502
+
+@app.post("/api/homestock/scan")
+def homestock_scan():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(hass_request("food_scanner/informha/scan", method="POST", payload=payload, timeout=70))
+    except Exception as exc:
+        return jsonify(found=False, error=str(exc)), 502
 
 @app.post("/api/measurement")
 def measurement():
