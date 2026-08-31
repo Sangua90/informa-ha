@@ -1,6 +1,6 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.3.5
+ARG BUILD_VERSION=0.3.6
 ARG BUILD_ARCH=amd64
 
 LABEL \
@@ -13,7 +13,8 @@ RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0
 
 COPY app.py /app/app.py
 COPY web /app/web
-RUN sed -i 's/VERSION = "0.3.2"/VERSION = "0.3.5"/' /app/app.py \
+RUN sed -i 's/VERSION = "0.3.2"/VERSION = "0.3.6"/' /app/app.py \
+ && printf '\n@app.get("/guides/<path:filename>")\ndef guide_asset(filename):\n    return send_from_directory("/app/web/guides", filename)\n' >> /app/app.py \
  && for f in /app/web/guides/*.svg; do \
       sed -i 's#<svg xmlns="http://www.w3.org/2000/svg"#<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"#; s#<image href="#<image width="300" height="400" preserveAspectRatio="xMidYMid meet" xlink:href="#' "$f"; \
     done \
