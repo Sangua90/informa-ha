@@ -3,15 +3,43 @@ import json
 import guide_patch as base
 
 app = base.app
-base.base.VERSION = "0.6.3"
+base.base.VERSION = "0.6.4"
+
+EXERCISES_PAGE = '''
+<section class="page" data-page="exercises-static">
+  <div class="ey">Altro</div><h1>Esercizi</h1>
+  <div class="sub" style="margin-bottom:14px">Libreria degli esercizi disponibili in InFormha.</div>
+  <div class="card"><div class="ey">Petto</div><div class="measure"><span>Chest press alla macchina</span><b>3 × 10</b></div><div class="measure"><span>Aperture / pec deck alla macchina</span><b>3 × 12</b></div></div>
+  <div class="card"><div class="ey">Schiena</div><div class="measure"><span>Lat machine al petto</span><b>3 × 10</b></div><div class="measure"><span>Rematore al cavo basso</span><b>3 × 10</b></div></div>
+  <div class="card"><div class="ey">Spalle</div><div class="measure"><span>Shoulder press</span><b>3 × 10</b></div><div class="measure"><span>Alzate laterali</span><b>3 × 12</b></div><div class="measure"><span>Face pull con corda</span><b>3 × 12</b></div></div>
+  <div class="card"><div class="ey">Braccia</div><div class="measure"><span>Push-down tricipiti con corda</span><b>3 × 12</b></div><div class="measure"><span>Curl bicipiti al cavo basso</span><b>3 × 12</b></div></div>
+  <div class="card"><div class="ey">Gambe e glutei</div><div class="measure"><span>Goblet squat a box/panca</span><b>3 × 10</b></div><div class="measure"><span>Stacco rumeno con manubri</span><b>3 × 10</b></div><div class="measure"><span>Ponte glutei su panca</span><b>3 × 12</b></div><div class="measure"><span>Calf raise in piedi</span><b>3 × 15</b></div></div>
+  <div class="card"><div class="ey">Core</div><div class="measure"><span>Plank</span><b>3 × 30 sec</b></div></div>
+  <div class="card"><div class="ey">Cardio</div><div class="measure"><span>Tapis roulant Fassi</span><b>20 min</b></div><div class="measure"><span>Mini stepper</span><b>10 min</b></div></div>
+  <button class="btn secondary" onclick="go('profile')">Indietro</button>
+</section>
+'''
 
 
 @app.after_request
-def no_cache_ui(response):
-    if base.request.path in ('/', '/app.js', '/style.css'):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
+def force_exercises_menu(response):
+    try:
+        if 'text/html' in response.headers.get('Content-Type', ''):
+            html = response.get_data(as_text=True)
+            if 'data-page="exercises-static"' not in html:
+                marker = '<section class="page" data-page="profiledata">'
+                html = html.replace(marker, EXERCISES_PAGE + '\n' + marker, 1)
+            if 'id="exercisesStaticButton"' not in html:
+                marker = '<button class="btn secondary" onclick="go(\'coach\')">Settimana e Coach</button>'
+                button = '<button id="exercisesStaticButton" class="btn secondary" onclick="go(\'exercises-static\')">🏋️ Esercizi</button>'
+                html = html.replace(marker, button + marker, 1)
+            response.set_data(html)
+        if base.request.path in ('/', '/app.js', '/style.css'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+    except Exception:
+        pass
     return response
 
 
