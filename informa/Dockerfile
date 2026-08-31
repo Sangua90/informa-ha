@@ -25,6 +25,7 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/coach_controls_060.js >> /app/web/app.js \
  && cat /app/web/interface_061.js >> /app/web/app.js \
  && cat /app/web/interface_063.js >> /app/web/app.js \
+ && cat /app/web/exercise_gallery_066.js >> /app/web/app.js \
  && cat /app/web/workout_ui_067.js >> /app/web/app.js \
  && cat /app/web/progression_068.js >> /app/web/app.js
 
