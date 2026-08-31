@@ -1,6 +1,6 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.3.8
+ARG BUILD_VERSION=0.3.9
 ARG BUILD_ARCH=amd64
 
 LABEL \
@@ -15,7 +15,8 @@ COPY app.py /app/app.py
 COPY guide_patch.py /app/guide_patch.py
 COPY web /app/web
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
- && cat /app/web/guides_038.js >> /app/web/app.js
+ && cat /app/web/guides_038.js >> /app/web/app.js \
+ && cat /app/web/guides_039.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
