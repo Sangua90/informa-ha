@@ -12,7 +12,7 @@ import uuid
 app = Flask(__name__, static_folder=None)
 DB = Path("/data/informa.db")
 PHOTO_DIR = Path("/data/meal_photos")
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 
 def db():
