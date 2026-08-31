@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import coach_week_069 as base
 
 app = base.app
-base.base.base.base.base.VERSION = "0.7.0"
+base.base.base.base.base.VERSION = "0.7.1"
 
 
 def _db():
