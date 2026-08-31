@@ -1,6 +1,6 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.1
+ARG BUILD_VERSION=0.9.2
 ARG BUILD_ARCH=amd64
 
 LABEL \
@@ -25,6 +25,7 @@ COPY nutrition_080.py /app/nutrition_080.py
 COPY supplements_081.py /app/supplements_081.py
 COPY ai_coach_090.py /app/ai_coach_090.py
 COPY ai_gemini_091.py /app/ai_gemini_091.py
+COPY ai_gemini_092.py /app/ai_gemini_092.py
 COPY web /app/web
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -53,4 +54,4 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "ai_gemini_091:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "ai_gemini_092:app"]
