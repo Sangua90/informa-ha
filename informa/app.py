@@ -2,15 +2,20 @@ from flask import Flask, jsonify, request, send_from_directory
 from pathlib import Path
 import sqlite3
 from datetime import datetime
+import json
+import os
+import urllib.request
 
 app = Flask(__name__, static_folder=None)
 DB = Path("/data/informa.db")
-VERSION = "0.2.3"
+VERSION = "0.2.4"
+
 
 def db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def init_db():
     DB.parent.mkdir(parents=True, exist_ok=True)
@@ -76,19 +81,106 @@ def init_db():
     con.commit()
     con.close()
 
+
 init_db()
+
+
+def hass_states():
+    token = os.environ.get("SUPERVISOR_TOKEN")
+    if not token:
+        return []
+    req = urllib.request.Request(
+        "http://supervisor/core/api/states",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=5) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def normalize_state(item):
+    state = item.get("state")
+    attrs = item.get("attributes", {}) or {}
+    if state in (None, "unknown", "unavailable", ""):
+        value = None
+    else:
+        try:
+            value = float(state)
+            if value.is_integer():
+                value = int(value)
+        except (TypeError, ValueError):
+            value = state
+    return {
+        "value": value,
+        "unit": attrs.get("unit_of_measurement"),
+        "entity_id": item.get("entity_id"),
+        "name": attrs.get("friendly_name"),
+        "last_updated": item.get("last_updated"),
+    }
+
+
+def healthsync_snapshot():
+    states = hass_states()
+    by_name = {}
+    for item in states:
+        name = str((item.get("attributes") or {}).get("friendly_name", "")).strip().lower()
+        if name:
+            by_name[name] = item
+
+    wanted = {
+        "steps": "steps today",
+        "active_calories": "active calories today",
+        "exercise_time": "exercise time today",
+        "heart_rate": "heart rate",
+        "resting_heart_rate": "resting heart rate",
+        "hrv": "heart rate variability",
+        "weight": "weight",
+        "body_fat": "body fat percentage",
+        "bmi": "body mass index",
+        "lean_body_mass": "lean body mass",
+        "vo2_max": "vo2 max",
+        "walking_running_distance": "walking + running distance today",
+        "sleep": "sleep last night",
+        "last_sync": "last sync",
+        "last_workout_type": "last workout type",
+        "last_workout_duration": "last workout duration",
+        "last_workout_calories": "last workout calories",
+        "last_workout_distance": "last workout distance",
+    }
+
+    data = {}
+    found = 0
+    for key, friendly_name in wanted.items():
+        item = by_name.get(friendly_name)
+        if item:
+            data[key] = normalize_state(item)
+            found += 1
+        else:
+            data[key] = None
+
+    return {
+        "connected": found > 0,
+        "found": found,
+        "data": data,
+    }
+
 
 @app.get("/")
 def index():
     return send_from_directory("/app/web", "index.html")
 
+
 @app.get("/app.js")
 def js():
     return send_from_directory("/app/web", "app.js")
 
+
 @app.get("/style.css")
 def css():
     return send_from_directory("/app/web", "style.css")
+
 
 @app.get("/api/state")
 def state():
@@ -104,6 +196,15 @@ def state():
     }
     con.close()
     return jsonify(result)
+
+
+@app.get("/api/healthsync")
+def healthsync():
+    try:
+        return jsonify(healthsync_snapshot())
+    except Exception as exc:
+        return jsonify(connected=False, found=0, data={}, error=str(exc)), 200
+
 
 @app.post("/api/measurement")
 def measurement():
@@ -123,6 +224,7 @@ def measurement():
     con.close()
     return jsonify(ok=True)
 
+
 @app.post("/api/cardio")
 def cardio():
     x = request.get_json(force=True)
@@ -139,6 +241,7 @@ def cardio():
     con.commit()
     con.close()
     return jsonify(ok=True)
+
 
 @app.post("/api/set")
 def save_set():
@@ -163,6 +266,7 @@ def save_set():
     con.close()
     return jsonify(ok=True, workout_id=wid)
 
+
 @app.get("/api/history")
 def history():
     con = db()
@@ -172,10 +276,12 @@ def history():
     con.close()
     return jsonify(measurements=ms, cardio=cs, sets=sets)
 
+
 @app.post("/api/health/import")
 def health_import():
     payload = request.get_json(silent=True) or {}
     return jsonify(ok=True, received=True, keys=list(payload.keys())[:20])
+
 
 @app.get("/health")
 def health():
