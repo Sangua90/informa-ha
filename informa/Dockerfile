@@ -1,6 +1,6 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.7.0
+ARG BUILD_VERSION=0.7.1
 ARG BUILD_ARCH=amd64
 
 LABEL \
@@ -31,7 +31,8 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/workout_ui_067.js >> /app/web/app.js \
  && cat /app/web/progression_068.js >> /app/web/app.js \
  && cat /app/web/week_069.js >> /app/web/app.js \
- && cat /app/web/advance_070.js >> /app/web/app.js
+ && cat /app/web/advance_070.js >> /app/web/app.js \
+ && cat /app/web/pain_071.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
