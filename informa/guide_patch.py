@@ -29,6 +29,30 @@ def _user_guide_path(name):
     return None
 
 
+def _extract_default_jpeg(name):
+    path = GUIDE_DIR / f"{name}.svg"
+    if not path.exists():
+        return None
+    text = path.read_text(encoding="utf-8")
+    match = re.search(r"data:image/jpeg;base64,([^\"']+)", text)
+    if not match:
+        return None
+    try:
+        return base64.b64decode(match.group(1), validate=False)
+    except Exception:
+        return None
+
+
+def seed_default_guides():
+    """Install the bundled non-stylized guide images once; user replacements are never overwritten."""
+    for name in ALLOWED_GUIDES:
+        if _user_guide_path(name):
+            continue
+        data = _extract_default_jpeg(name)
+        if data:
+            (USER_GUIDE_DIR / f"{name}.jpg").write_bytes(data)
+
+
 def init_coach_db():
     con = base.db()
     con.executescript("""
@@ -62,23 +86,16 @@ def init_coach_db():
     con.commit(); con.close()
 
 init_coach_db()
+seed_default_guides()
 
 @app.get("/guide-image/<name>.jpg")
 def guide_jpeg(name):
     safe = _safe_guide(name)
     if not safe:
         return Response("Not found", status=404)
-    path = GUIDE_DIR / f"{safe}.svg"
-    if not path.exists():
+    data = _extract_default_jpeg(safe)
+    if not data:
         return Response("Not found", status=404)
-    text = path.read_text(encoding="utf-8")
-    match = re.search(r"data:image/jpeg;base64,([^\"']+)", text)
-    if not match:
-        return Response("Image data missing", status=500)
-    try:
-        data = base64.b64decode(match.group(1), validate=False)
-    except Exception:
-        return Response("Invalid image data", status=500)
     return Response(data, mimetype="image/jpeg", headers={"Cache-Control": "no-store"})
 
 @app.get("/guide-hd/<name>.svg")
@@ -95,7 +112,7 @@ def guide_local(name):
         return Response("Not found", status=404)
     path = _user_guide_path(safe)
     if not path:
-        return Response("Guida personalizzata non caricata", status=404)
+        return Response("Guida non disponibile", status=404)
     return send_from_directory(USER_GUIDE_DIR, path.name, mimetype=MIMES.get(path.suffix.lower(), "application/octet-stream"), max_age=0)
 
 @app.get("/api/guides")
@@ -131,7 +148,10 @@ def guide_delete(name):
         return jsonify(ok=False, error="Guida non valida"), 404
     path = _user_guide_path(safe)
     if path: path.unlink()
-    return jsonify(ok=True, guide=safe)
+    data = _extract_default_jpeg(safe)
+    if data:
+        (USER_GUIDE_DIR / f"{safe}.jpg").write_bytes(data)
+    return jsonify(ok=True, guide=safe, restored_default=bool(data))
 
 @app.post("/api/coach/checkin")
 def coach_checkin():
