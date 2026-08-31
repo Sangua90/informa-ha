@@ -1,0 +1,22 @@
+name: "InFormha"
+version: "0.1.0"
+slug: "informa"
+description: "Coach palestra personale con allenamenti, progressi, cardio e guida attrezzatura."
+url: "https://github.com/Sangua90/informa-ha"
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: "mdi:dumbbell"
+panel_title: "InFormha"
+panel_admin: false
+stage: experimental
+backup: hot
+options:
+  profile_name: "Edoardo"
+schema:
+  profile_name: str
