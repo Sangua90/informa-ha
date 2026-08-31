@@ -1,12 +1,13 @@
 from pathlib import Path
-from flask import Response
+from flask import Response, send_from_directory
 import base64
 import re
 import app as base
 
-base.VERSION = "0.3.8"
+base.VERSION = "0.3.9"
 app = base.app
 GUIDE_DIR = Path("/app/web/guides")
+GUIDE_HD_DIR = Path("/app/web/guides_hd")
 
 @app.get("/guide-image/<name>.jpg")
 def guide_jpeg(name):
@@ -25,3 +26,10 @@ def guide_jpeg(name):
     except Exception:
         return Response("Invalid image data", status=500)
     return Response(data, mimetype="image/jpeg", headers={"Cache-Control": "no-store"})
+
+@app.get("/guide-hd/<name>.svg")
+def guide_hd(name):
+    safe = Path(name).name
+    if safe not in {"chest", "lat", "pushdown", "curl"}:
+        return Response("Not found", status=404)
+    return send_from_directory(GUIDE_HD_DIR, f"{safe}.svg", mimetype="image/svg+xml", max_age=0)
