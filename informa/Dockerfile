@@ -1,6 +1,6 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.8.0
+ARG BUILD_VERSION=0.8.1
 ARG BUILD_ARCH=amd64
 
 LABEL \
@@ -22,6 +22,7 @@ COPY coach_search_073.py /app/coach_search_073.py
 COPY coach_guides_074.py /app/coach_guides_074.py
 COPY coach_refine_075.py /app/coach_refine_075.py
 COPY nutrition_080.py /app/nutrition_080.py
+COPY supplements_081.py /app/supplements_081.py
 COPY web /app/web
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -42,9 +43,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/muscle_search_073.js >> /app/web/app.js \
  && cat /app/web/guide_ui_074.js >> /app/web/app.js \
  && cat /app/web/coach_refine_075.js >> /app/web/app.js \
- && cat /app/web/nutrition_080.js >> /app/web/app.js
+ && cat /app/web/nutrition_080.js >> /app/web/app.js \
+ && cat /app/web/supplements_081.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "nutrition_080:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "supplements_081:app"]
