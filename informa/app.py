@@ -5,6 +5,7 @@ from datetime import datetime
 
 app = Flask(__name__, static_folder=None)
 DB = Path("/data/informa.db")
+VERSION = "0.2.0"
 
 def db():
     conn = sqlite3.connect(DB)
@@ -93,7 +94,7 @@ def state():
     profile=dict(con.execute("SELECT * FROM profile WHERE id=1").fetchone())
     measurement=con.execute("SELECT * FROM body_measurements ORDER BY id DESC LIMIT 1").fetchone()
     cardio=con.execute("SELECT * FROM cardio ORDER BY id DESC LIMIT 1").fetchone()
-    result={"profile":profile,"measurement":dict(measurement) if measurement else None,"last_cardio":dict(cardio) if cardio else None,"version":"0.1.0"}
+    result={"profile":profile,"measurement":dict(measurement) if measurement else None,"last_cardio":dict(cardio) if cardio else None,"version":VERSION}
     con.close()
     return jsonify(result)
 
@@ -103,7 +104,7 @@ def measurement():
     con=db()
     con.execute("""INSERT INTO body_measurements
     (ts,weight_kg,waist_cm,chest_cm,arm_r_cm,arm_l_cm,thigh_r_cm,thigh_l_cm)
-    VALUES(?,?,?,?,?,?,?,?)""",(
+    VALUES(?,?,?,?,?,?,?,?)"",(
       datetime.now().isoformat(timespec="seconds"),x.get("weight_kg"),x.get("waist_cm"),x.get("chest_cm"),x.get("arm_r_cm"),x.get("arm_l_cm"),x.get("thigh_r_cm"),x.get("thigh_l_cm")
     ))
     con.commit(); con.close()
@@ -114,7 +115,7 @@ def cardio():
     x=request.get_json(force=True)
     con=db()
     con.execute("""INSERT INTO cardio(ts,activity,duration_min,avg_hr,max_hr,calories,notes)
-      VALUES(?,?,?,?,?,?,?)""",(
+      VALUES(?,?,?,?,?,?,?)"",(
       datetime.now().isoformat(timespec="seconds"),x.get("activity","Tapis roulant"),x.get("duration_min"),x.get("avg_hr"),x.get("max_hr"),x.get("calories"),x.get("notes")
     ))
     con.commit(); con.close()
@@ -129,7 +130,7 @@ def save_set():
         cur=con.execute("INSERT INTO workouts(ts,title) VALUES(?,?)",(datetime.now().isoformat(timespec="seconds"), x.get("workout_title","Allenamento")))
         wid=cur.lastrowid
     con.execute("""INSERT INTO sets(workout_id,exercise,set_no,weight,reps,fatigue,rest_sec)
-                   VALUES(?,?,?,?,?,?,?)""",(wid,x.get("exercise"),x.get("set_no"),x.get("weight"),x.get("reps"),x.get("fatigue"),x.get("rest_sec",90)))
+                   VALUES(?,?,?,?,?,?,?)"",(wid,x.get("exercise"),x.get("set_no"),x.get("weight"),x.get("reps"),x.get("fatigue"),x.get("rest_sec",90)))
     con.commit(); con.close()
     return jsonify(ok=True, workout_id=wid)
 
@@ -149,4 +150,4 @@ def health_import():
 
 @app.get("/health")
 def health():
-    return jsonify(status="ok", app="InFormha", version="0.1.0")
+    return jsonify(status="ok", app="InFormha", version=VERSION)
