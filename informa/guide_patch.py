@@ -13,7 +13,11 @@ GUIDE_DIR = Path("/app/web/guides")
 GUIDE_HD_DIR = Path("/app/web/guides_hd")
 USER_GUIDE_DIR = Path("/data/guides")
 USER_GUIDE_DIR.mkdir(parents=True, exist_ok=True)
-ALLOWED_GUIDES = {"chest", "lat", "pushdown", "curl"}
+ALLOWED_GUIDES = {
+    "chest", "lat", "pushdown", "curl", "seated_row", "pec_fly",
+    "shoulder_press", "lateral_raise", "goblet_squat", "romanian_deadlift",
+    "glute_bridge", "calf_raise", "face_pull", "plank", "treadmill", "stepper"
+}
 ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 MIMES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
@@ -46,7 +50,6 @@ def _extract_default_jpeg(name):
 
 
 def _enhance_default_jpeg(data):
-    """Create a larger local JPEG so mobile/desktop zoom does not expose coarse source pixels."""
     try:
         with Image.open(BytesIO(data)) as img:
             img = img.convert("RGB")
@@ -62,7 +65,6 @@ def _enhance_default_jpeg(data):
 
 
 def seed_default_guides():
-    """Install bundled non-stylized guides once; user replacements are never overwritten."""
     for name in ALLOWED_GUIDES:
         if _user_guide_path(name):
             continue
