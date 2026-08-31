@@ -9,7 +9,7 @@ LABEL \
   io.hass.arch="${BUILD_ARCH}"
 
 WORKDIR /app
-RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0
+RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0
 
 COPY app.py /app/app.py
 COPY guide_patch.py /app/guide_patch.py
