@@ -1,5 +1,5 @@
 name: "InFormha"
-version: "0.9.0"
+version: "0.9.1"
 slug: "informa"
 description: "Coach fitness personale adattivo per Home Assistant."
 url: "https://github.com/Sangua90/informa-ha"
@@ -19,5 +19,11 @@ stage: experimental
 backup: hot
 options:
   profile_name: "Edoardo"
+  ai_provider: "gemini"
+  gemini_model: "gemini-2.5-flash"
+  gemini_api_key: ""
 schema:
   profile_name: str
+  ai_provider: list(none|gemini)
+  gemini_model: str
+  gemini_api_key: password
