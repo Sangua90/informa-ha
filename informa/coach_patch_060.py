@@ -31,8 +31,10 @@ def force_exercises_menu(response):
                 html = html.replace(marker, EXERCISES_PAGE + '\n' + marker, 1)
             if 'id="exercisesStaticButton"' not in html:
                 marker = '<button class="btn secondary" onclick="go(\'coach\')">Settimana e Coach</button>'
-                button = '<button id="exercisesStaticButton" class="btn secondary" onclick="go(\'exercises-static\')">🏋️ Esercizi</button>'
+                button = '<button id="exercisesStaticButton" class="btn secondary" onclick="go(\'exercises\')">🏋️ Esercizi</button>'
                 html = html.replace(marker, button + marker, 1)
+            else:
+                html = html.replace("go('exercises-static')", "go('exercises')")
             response.set_data(html)
         if base.request.path in ('/', '/app.js', '/style.css'):
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
@@ -67,14 +69,12 @@ def init_state_db():
 
 init_state_db()
 
-
 @app.get('/api/coach/pending')
 def pending_get():
     con = base.base.db()
     rows = [dict(r) for r in con.execute("SELECT * FROM coach_pending WHERE status='pending' ORDER BY id")]
     con.close()
     return base.jsonify(ok=True, items=rows)
-
 
 @app.post('/api/coach/pending')
 def pending_add():
@@ -98,7 +98,6 @@ def pending_add():
     con.commit(); con.close()
     return base.jsonify(ok=True, added=added)
 
-
 @app.post('/api/coach/pending/resolve')
 def pending_resolve():
     x = base.request.get_json(force=True) or {}
@@ -113,7 +112,6 @@ def pending_resolve():
     con.commit(); con.close()
     return base.jsonify(ok=True, resolved=resolved)
 
-
 @app.get('/api/coach/state')
 def coach_state_get():
     con = base.base.db()
@@ -124,7 +122,6 @@ def coach_state_get():
         except Exception: out[row['key']] = row['value']
     return base.jsonify(ok=True, state=out)
 
-
 @app.post('/api/coach/state')
 def coach_state_set():
     x = base.request.get_json(force=True) or {}
@@ -133,4 +130,4 @@ def coach_state_set():
         con.execute("INSERT INTO coach_state(key,value,updated_ts) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_ts=excluded.updated_ts", (
             str(key), json.dumps(value, ensure_ascii=False), now))
     con.commit(); con.close()
-    return base.jsonify(ok=True)
+    return base.jsonify(ok=True, state=x)
