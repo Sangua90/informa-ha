@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.29
+ARG BUILD_VERSION=0.9.30
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.29-pain-detail
+ARG INFORMA_CACHE_BUST=0.9.30-pain-zone-selector
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -45,6 +45,7 @@ COPY supplements_settings_fix_0926.py /app/supplements_settings_fix_0926.py
 COPY nutrition_homestock_0927.py /app/nutrition_homestock_0927.py
 COPY workout_activation_0928.py /app/workout_activation_0928.py
 COPY pain_detail_0929.py /app/pain_detail_0929.py
+COPY pain_select_0930.py /app/pain_select_0930.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -63,9 +64,10 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "home_preparation_unlock=1" /app/workout_activation_0928.py \
  && grep -Fq "informha_workout_prepared_0928" /app/web/workout_activation_0928.js \
  && grep -Fq "pain_detail=1" /app/pain_detail_0929.py \
- && grep -Fq "if929PainDetail" /app/web/pain_detail_0929.js \
- && grep -Fq "pain_label" /app/web/pain_detail_0929.js \
- && printf '%s\n' "InFormha 0.9.29 pain-detail" > /app/BUILD_ID \
+ && grep -Fq "pain_zone_selector=1" /app/pain_select_0930.py \
+ && grep -Fq "data-if930-zone" /app/web/pain_select_0930.js \
+ && grep -Fq "Quadricipite" /app/web/pain_select_0930.js \
+ && printf '%s\n' "InFormha 0.9.30 pain-zone-selector" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -96,9 +98,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/supplements_split_0923.js >> /app/web/app.js \
  && cat /app/web/nutrition_homestock_0927.js >> /app/web/app.js \
  && cat /app/web/workout_activation_0928.js >> /app/web/app.js \
- && cat /app/web/pain_detail_0929.js >> /app/web/app.js
+ && cat /app/web/pain_detail_0929.js >> /app/web/app.js \
+ && cat /app/web/pain_select_0930.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "pain_detail_0929:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "pain_select_0930:app"]
