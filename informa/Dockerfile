@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.9
+ARG BUILD_VERSION=0.9.10
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.9-diag-36
+ARG INFORMA_CACHE_BUST=0.9.10-visible-36
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -15,9 +15,6 @@ RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0
 COPY app.py /app/app.py
 COPY guide_patch.py /app/guide_patch.py
 COPY coach_patch_060.py /app/coach_patch_060.py
-RUN grep -Fq "Libreria completa InFormha · 36 esercizi · build 0.9.8" /app/coach_patch_060.py \
- && printf '%s\n' "InFormha 0.9.9 diagnostic-36" > /app/BUILD_ID \
- && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 COPY coach_progression_068.py /app/coach_progression_068.py
 COPY coach_week_069.py /app/coach_week_069.py
 COPY coach_advance_070.py /app/coach_advance_070.py
@@ -35,6 +32,9 @@ COPY coach_library_094.py /app/coach_library_094.py
 COPY coach_library_096.py /app/coach_library_096.py
 COPY coach_diag_099.py /app/coach_diag_099.py
 COPY web /app/web
+RUN grep -Fq "Libreria completa InFormha · 36 esercizi · build 0.9.10" /app/web/interface_063.js \
+ && printf '%s\n' "InFormha 0.9.10 visible-library-36" > /app/BUILD_ID \
+ && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
  && cat /app/web/guides_039.js >> /app/web/app.js \
