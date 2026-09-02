@@ -2,10 +2,9 @@ import coach_library_094 as base
 import app as root
 
 app = base.app
-root.VERSION = "0.9.6"
+root.VERSION = "0.9.8"
 
 # Remove the legacy backend HTML injector from coach_patch_060.
-# It hard-coded the original 16 exercises and could override the newer JS library.
 for scope, funcs in list(app.after_request_funcs.items()):
     app.after_request_funcs[scope] = [
         fn for fn in funcs if getattr(fn, "__name__", "") != "force_exercises_menu"
@@ -86,7 +85,7 @@ def _exercise_page():
     return (
         '<section class="page" data-page="exercises-static">'
         '<div class="ey">Altro</div><h1>Esercizi</h1>'
-        f'<div class="sub" style="margin-bottom:14px">Libreria completa InFormha · {total} esercizi.</div>'
+        f'<div class="sub" style="margin-bottom:14px">Libreria completa InFormha · {total} esercizi · build 0.9.8</div>'
         + "".join(cards)
         + '<button class="btn secondary" onclick="go(\'profile\')">Indietro</button></section>'
     )
@@ -100,22 +99,16 @@ def exercises_backend_096(response):
     try:
         if "text/html" in response.headers.get("Content-Type", ""):
             html = response.get_data(as_text=True)
-
-            # Remove any previously injected legacy/static exercise page.
             start = html.find('<section class="page" data-page="exercises-static">')
             if start >= 0:
                 end = html.find('</section>', start)
                 if end >= 0:
                     html = html[:start] + html[end + len('</section>'):]
-
             marker = '<section class="page" data-page="profiledata">'
             html = html.replace(marker, EXERCISES_PAGE_096 + "\n" + marker, 1)
-
-            # Keep a single reliable entry point to the server-rendered library.
             html = html.replace("go('exercises')", "go('exercises-static')")
             html = html.replace("go(\"exercises\")", "go(\"exercises-static\")")
             response.set_data(html)
-
         if root.request.path in ("/", "/app.js", "/style.css"):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
