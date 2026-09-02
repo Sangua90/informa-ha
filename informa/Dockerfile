@@ -32,7 +32,8 @@ COPY coach_library_094.py /app/coach_library_094.py
 COPY coach_library_096.py /app/coach_library_096.py
 COPY coach_diag_099.py /app/coach_diag_099.py
 COPY web /app/web
-RUN grep -Fq "Libreria completa InFormha · 36 esercizi · build 0.9.10" /app/web/interface_063.js \
+RUN test "$(grep -c "^    \\['" /app/web/interface_063.js)" -eq 36 \
+ && grep -Fq "build 0.9.10" /app/web/interface_063.js \
  && printf '%s\n' "InFormha 0.9.10 visible-library-36" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
