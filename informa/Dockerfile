@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.27
+ARG BUILD_VERSION=0.9.28
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.27-nutrition-homestock-settings
+ARG INFORMA_CACHE_BUST=0.9.28-home-workout-activation
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -43,6 +43,7 @@ COPY remove_legacy_guide_manager_0922.py /app/remove_legacy_guide_manager_0922.p
 COPY supplements_split_0923.py /app/supplements_split_0923.py
 COPY supplements_settings_fix_0926.py /app/supplements_settings_fix_0926.py
 COPY nutrition_homestock_0927.py /app/nutrition_homestock_0927.py
+COPY workout_activation_0928.py /app/workout_activation_0928.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -58,7 +59,10 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "api/homestock/catalog" /app/web/nutrition_homestock_0927.js \
  && grep -Fq "nutrition-settings-0927" /app/web/nutrition_homestock_0927.js \
  && grep -Fq "homestock_catalog=1" /app/nutrition_homestock_0927.py \
- && printf '%s\n' "InFormha 0.9.27 nutrition-homestock-settings" > /app/BUILD_ID \
+ && grep -Fq "home_preparation_unlock=1" /app/workout_activation_0928.py \
+ && grep -Fq "informha_workout_prepared_0928" /app/web/workout_activation_0928.js \
+ && grep -Fq "if928-locked" /app/web/workout_activation_0928.js \
+ && printf '%s\n' "InFormha 0.9.28 home-workout-activation" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -87,9 +91,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/load_fields_0913.js >> /app/web/app.js \
  && cat /app/web/management_accordion_0921.js >> /app/web/app.js \
  && cat /app/web/supplements_split_0923.js >> /app/web/app.js \
- && cat /app/web/nutrition_homestock_0927.js >> /app/web/app.js
+ && cat /app/web/nutrition_homestock_0927.js >> /app/web/app.js \
+ && cat /app/web/workout_activation_0928.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "nutrition_homestock_0927:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "workout_activation_0928:app"]
