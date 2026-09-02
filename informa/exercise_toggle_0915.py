@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import threading
+from flask import request
 
 import guide_manager_0914 as base
 import app as root
@@ -60,7 +61,7 @@ def exercise_enabled_status_0915():
 def exercise_enabled_set_0915(exercise_id):
     if exercise_id not in EXERCISE_IDS:
         return root.jsonify(ok=False, error="Esercizio non valido"), 404
-    payload = root.request.get_json(force=True, silent=True) or {}
+    payload = request.get_json(force=True, silent=True) or {}
     if "enabled" not in payload:
         return root.jsonify(ok=False, error="Campo enabled mancante"), 400
     enabled = bool(payload.get("enabled"))
