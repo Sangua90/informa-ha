@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.28
+ARG BUILD_VERSION=0.9.29
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.28-home-workout-activation
+ARG INFORMA_CACHE_BUST=0.9.29-pain-detail
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -44,6 +44,7 @@ COPY supplements_split_0923.py /app/supplements_split_0923.py
 COPY supplements_settings_fix_0926.py /app/supplements_settings_fix_0926.py
 COPY nutrition_homestock_0927.py /app/nutrition_homestock_0927.py
 COPY workout_activation_0928.py /app/workout_activation_0928.py
+COPY pain_detail_0929.py /app/pain_detail_0929.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -61,8 +62,10 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "homestock_catalog=1" /app/nutrition_homestock_0927.py \
  && grep -Fq "home_preparation_unlock=1" /app/workout_activation_0928.py \
  && grep -Fq "informha_workout_prepared_0928" /app/web/workout_activation_0928.js \
- && grep -Fq "if928-locked" /app/web/workout_activation_0928.js \
- && printf '%s\n' "InFormha 0.9.28 home-workout-activation" > /app/BUILD_ID \
+ && grep -Fq "pain_detail=1" /app/pain_detail_0929.py \
+ && grep -Fq "if929PainDetail" /app/web/pain_detail_0929.js \
+ && grep -Fq "pain_label" /app/web/pain_detail_0929.js \
+ && printf '%s\n' "InFormha 0.9.29 pain-detail" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -92,9 +95,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/management_accordion_0921.js >> /app/web/app.js \
  && cat /app/web/supplements_split_0923.js >> /app/web/app.js \
  && cat /app/web/nutrition_homestock_0927.js >> /app/web/app.js \
- && cat /app/web/workout_activation_0928.js >> /app/web/app.js
+ && cat /app/web/workout_activation_0928.js >> /app/web/app.js \
+ && cat /app/web/pain_detail_0929.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "workout_activation_0928:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "pain_detail_0929:app"]
