@@ -3,10 +3,10 @@ import coach_library_096 as base
 import app as root
 
 app = base.app
-root.VERSION = "0.9.10"
+root.VERSION = "0.9.11"
 
 EXERCISE_COUNT = sum(len(items) for _, items in base.GROUPS)
-BUILD_ID = "InFormha-0.9.10-runtime-visible-library-36"
+BUILD_ID = "InFormha-0.9.11-runtime-visible-library-36"
 
 print(
     f"[INFORMHA_DIAG] version={root.VERSION} module=coach_diag_099 "
