@@ -1,4 +1,4 @@
-// InFormha 0.9.10 - menu Esercizi visibile con libreria completa a 36
+// InFormha 0.9.11 - menu Esercizi visibile con libreria completa a 36
 (function(){
   const LIB=[
     ['Petto','Chest press alla macchina','Fassi · bracci chest press integrati','3 × 10','120 sec','chest'],
@@ -43,7 +43,7 @@
     let page=document.querySelector('[data-page="exercise-library-063"]');
     if(!page){page=document.createElement('section');page.className='page';page.dataset.page='exercise-library-063';document.querySelector('.app')?.appendChild(page)}
     const groups={};LIB.forEach(x=>(groups[x[0]]||(groups[x[0]]=[])).push(x));
-    page.innerHTML=`<div class="ey">Altro</div><h1>Esercizi</h1><div class="sub" style="margin-bottom:14px">Libreria completa InFormha · ${LIB.length} esercizi · build 0.9.10</div>`+
+    page.innerHTML=`<div class="ey">Altro</div><h1>Esercizi</h1><div class="sub" style="margin-bottom:14px">Libreria completa InFormha · ${LIB.length} esercizi · build 0.9.11</div>`+
       Object.entries(groups).map(([g,items])=>`<div class="card"><div class="ey">${g}</div>${items.map(x=>`<button class="exercise-library-item" onclick="if63Detail(${LIB.indexOf(x)})"><span><b>${x[1]}</b><small>${x[2]}</small></span><span>›</span></button>`).join('')}</div>`).join('')+
       `<button class="btn secondary" onclick="go('profile')">Indietro</button>`;
   }
@@ -52,7 +52,7 @@
     const x=LIB[index];if(!x)return;
     let page=document.querySelector('[data-page="exercise-detail-063"]');
     if(!page){page=document.createElement('section');page.className='page';page.dataset.page='exercise-detail-063';document.querySelector('.app')?.appendChild(page)}
-    const image=x[5]?`<div class="card"><img src="guide-local/${x[5]}?v=0910" alt="${x[1]}" style="width:100%;border-radius:18px;display:block" onerror="this.parentElement.style.display='none'"></div>`:'';
+    const image=x[5]?`<div class="card"><img src="guide-local/${x[5]}?v=0911" alt="${x[1]}" style="width:100%;border-radius:18px;display:block" onerror="this.parentElement.style.display='none'"></div>`:'';
     page.innerHTML=`<div class="ey">Esercizi · ${x[0]}</div><h1>${x[1]}</h1>${image}<div class="card"><div class="measure"><span>Gruppo</span><b>${x[0]}</b></div><div class="measure"><span>Attrezzatura</span><b>${x[2]}</b></div><div class="measure"><span>Serie / tempo</span><b>${x[3]}</b></div><div class="measure"><span>Recupero</span><b>${x[4]}</b></div></div>${x[5]?`<button class="btn" onclick="openGuide('${x[5]}')">Apri guida esercizio</button>`:''}<button class="btn secondary" onclick="go('exercise-library-063')">Torna agli esercizi</button>`;
     go('exercise-detail-063');
   };
