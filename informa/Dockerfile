@@ -1,7 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.7
+ARG BUILD_VERSION=0.9.8
 ARG BUILD_ARCH=amd64
+ARG INFORMA_CACHE_BUST=0.9.8-36
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -14,6 +15,9 @@ RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0
 COPY app.py /app/app.py
 COPY guide_patch.py /app/guide_patch.py
 COPY coach_patch_060.py /app/coach_patch_060.py
+RUN grep -Fq "Libreria completa InFormha · 36 esercizi · build 0.9.8" /app/coach_patch_060.py \
+ && printf '%s\n' "InFormha 0.9.8 verified-36" > /app/BUILD_ID \
+ && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 COPY coach_progression_068.py /app/coach_progression_068.py
 COPY coach_week_069.py /app/coach_week_069.py
 COPY coach_advance_070.py /app/coach_advance_070.py
