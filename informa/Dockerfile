@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.24
+ARG BUILD_VERSION=0.9.25
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.24-supplements-settings-nav-fix
+ARG INFORMA_CACHE_BUST=0.9.25-altro-integratori-direct-nav
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -42,6 +42,7 @@ COPY management_accordion_0921.py /app/management_accordion_0921.py
 COPY remove_legacy_guide_manager_0922.py /app/remove_legacy_guide_manager_0922.py
 COPY supplements_split_0923.py /app/supplements_split_0923.py
 COPY supplements_settings_nav_0924.py /app/supplements_settings_nav_0924.py
+COPY supplements_settings_nav_0925.py /app/supplements_settings_nav_0925.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -54,9 +55,10 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "settings_daily_split=1" /app/supplements_split_0923.py \
  && grep -Fq "window.if923EnsureSettingsPage=ensureSettingsPage" /app/web/supplements_split_0923.js \
  && grep -Fq "window.if923LoadSettings=loadSettings" /app/web/supplements_split_0923.js \
- && grep -Fq "settings_nav_capture=1" /app/web/supplements_settings_nav_0924.js \
- && grep -Fq "stopImmediatePropagation" /app/web/supplements_settings_nav_0924.js \
- && printf '%s\n' "InFormha 0.9.24 supplements-settings-nav-fix" > /app/BUILD_ID \
+ && grep -Fq "profile_integratori_anywhere=1" /app/supplements_settings_nav_0925.py \
+ && grep -Fq "if925OpenSupplementSettings" /app/web/supplements_settings_nav_0925.js \
+ && grep -Fq "btn.closest('.nav')" /app/web/supplements_settings_nav_0925.js \
+ && printf '%s\n' "InFormha 0.9.25 altro-integratori-direct-nav" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -85,9 +87,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/load_fields_0913.js >> /app/web/app.js \
  && cat /app/web/management_accordion_0921.js >> /app/web/app.js \
  && cat /app/web/supplements_split_0923.js >> /app/web/app.js \
- && cat /app/web/supplements_settings_nav_0924.js >> /app/web/app.js
+ && cat /app/web/supplements_settings_nav_0924.js >> /app/web/app.js \
+ && cat /app/web/supplements_settings_nav_0925.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "supplements_settings_nav_0924:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "supplements_settings_nav_0925:app"]
