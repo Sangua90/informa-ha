@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.35
+ARG BUILD_VERSION=0.9.36
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.35-healthsync-relocate
+ARG INFORMA_CACHE_BUST=0.9.36-equipment-details
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -51,6 +51,7 @@ COPY warmup_ui_fix_0932.py /app/warmup_ui_fix_0932.py
 COPY workout_history_0933.py /app/workout_history_0933.py
 COPY healthsync_status_0934.py /app/healthsync_status_0934.py
 COPY healthsync_relocate_0935.py /app/healthsync_relocate_0935.py
+COPY equipment_details_0936.py /app/equipment_details_0936.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -76,9 +77,10 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "workout_history=1" /app/workout_history_0933.py \
  && grep -Fq "status_ui=1" /app/healthsync_status_0934.py \
  && grep -Fq "relocated_to_apple_card=1" /app/healthsync_relocate_0935.py \
- && grep -Fq "appleCard" /app/web/healthsync_relocate_0935.js \
- && grep -Fq "if934Health" /app/web/healthsync_relocate_0935.js \
- && printf '%s\n' "InFormha 0.9.35 healthsync-relocate" > /app/BUILD_ID \
+ && grep -Fq "equipment_details=1" /app/equipment_details_0936.py \
+ && grep -Fq "Fassi Power 350" /app/web/equipment_details_0936.js \
+ && grep -Fq "carrucole frontali fisse" /app/web/equipment_details_0936.js \
+ && printf '%s\n' "InFormha 0.9.36 equipment-details" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -115,9 +117,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/warmup_ui_fix_0932.js >> /app/web/app.js \
  && cat /app/web/workout_history_0933.js >> /app/web/app.js \
  && cat /app/web/healthsync_status_0934.js >> /app/web/app.js \
- && cat /app/web/healthsync_relocate_0935.js >> /app/web/app.js
+ && cat /app/web/healthsync_relocate_0935.js >> /app/web/app.js \
+ && cat /app/web/equipment_details_0936.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "healthsync_relocate_0935:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "equipment_details_0936:app"]
