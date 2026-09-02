@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.18
+ARG BUILD_VERSION=0.9.19
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.18-force-compact-management
+ARG INFORMA_CACHE_BUST=0.9.19-direct-submenu-navigation
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -36,6 +36,7 @@ COPY exercise_toggle_0915.py /app/exercise_toggle_0915.py
 COPY compact_management_0916.py /app/compact_management_0916.py
 COPY compact_management_0917.py /app/compact_management_0917.py
 COPY compact_management_0918.py /app/compact_management_0918.py
+COPY compact_management_0919.py /app/compact_management_0919.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -44,11 +45,13 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "GUIDE_IDS_36" /app/guide_manager_0914.py \
  && grep -Fq "persistent_toggle=1" /app/exercise_toggle_0915.py \
  && grep -Fq "legacy_disabled=1" /app/web/compact_management_0916.js \
- && grep -Fq "if917OpenPhotos" /app/web/compact_management_0917.js \
- && grep -Fq "if917OpenExercises" /app/web/compact_management_0917.js \
  && grep -Fq "if918CompactMenu" /app/web/compact_management_0918.js \
- && grep -Fq "forced_compact_menu=1" /app/compact_management_0918.py \
- && printf '%s\n' "InFormha 0.9.18 force-compact-management" > /app/BUILD_ID \
+ && grep -Fq "direct_submenu_navigation=1" /app/compact_management_0919.py \
+ && grep -Fq "photo-manager-0919" /app/web/compact_management_0919.js \
+ && grep -Fq "exercise-manager-0919" /app/web/compact_management_0919.js \
+ && grep -Fq "addEventListener('click',openPhotos" /app/web/compact_management_0919.js \
+ && grep -Fq "addEventListener('click',openExercises" /app/web/compact_management_0919.js \
+ && printf '%s\n' "InFormha 0.9.19 direct-submenu-navigation" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -81,9 +84,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/exercise_toggle_0915.js >> /app/web/app.js \
  && cat /app/web/compact_management_0916.js >> /app/web/app.js \
  && cat /app/web/compact_management_0917.js >> /app/web/app.js \
- && cat /app/web/compact_management_0918.js >> /app/web/app.js
+ && cat /app/web/compact_management_0918.js >> /app/web/app.js \
+ && cat /app/web/compact_management_0919.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "compact_management_0918:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "compact_management_0919:app"]
