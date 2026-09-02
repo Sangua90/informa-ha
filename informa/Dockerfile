@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.22
+ARG BUILD_VERSION=0.9.23
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.22-remove-legacy-guide-manager
+ARG INFORMA_CACHE_BUST=0.9.23-supplements-settings-daily-split
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -40,19 +40,21 @@ COPY compact_management_0919.py /app/compact_management_0919.py
 COPY compact_management_0920.py /app/compact_management_0920.py
 COPY management_accordion_0921.py /app/management_accordion_0921.py
 COPY remove_legacy_guide_manager_0922.py /app/remove_legacy_guide_manager_0922.py
+COPY supplements_split_0923.py /app/supplements_split_0923.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
- && grep -Fq "Consultazione / Funzioni" /app/web/profile_sections_0912.js \
+ && grep -Fq "SETTINGS_LABELS=['Profilo','Connessioni e dispositivi','Integratori']" /app/web/profile_sections_0912.js \
  && grep -Fq "Piastra / pin" /app/web/load_fields_0913.js \
  && grep -Fq "GUIDE_IDS_36" /app/guide_manager_0914.py \
  && grep -Fq "persistent_toggle=1" /app/exercise_toggle_0915.py \
  && grep -Fq "native_accordion=1" /app/management_accordion_0921.py \
- && grep -Fq "<details class=\"if921-section\"" /app/web/management_accordion_0921.js \
  && grep -Fq "legacy_upload_manager_removed=1" /app/web/guides_040.js \
- && ! grep -Fq "Carica / sostituisci" /app/web/guides_040.js \
- && ! grep -Fq "Immagini esercizi" /app/web/guides_040.js \
- && printf '%s\n' "InFormha 0.9.22 remove-legacy-guide-manager" > /app/BUILD_ID \
+ && grep -Fq "settings_daily_split=1" /app/supplements_split_0923.py \
+ && grep -Fq "api/supplements/today-v2" /app/web/supplements_split_0923.js \
+ && grep -Fq "supplement-settings-0923" /app/web/supplements_split_0923.js \
+ && grep -Fq "Giorni" /app/web/supplements_split_0923.js \
+ && printf '%s\n' "InFormha 0.9.23 supplements-settings-daily-split" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -73,16 +75,16 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/muscle_search_073.js >> /app/web/app.js \
  && cat /app/web/coach_refine_075.js >> /app/web/app.js \
  && cat /app/web/nutrition_080.js >> /app/web/app.js \
- && cat /app/web/supplements_081.js >> /app/web/app.js \
  && cat /app/web/ai_coach_090.js >> /app/web/app.js \
  && cat /app/web/ai_gemini_091.js >> /app/web/app.js \
  && cat /app/web/ai_context_093.js >> /app/web/app.js \
  && cat /app/web/library_094.js >> /app/web/app.js \
  && cat /app/web/profile_sections_0912.js >> /app/web/app.js \
  && cat /app/web/load_fields_0913.js >> /app/web/app.js \
- && cat /app/web/management_accordion_0921.js >> /app/web/app.js
+ && cat /app/web/management_accordion_0921.js >> /app/web/app.js \
+ && cat /app/web/supplements_split_0923.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "remove_legacy_guide_manager_0922:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "supplements_split_0923:app"]
