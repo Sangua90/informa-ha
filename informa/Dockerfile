@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.14
+ARG BUILD_VERSION=0.9.15
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.14-guide-manager-36
+ARG INFORMA_CACHE_BUST=0.9.15-exercise-toggle
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -32,16 +32,18 @@ COPY coach_library_094.py /app/coach_library_094.py
 COPY coach_library_096.py /app/coach_library_096.py
 COPY coach_diag_099.py /app/coach_diag_099.py
 COPY guide_manager_0914.py /app/guide_manager_0914.py
+COPY exercise_toggle_0915.py /app/exercise_toggle_0915.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
  && grep -Fq "Consultazione / Funzioni" /app/web/profile_sections_0912.js \
  && grep -Fq "Piastra / pin" /app/web/load_fields_0913.js \
- && grep -Fq "Tutti i 36 esercizi" /app/web/guide_manager_0914.js \
- && grep -Fq "Solo senza immagine" /app/web/guide_manager_0914.js \
- && grep -Fq "Carica file" /app/web/guide_manager_0914.js \
  && grep -Fq "GUIDE_IDS_36" /app/guide_manager_0914.py \
- && printf '%s\n' "InFormha 0.9.14 guide-manager-36" > /app/BUILD_ID \
+ && grep -Fq "persistent_toggle=1" /app/exercise_toggle_0915.py \
+ && grep -Fq "La gestione delle foto è separata" /app/web/exercise_toggle_0915.js \
+ && grep -Fq "Esercizio escluso dagli allenamenti" /app/web/exercise_toggle_0915.js \
+ && grep -Fq "api/exercise-enabled" /app/web/exercise_toggle_0915.js \
+ && printf '%s\n' "InFormha 0.9.15 exercise-toggle" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -70,9 +72,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/library_094.js >> /app/web/app.js \
  && cat /app/web/profile_sections_0912.js >> /app/web/app.js \
  && cat /app/web/load_fields_0913.js >> /app/web/app.js \
- && cat /app/web/guide_manager_0914.js >> /app/web/app.js
+ && cat /app/web/guide_manager_0914.js >> /app/web/app.js \
+ && cat /app/web/exercise_toggle_0915.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "guide_manager_0914:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_toggle_0915:app"]
