@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.33
+ARG BUILD_VERSION=0.9.34
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.33-workout-history-delete
+ARG INFORMA_CACHE_BUST=0.9.34-healthsync-status
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -49,6 +49,7 @@ COPY pain_select_0930.py /app/pain_select_0930.py
 COPY warmup_stretching_0931.py /app/warmup_stretching_0931.py
 COPY warmup_ui_fix_0932.py /app/warmup_ui_fix_0932.py
 COPY workout_history_0933.py /app/workout_history_0933.py
+COPY healthsync_status_0934.py /app/healthsync_status_0934.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -72,9 +73,10 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "stretching_selective=1" /app/warmup_stretching_0931.py \
  && grep -Fq "existing_checkin_injection=1" /app/warmup_ui_fix_0932.py \
  && grep -Fq "workout_history=1" /app/workout_history_0933.py \
- && grep -Fq "DELETE FROM workouts" /app/workout_history_0933.py \
- && grep -Fq "if933HistoryButton" /app/web/workout_history_0933.js \
- && printf '%s\n' "InFormha 0.9.33 workout-history-delete" > /app/BUILD_ID \
+ && grep -Fq "status_ui=1" /app/healthsync_status_0934.py \
+ && grep -Fq "api/healthsync" /app/web/healthsync_status_0934.js \
+ && grep -Fq "iPhone / Health Sync" /app/web/healthsync_status_0934.js \
+ && printf '%s\n' "InFormha 0.9.34 healthsync-status" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -109,9 +111,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/pain_select_0930.js >> /app/web/app.js \
  && cat /app/web/warmup_stretching_0931.js >> /app/web/app.js \
  && cat /app/web/warmup_ui_fix_0932.js >> /app/web/app.js \
- && cat /app/web/workout_history_0933.js >> /app/web/app.js
+ && cat /app/web/workout_history_0933.js >> /app/web/app.js \
+ && cat /app/web/healthsync_status_0934.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "workout_history_0933:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "healthsync_status_0934:app"]
