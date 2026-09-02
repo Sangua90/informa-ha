@@ -8,13 +8,17 @@ base.base.VERSION = "0.6.5"
 EXERCISES_PAGE = '''
 <section class="page" data-page="exercises-static">
   <div class="ey">Altro</div><h1>Esercizi</h1>
-  <div class="sub" style="margin-bottom:14px">Libreria degli esercizi disponibili in InFormha.</div>
+  <div class="sub" style="margin-bottom:14px">Libreria completa InFormha · 36 esercizi.</div>
   <div class="card"><div class="ey">Petto</div><div class="measure"><span>Chest press alla macchina</span><b>3 × 10</b></div><div class="measure"><span>Aperture / pec deck alla macchina</span><b>3 × 12</b></div></div>
-  <div class="card"><div class="ey">Schiena</div><div class="measure"><span>Lat machine al petto</span><b>3 × 10</b></div><div class="measure"><span>Rematore al cavo basso</span><b>3 × 10</b></div></div>
-  <div class="card"><div class="ey">Spalle</div><div class="measure"><span>Shoulder press</span><b>3 × 10</b></div><div class="measure"><span>Alzate laterali</span><b>3 × 12</b></div><div class="measure"><span>Face pull con corda</span><b>3 × 12</b></div></div>
-  <div class="card"><div class="ey">Braccia</div><div class="measure"><span>Push-down tricipiti con corda</span><b>3 × 12</b></div><div class="measure"><span>Curl bicipiti al cavo basso</span><b>3 × 12</b></div></div>
-  <div class="card"><div class="ey">Gambe e glutei</div><div class="measure"><span>Goblet squat a box/panca</span><b>3 × 10</b></div><div class="measure"><span>Stacco rumeno con manubri</span><b>3 × 10</b></div><div class="measure"><span>Ponte glutei su panca</span><b>3 × 12</b></div><div class="measure"><span>Calf raise in piedi</span><b>3 × 15</b></div></div>
-  <div class="card"><div class="ey">Core</div><div class="measure"><span>Plank</span><b>3 × 30 sec</b></div></div>
+  <div class="card"><div class="ey">Schiena</div><div class="measure"><span>Lat machine al petto</span><b>3 × 10</b></div><div class="measure"><span>Lat machine presa stretta</span><b>3 × 10</b></div><div class="measure"><span>Lat machine presa inversa</span><b>3 × 10</b></div><div class="measure"><span>Pull-down a braccia tese</span><b>3 × 12</b></div><div class="measure"><span>Rematore al cavo basso</span><b>3 × 10</b></div><div class="measure"><span>Rematore monobraccio al cavo basso</span><b>3 × 10</b></div><div class="measure"><span>Rematore al cavo medio</span><b>3 × 10</b></div></div>
+  <div class="card"><div class="ey">Spalle</div><div class="measure"><span>Shoulder press</span><b>3 × 10</b></div><div class="measure"><span>Alzate laterali</span><b>3 × 12</b></div><div class="measure"><span>Face pull con corda</span><b>3 × 12</b></div><div class="measure"><span>Tirata al mento al cavo basso</span><b>3 × 12</b></div><div class="measure"><span>Alzata frontale al cavo basso</span><b>3 × 12</b></div></div>
+  <div class="card"><div class="ey">Tricipiti</div><div class="measure"><span>Push-down tricipiti con corda</span><b>3 × 12</b></div><div class="measure"><span>Push-down tricipiti con barra</span><b>3 × 12</b></div><div class="measure"><span>Estensione tricipiti sopra la testa</span><b>3 × 12</b></div><div class="measure"><span>Push-down tricipiti monobraccio</span><b>3 × 12</b></div></div>
+  <div class="card"><div class="ey">Bicipiti e avambracci</div><div class="measure"><span>Curl bicipiti al cavo basso</span><b>3 × 12</b></div><div class="measure"><span>Hammer curl con corda</span><b>3 × 12</b></div><div class="measure"><span>Curl bicipiti monobraccio</span><b>3 × 12</b></div><div class="measure"><span>Reverse curl al cavo basso</span><b>3 × 12</b></div></div>
+  <div class="card"><div class="ey">Gambe</div><div class="measure"><span>Goblet squat a box/panca</span><b>3 × 10</b></div><div class="measure"><span>Leg extension alla macchina</span><b>3 × 12</b></div><div class="measure"><span>Squat al cavo basso</span><b>3 × 10</b></div></div>
+  <div class="card"><div class="ey">Catena posteriore</div><div class="measure"><span>Stacco rumeno con manubri</span><b>3 × 10</b></div><div class="measure"><span>Leg curl in piedi al cavo</span><b>3 × 12</b></div><div class="measure"><span>Stacco rumeno al cavo basso</span><b>3 × 10</b></div></div>
+  <div class="card"><div class="ey">Glutei</div><div class="measure"><span>Ponte glutei su panca</span><b>3 × 12</b></div><div class="measure"><span>Glute kickback al cavo basso</span><b>3 × 12</b></div></div>
+  <div class="card"><div class="ey">Polpacci</div><div class="measure"><span>Calf raise in piedi</span><b>3 × 15</b></div><div class="measure"><span>Calf raise al cavo basso</span><b>3 × 15</b></div></div>
+  <div class="card"><div class="ey">Core</div><div class="measure"><span>Plank</span><b>3 × 30 sec</b></div><div class="measure"><span>Crunch al cavo alto</span><b>3 × 12</b></div></div>
   <div class="card"><div class="ey">Cardio</div><div class="measure"><span>Tapis roulant Fassi</span><b>20 min</b></div><div class="measure"><span>Mini stepper</span><b>10 min</b></div></div>
   <button class="btn secondary" onclick="go('profile')">Indietro</button>
 </section>
@@ -31,10 +35,10 @@ def force_exercises_menu(response):
                 html = html.replace(marker, EXERCISES_PAGE + '\n' + marker, 1)
             if 'id="exercisesStaticButton"' not in html:
                 marker = '<button class="btn secondary" onclick="go(\'coach\')">Settimana e Coach</button>'
-                button = '<button id="exercisesStaticButton" class="btn secondary" onclick="go(\'exercises\')">🏋️ Esercizi</button>'
+                button = '<button id="exercisesStaticButton" class="btn secondary" onclick="go(\'exercises-static\')">🏋️ Esercizi</button>'
                 html = html.replace(marker, button + marker, 1)
             else:
-                html = html.replace("go('exercises-static')", "go('exercises')")
+                html = html.replace("go('exercises')", "go('exercises-static')")
             response.set_data(html)
         if base.request.path in ('/', '/app.js', '/style.css'):
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
