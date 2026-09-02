@@ -1,7 +1,7 @@
-// InFormha 0.9.12 - separa funzioni consultabili e impostazioni nella sezione Altro
+// InFormha 0.9.23 - separa funzioni consultabili e impostazioni nella sezione Altro
 (function(){
-  const VIEW_LABELS=['Esercizi','Settimana e Coach','Progressi e misure','Alimentazione','Integratori'];
-  const SETTINGS_LABELS=['Profilo','Connessioni e dispositivi'];
+  const VIEW_LABELS=['Esercizi','Settimana e Coach','Progressi e misure','Alimentazione'];
+  const SETTINGS_LABELS=['Profilo','Connessioni e dispositivi','Integratori'];
   const clean=s=>(s||'').replace(/^🏋️\s*/,'').trim();
 
   function pickButton(profile,label){
