@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.26
+ARG BUILD_VERSION=0.9.27
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.26-supplements-settings-dom-fix
+ARG INFORMA_CACHE_BUST=0.9.27-nutrition-homestock-settings
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -42,22 +42,23 @@ COPY management_accordion_0921.py /app/management_accordion_0921.py
 COPY remove_legacy_guide_manager_0922.py /app/remove_legacy_guide_manager_0922.py
 COPY supplements_split_0923.py /app/supplements_split_0923.py
 COPY supplements_settings_fix_0926.py /app/supplements_settings_fix_0926.py
+COPY nutrition_homestock_0927.py /app/nutrition_homestock_0927.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
- && grep -Fq "SETTINGS_LABELS=['Profilo','Connessioni e dispositivi','Integratori']" /app/web/profile_sections_0912.js \
+ && grep -Fq "SETTINGS_LABELS=['Profilo','Connessioni e dispositivi','Integratori','Alimentazione']" /app/web/profile_sections_0912.js \
  && grep -Fq "Piastra / pin" /app/web/load_fields_0913.js \
  && grep -Fq "GUIDE_IDS_36" /app/guide_manager_0914.py \
  && grep -Fq "persistent_toggle=1" /app/exercise_toggle_0915.py \
  && grep -Fq "native_accordion=1" /app/management_accordion_0921.py \
  && grep -Fq "legacy_upload_manager_removed=1" /app/web/guides_040.js \
  && grep -Fq "settings_daily_split=1" /app/supplements_split_0923.py \
- && grep -Fq "window.if923EnsureSettingsPage=ensureSettingsPage" /app/web/supplements_split_0923.js \
- && grep -Fq "window.if923LoadSettings=loadSettings" /app/web/supplements_split_0923.js \
  && grep -Fq "app.appendChild(page)" /app/web/supplements_split_0923.js \
- && ! grep -Fq "insertBefore(page,nav" /app/web/supplements_split_0923.js \
  && grep -Fq "settings_page_dom_fix=1" /app/supplements_settings_fix_0926.py \
- && printf '%s\n' "InFormha 0.9.26 supplements-settings-dom-fix" > /app/BUILD_ID \
+ && grep -Fq "api/homestock/catalog" /app/web/nutrition_homestock_0927.js \
+ && grep -Fq "nutrition-settings-0927" /app/web/nutrition_homestock_0927.js \
+ && grep -Fq "homestock_catalog=1" /app/nutrition_homestock_0927.py \
+ && printf '%s\n' "InFormha 0.9.27 nutrition-homestock-settings" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -85,9 +86,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/profile_sections_0912.js >> /app/web/app.js \
  && cat /app/web/load_fields_0913.js >> /app/web/app.js \
  && cat /app/web/management_accordion_0921.js >> /app/web/app.js \
- && cat /app/web/supplements_split_0923.js >> /app/web/app.js
+ && cat /app/web/supplements_split_0923.js >> /app/web/app.js \
+ && cat /app/web/nutrition_homestock_0927.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "supplements_settings_fix_0926:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "nutrition_homestock_0927:app"]
