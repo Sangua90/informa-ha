@@ -1,4 +1,4 @@
-// InFormha 0.9.24 - separa impostazioni integratori e promemoria quotidiano
+// InFormha 0.9.26 - separa impostazioni integratori e promemoria quotidiano
 (function(){
   const DAY_NAMES=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
   let settingsCache=[];
@@ -12,7 +12,7 @@
     if(page)return page;
     page=document.createElement('section');page.className='page';page.dataset.page='supplement-settings-0923';
     page.innerHTML='<div class="ey">Impostazioni</div><h1>Integratori</h1><div class="sub">Configura cosa prendi, dose, giorni e orario. La barra Integratori in basso resta solo per il promemoria quotidiano.</div><div id="if923SettingsHost"></div><button class="btn secondary" onclick="go(\'profile\')">Indietro</button>';
-    const app=document.querySelector('.app'),nav=document.querySelector('.nav');if(app)app.insertBefore(page,nav||null);
+    const app=document.querySelector('.app');if(app)app.appendChild(page);
     return page;
   }
 
