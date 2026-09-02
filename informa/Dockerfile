@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.21
+ARG BUILD_VERSION=0.9.22
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.21-native-accordion-management
+ARG INFORMA_CACHE_BUST=0.9.22-remove-legacy-guide-manager
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -39,6 +39,7 @@ COPY compact_management_0918.py /app/compact_management_0918.py
 COPY compact_management_0919.py /app/compact_management_0919.py
 COPY compact_management_0920.py /app/compact_management_0920.py
 COPY management_accordion_0921.py /app/management_accordion_0921.py
+COPY remove_legacy_guide_manager_0922.py /app/remove_legacy_guide_manager_0922.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -48,9 +49,10 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "persistent_toggle=1" /app/exercise_toggle_0915.py \
  && grep -Fq "native_accordion=1" /app/management_accordion_0921.py \
  && grep -Fq "<details class=\"if921-section\"" /app/web/management_accordion_0921.js \
- && grep -Fq "Gestione foto esercizi" /app/web/management_accordion_0921.js \
- && grep -Fq "Gestione esercizi" /app/web/management_accordion_0921.js \
- && printf '%s\n' "InFormha 0.9.21 native-accordion-management" > /app/BUILD_ID \
+ && grep -Fq "legacy_upload_manager_removed=1" /app/web/guides_040.js \
+ && ! grep -Fq "Carica / sostituisci" /app/web/guides_040.js \
+ && ! grep -Fq "Immagini esercizi" /app/web/guides_040.js \
+ && printf '%s\n' "InFormha 0.9.22 remove-legacy-guide-manager" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -83,4 +85,4 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "management_accordion_0921:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "remove_legacy_guide_manager_0922:app"]
