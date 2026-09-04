@@ -1,0 +1,31 @@
+// InFormha 0.9.40 - pannello controllo Apple Salute con categorie e timestamp
+(function(){
+  const esc=v=>{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
+  const LABELS={
+    step_count:'Passi',walking_running_distance:'Distanza cammino/corsa',flights_climbed:'Piani saliti',walking_speed:'Velocità cammino',walking_step_length:'Lunghezza passo',walking_double_support_percentage:'Doppio appoggio',walking_asymmetry_percentage:'Asimmetria cammino',
+    active_energy:'Calorie attive',basal_energy_burned:'Energia basale',apple_exercise_time:'Tempo esercizio',apple_stand_hour:'Ore in piedi',apple_stand_time:'Tempo in piedi',physical_effort:'Sforzo fisico',
+    resting_heart_rate:'FC a riposo',heart_rate_min:'FC minima',heart_rate_average:'FC media',heart_rate_max:'FC massima',heart_rate_variability:'HRV',walking_heart_rate_average:'FC media cammino',vo2_max:'VO₂ max',blood_oxygen_saturation:'Saturazione ossigeno',
+    body_mass:'Peso',body_mass_index:'BMI',body_fat_percentage:'Massa grassa',lean_body_mass:'Massa magra',
+    sleep_analysis:'Sonno',dietary_water:'Acqua',dietary_energy:'Calorie alimentari',environmental_audio_exposure:'Esposizione audio ambientale'
+  };
+  const GROUPS=[
+    ['Attività e camminata',['step_count','walking_running_distance','flights_climbed','walking_speed','walking_step_length','walking_double_support_percentage','walking_asymmetry_percentage']],
+    ['Energia e movimento',['active_energy','basal_energy_burned','apple_exercise_time','apple_stand_hour','apple_stand_time','physical_effort']],
+    ['Cuore e fitness',['resting_heart_rate','heart_rate_min','heart_rate_average','heart_rate_max','heart_rate_variability','walking_heart_rate_average','vo2_max','blood_oxygen_saturation']],
+    ['Corpo',['body_mass','body_mass_index','body_fat_percentage','lean_body_mass']],
+    ['Sonno',['sleep_analysis']],
+    ['Nutrizione e idratazione',['dietary_water','dietary_energy']],
+    ['Altri dati',['environmental_audio_exposure']]
+  ];
+  const fmt=x=>!x||x.value===null||x.value===undefined||x.value===''?'—':`${esc(x.value)}${x.unit?` ${esc(x.unit)}`:''}`;
+  function fmtTs(raw){if(!raw)return'—';const d=new Date(raw);return Number.isNaN(d.getTime())?esc(raw):d.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+  function ageClass(raw){if(!raw)return'';const t=new Date(raw).getTime();if(!Number.isFinite(t))return'';const h=(Date.now()-t)/3600000;return h<=2?'green':h<=24?'':'if940Old';}
+  function appleCard(){const page=document.querySelector('[data-page="connections"]');if(!page)return null;return [...page.querySelectorAll(':scope > .card')].find(c=>{const t=(c.textContent||'').toLowerCase();return t.includes('apple salute')&&t.includes('healthsync')})||null;}
+  function newest(metrics){let best=null;for(const m of Object.values(metrics||{})){const raw=m?.last_updated;if(!raw)continue;const t=new Date(raw).getTime();if(Number.isFinite(t)&&(!best||t>best.t))best={t,raw};}return best?.raw||null;}
+  function groupHtml(title,keys,metrics){const rows=keys.filter(k=>metrics[k]).map(k=>{const m=metrics[k];return `<div class="if940Row"><div><span>${esc(LABELS[k]||k)}</span><b>${fmt(m)}</b></div><small class="${ageClass(m.last_updated)}">${fmtTs(m.last_updated)}</small></div>`}).join('');if(!rows)return'';return `<details class="if940Group"><summary>${esc(title)}</summary>${rows}</details>`;}
+  async function load(){const host=document.getElementById('if940HealthHost');if(!host)return;host.innerHTML='<div class="sub">Lettura dati Apple Salute…</div>';try{const d=await api('api/healthsync'),metrics=d.metrics||{},connected=!!d.connected,found=Number(d.found||0),last=newest(metrics);const groups=GROUPS.map(([t,k])=>groupHtml(t,k,metrics)).join('');host.innerHTML=`<div class="measure"><span>Collegamento</span><b class="${connected?'green':''}">${connected?'● Attivo':'● Nessun dato'}</b></div><div class="measure"><span>Dati ricevuti</span><b>${found}</b></div><div class="measure"><span>Ultima sincronizzazione</span><b class="${ageClass(last)}">${fmtTs(last)}</b></div>${groups||'<div class="sub" style="margin-top:10px">Nessun dato Health Auto Export disponibile.</div>'}<button class="btn secondary" type="button" id="if940Refresh">Aggiorna dati</button>`;document.getElementById('if940Refresh')?.addEventListener('click',load);}catch(e){host.innerHTML=`<div class="sub">${esc(e.message||'Errore lettura dati Apple Salute')}</div>`;}}
+  function install(){const card=appleCard();if(!card)return;document.getElementById('if935HealthHost')?.remove();document.getElementById('if935Hint')?.remove();if(card.dataset.if940Ready==='1')return;card.dataset.if940Ready='1';card.style.cursor='pointer';const body=document.createElement('div');body.id='if940HealthHost';body.className='hide';body.style.marginTop='14px';card.appendChild(body);const hint=document.createElement('div');hint.id='if940Hint';hint.className='sub';hint.style.marginTop='10px';hint.textContent='Tocca per controllare i dati Apple Salute e l’ultimo aggiornamento.';card.appendChild(hint);card.addEventListener('click',e=>{if(e.target.closest('button,summary,details'))return;const open=body.classList.contains('hide');body.classList.toggle('hide',!open);hint.textContent=open?'Tocca di nuovo per chiudere.':'Tocca per controllare i dati Apple Salute e l’ultimo aggiornamento.';if(open)load();});}
+  const css=document.createElement('style');css.textContent='#if940HealthHost{border-top:1px solid var(--ln);padding-top:12px}.if940Group{border-top:1px solid var(--ln);padding:10px 0}.if940Group summary{font-weight:700;cursor:pointer}.if940Row{padding:9px 0;border-top:1px solid rgba(255,255,255,.05)}.if940Row>div{display:flex;justify-content:space-between;gap:12px;align-items:center}.if940Row small{display:block;margin-top:4px;opacity:.72}.if940Old{color:#f2b84b!important}';document.head.appendChild(css);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,300));else setTimeout(install,300);setTimeout(install,900);setInterval(install,2000);
+  console.log('[INFORMHA_HEALTH_DASHBOARD] version=0.9.40 apple_health_categories=1 per_metric_timestamp=1');
+})();
