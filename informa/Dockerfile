@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.41
+ARG BUILD_VERSION=0.9.42
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.41-apple-health-dashboard-all-metrics
+ARG INFORMA_CACHE_BUST=0.9.42-health-auto-export-rest
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -10,7 +10,7 @@ LABEL \
   io.hass.arch="${BUILD_ARCH}"
 
 WORKDIR /app
-RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0
+RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0 websocket-client==1.8.0
 
 COPY app.py /app/app.py
 COPY guide_patch.py /app/guide_patch.py
@@ -57,6 +57,7 @@ COPY calibration_mode_0938.py /app/calibration_mode_0938.py
 COPY health_context_0939.py /app/health_context_0939.py
 COPY health_dashboard_0940.py /app/health_dashboard_0940.py
 COPY health_dashboard_0941.py /app/health_dashboard_0941.py
+COPY health_rest_0942.py /app/health_rest_0942.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -95,7 +96,12 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "per_metric_timestamp=1" /app/web/health_dashboard_0940.js \
  && grep -Fq "show_all_hae_metrics=1" /app/health_dashboard_0941.py \
  && grep -Fq "dynamic_uncategorized=1" /app/web/health_dashboard_0941.js \
- && printf '%s\n' "InFormha 0.9.41 apple-health-dashboard-all-metrics" > /app/BUILD_ID \
+ && grep -Fq "ha_event_bridge=1" /app/health_rest_0942.py \
+ && grep -Fq "raw_payload_archive=1" /app/health_rest_0942.py \
+ && grep -Fq "metric_history=1" /app/health_rest_0942.py \
+ && grep -Fq "workout_dedup=1" /app/health_rest_0942.py \
+ && grep -Fq "api/health-auto-export/rest-status" /app/health_rest_0942.py \
+ && printf '%s\n' "InFormha 0.9.42 health-auto-export-rest" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -142,4 +148,4 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "health_dashboard_0941:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "health_rest_0942:app"]
