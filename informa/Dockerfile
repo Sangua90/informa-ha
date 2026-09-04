@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.39
+ARG BUILD_VERSION=0.9.40
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.39-health-auto-export-context
+ARG INFORMA_CACHE_BUST=0.9.40-apple-health-dashboard
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -55,6 +55,7 @@ COPY equipment_details_0936.py /app/equipment_details_0936.py
 COPY calibration_mode_0937.py /app/calibration_mode_0937.py
 COPY calibration_mode_0938.py /app/calibration_mode_0938.py
 COPY health_context_0939.py /app/health_context_0939.py
+COPY health_dashboard_0940.py /app/health_dashboard_0940.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -89,7 +90,9 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "coach_context=1" /app/health_context_0939.py \
  && grep -Fq "gemini_context=1" /app/health_context_0939.py \
  && grep -Fq "api/health-context-0939" /app/health_context_0939.py \
- && printf '%s\n' "InFormha 0.9.39 health-auto-export-context" > /app/BUILD_ID \
+ && grep -Fq "apple_health_categories=1" /app/health_dashboard_0940.py \
+ && grep -Fq "per_metric_timestamp=1" /app/web/health_dashboard_0940.js \
+ && printf '%s\n' "InFormha 0.9.40 apple-health-dashboard" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -129,9 +132,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/healthsync_relocate_0935.js >> /app/web/app.js \
  && cat /app/web/equipment_details_0936.js >> /app/web/app.js \
  && cat /app/web/calibration_mode_0937.js >> /app/web/app.js \
- && cat /app/web/calibration_mode_0938.js >> /app/web/app.js
+ && cat /app/web/calibration_mode_0938.js >> /app/web/app.js \
+ && cat /app/web/health_dashboard_0940.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "health_context_0939:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "health_dashboard_0940:app"]
