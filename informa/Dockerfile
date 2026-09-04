@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.37
+ARG BUILD_VERSION=0.9.38
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.37-calibration-mode
+ARG INFORMA_CACHE_BUST=0.9.38-calibration-counter-fix
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -53,6 +53,7 @@ COPY healthsync_status_0934.py /app/healthsync_status_0934.py
 COPY healthsync_relocate_0935.py /app/healthsync_relocate_0935.py
 COPY equipment_details_0936.py /app/equipment_details_0936.py
 COPY calibration_mode_0937.py /app/calibration_mode_0937.py
+COPY calibration_mode_0938.py /app/calibration_mode_0938.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -81,7 +82,9 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "equipment_details=1" /app/equipment_details_0936.py \
  && grep -Fq "adaptive_after=3" /app/calibration_mode_0937.py \
  && grep -Fq "api/calibration-0937" /app/web/calibration_mode_0937.js \
- && printf '%s\n' "InFormha 0.9.37 calibration-mode" > /app/BUILD_ID \
+ && grep -Fq "persistent_home_counter=1" /app/calibration_mode_0938.py \
+ && grep -Fq "api/calibration-0938" /app/web/calibration_mode_0938.js \
+ && printf '%s\n' "InFormha 0.9.38 calibration-counter-fix" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -120,9 +123,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/healthsync_status_0934.js >> /app/web/app.js \
  && cat /app/web/healthsync_relocate_0935.js >> /app/web/app.js \
  && cat /app/web/equipment_details_0936.js >> /app/web/app.js \
- && cat /app/web/calibration_mode_0937.js >> /app/web/app.js
+ && cat /app/web/calibration_mode_0937.js >> /app/web/app.js \
+ && cat /app/web/calibration_mode_0938.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "calibration_mode_0937:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "calibration_mode_0938:app"]
