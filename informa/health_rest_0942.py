@@ -186,6 +186,10 @@ def _listen_once():
         ack = json.loads(ws.recv())
         if ack.get("type") != "result" or not ack.get("success"):
             raise RuntimeError("Sottoscrizione evento Health Auto Export fallita")
+        # The 30-second timeout is useful for the handshake, but health exports can
+        # be hours apart. Wait indefinitely after subscribing so idle periods do
+        # not create reconnect gaps in which an event could be missed.
+        ws.settimeout(None)
         print("[INFORMHA_HEALTH_REST] websocket_subscribed event=informha_health_auto_export", flush=True)
         while True:
             msg = json.loads(ws.recv())
