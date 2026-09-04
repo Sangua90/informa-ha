@@ -6,7 +6,7 @@
   function fmtTs(x){const raw=x?.value||x?.last_updated;if(!raw)return'—';const d=new Date(raw);return Number.isNaN(d.getTime())?esc(raw):d.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
   function appleCard(){
     const page=document.querySelector('[data-page="connections"]');if(!page)return null;
-    return [...page.querySelectorAll(':scope > .card')].find(c=>{const t=(c.textContent||'').toLowerCase();return t.includes('apple salute')&&t.includes('healthsync')})||null;
+    return [...page.querySelectorAll(':scope > .card')].find(c=>{const t=(c.textContent||'').toLowerCase();return t.includes('apple salute')&&(t.includes('health auto export')||t.includes('healthsync'))})||null;
   }
   function removeDuplicate(){document.getElementById('if934Health')?.remove()}
   async function load(){
@@ -15,7 +15,7 @@
     try{
       const d=await api('api/healthsync'),data=d.data||{},connected=!!d.connected,found=Number(d.found||0),last=data.last_sync;
       const rows=Object.entries(LABELS).filter(([k])=>data[k]).map(([k,label])=>`<div class="measure"><span>${esc(label)}</span><b>${fmt(data[k])}</b></div>`).join('');
-      host.innerHTML=`<div class="measure"><span>Collegamento</span><b class="${connected?'green':''}">${connected?'● Attivo':'● Nessun dato trovato'}</b></div><div class="measure"><span>Sensori riconosciuti</span><b>${found}</b></div><div class="measure"><span>Ultimo aggiornamento</span><b>${fmtTs(last)}</b></div>${rows?`<div class="if935HealthRows">${rows}</div>`:'<div class="sub" style="margin-top:10px">Nessun sensore Health Sync compatibile trovato.</div>'}<button class="btn secondary" type="button" id="if935Refresh">Aggiorna dati</button>`;
+      host.innerHTML=`<div class="measure"><span>Collegamento</span><b class="${connected?'green':''}">${connected?'● Attivo':'● Nessun dato trovato'}</b></div><div class="measure"><span>Sensori riconosciuti</span><b>${found}</b></div><div class="measure"><span>Ultimo aggiornamento</span><b>${fmtTs(last)}</b></div>${rows?`<div class="if935HealthRows">${rows}</div>`:'<div class="sub" style="margin-top:10px">Nessun sensore Health Auto Export compatibile trovato.</div>'}<button class="btn secondary" type="button" id="if935Refresh">Aggiorna dati</button>`;
       document.getElementById('if935Refresh')?.addEventListener('click',load);
     }catch(e){host.innerHTML=`<div class="sub">${esc(e.message||'Errore lettura dati automatici')}</div>`}
   }

@@ -15,7 +15,7 @@
     ['Nutrizione e idratazione',k=>/(dietary|water|protein|carb|fat|fiber|sugar|caffeine|vitamin|mineral)/.test(k)],
     ['Altri dati',k=>true]
   ];
-  function appleCard(){const page=document.querySelector('[data-page="connections"]');if(!page)return null;return [...page.querySelectorAll(':scope > .card')].find(c=>{const t=(c.textContent||'').toLowerCase();return t.includes('apple salute')&&t.includes('healthsync')})||null;}
+  function appleCard(){const page=document.querySelector('[data-page="connections"]');if(!page)return null;return [...page.querySelectorAll(':scope > .card')].find(c=>{const t=(c.textContent||'').toLowerCase();return t.includes('apple salute')&&(t.includes('health auto export')||t.includes('healthsync'))})||null;}
   function newest(metrics){let best=null;for(const m of Object.values(metrics||{})){const raw=m?.last_updated;if(!raw)continue;const t=new Date(raw).getTime();if(Number.isFinite(t)&&(!best||t>best.t))best={t,raw};}return best?.raw||null;}
   function row(k,m){return `<div class="if941Row"><div><span>${esc(LABELS[k]||fmtName(k))}</span><b>${fmt(m)}</b></div><small class="${ageClass(m?.last_updated)}">${fmtTs(m?.last_updated)}</small><small class="if941Entity">hae.homeassistant_${esc(k)}</small></div>`;}
   function grouped(metrics){const remaining=new Set(Object.keys(metrics||{}));const out=[];for(const [title,test] of GROUPS){const keys=[];for(const k of [...remaining]){if(test(k)){keys.push(k);remaining.delete(k);if(title==='Altri dati')continue;}}if(keys.length)out.push(`<details class="if941Group"><summary>${esc(title)} <span>(${keys.length})</span></summary>${keys.sort().map(k=>row(k,metrics[k])).join('')}</details>`);if(title==='Altri dati')break;}return out.join('');}
