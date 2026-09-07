@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.47
+ARG BUILD_VERSION=0.9.48
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.47-health-metrics
+ARG INFORMA_CACHE_BUST=0.9.48-daily-summary
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -116,10 +116,11 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "compact_sets=1" /app/web/workout_tv_layout_0946.js \
  && grep -Fq "daily_aggregation=1" /app/health_metrics_0947.py \
  && grep -Fq "heart_min_avg_max=1" /app/health_metrics_0947.py \
+ && grep -Fq "daily_summary_preferred=1" /app/health_metrics_0947.py \
  && grep -Fq "Tipi ricevuti" /app/web/health_rest_dashboard_0944.js \
  && grep -Fq "Salute oggi · Health Auto Export" /app/web/app.js \
  && grep -Fq "<h2>Health Auto Export</h2>" /app/web/index.html \
- && printf '%s\n' "InFormha 0.9.47 health-metrics" > /app/BUILD_ID \
+ && printf '%s\n' "InFormha 0.9.48 daily-summary" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \

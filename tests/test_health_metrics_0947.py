@@ -176,6 +176,24 @@ class HealthMetrics0947Test(unittest.TestCase):
         self.assertIn("time_in_daylight", snapshot["metrics"])
         self.assertIn("stair_speed_down", snapshot["metrics"])
 
+    def test_daily_summary_replaces_older_granular_samples(self):
+        # Old granular exports from iPhone/Watch remain in the archive, but the
+        # new midnight bucket is Apple's already-deduplicated daily total.
+        self.add("step_count", "2026-09-07 08:00:00 +0200", {"qty": 2100})
+        self.add("step_count", "2026-09-07 15:00:00 +0200", {"qty": 4167})
+        self.add("step_count", "2026-09-07 21:26:00 +0200", {"qty": 2800})
+        self.add("step_count", "2026-09-07 00:00:00 +0200", {"qty": 4902}, received_at="2026-09-07T21:36:00")
+        self.add("walking_running_distance", "2026-09-07 09:00:00 +0200", {"qty": 3.2}, "km")
+        self.add("walking_running_distance", "2026-09-07 18:00:00 +0200", {"qty": 3.351}, "km")
+        self.add("walking_running_distance", "2026-09-07 00:00:00 +0200", {"qty": 3.4}, "km", "2026-09-07T21:36:00")
+
+        metrics = self.module._health_metrics_snapshot_0947()["metrics"]
+
+        self.assertEqual(4902, metrics["step_count"]["value"])
+        self.assertEqual(1, metrics["step_count"]["samples"])
+        self.assertEqual(3.4, metrics["walking_running_distance"]["value"])
+        self.assertEqual(1, metrics["walking_running_distance"]["samples"])
+
     def test_frontend_reports_types_values_and_real_last_import(self):
         project = Path(__file__).parents[1]
         javascript = (project / "informa" / "web" / "health_rest_dashboard_0944.js").read_text()

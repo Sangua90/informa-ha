@@ -8,7 +8,7 @@ import health_rest_dashboard_0944 as health_base
 import workout_tv_layout_0946 as base
 
 app = base.app
-root.VERSION = "0.9.47"
+root.VERSION = "0.9.48"
 
 
 SUM_METRICS = {
@@ -125,7 +125,21 @@ def _metric_samples():
         grouped[name].append(item)
     for samples in grouped.values():
         samples.sort(key=lambda item: item[0] or "")
+        # A Health Auto Export automation grouped by day produces one bucket at
+        # midnight. When that bucket is present it already contains Apple's
+        # source-deduplicated daily result, so mixing it with older granular
+        # samples would double count iPhone and Apple Watch contributions.
+        daily = [item for item in samples if _is_daily_summary_timestamp(item[0])]
+        if daily:
+            samples[:] = daily[-1:]
     return grouped, days, units
+
+
+def _is_daily_summary_timestamp(timestamp):
+    value = str(timestamp or "").strip()
+    if len(value) == 10:
+        return True
+    return " 00:00:00" in value or "T00:00:00" in value
 
 
 def _convert_energy(metric_name, value, unit):
@@ -256,8 +270,8 @@ root.healthsync_snapshot = _health_metrics_snapshot_0947
 health_context._health_auto_export_snapshot_0939 = _health_metrics_snapshot_0947
 
 
-@app.get('/api/health-metrics-0947-info')
-def health_metrics_0947_info():
+@app.get('/api/health-metrics-0948-info')
+def health_metrics_0948_info():
     snapshot = _health_metrics_snapshot_0947()
     return root.jsonify(
         ok=True,
@@ -268,7 +282,8 @@ def health_metrics_0947_info():
         heart_min_avg_max=True,
         energy_kcal=True,
         rounded_values=True,
+        daily_summary_preferred=True,
     )
 
 
-print("[INFORMHA_HEALTH_METRICS] version=0.9.47 daily_aggregation=1 heart_min_avg_max=1 energy_kcal=1 rounded_values=1", flush=True)
+print("[INFORMHA_HEALTH_METRICS] version=0.9.48 daily_aggregation=1 heart_min_avg_max=1 energy_kcal=1 rounded_values=1 daily_summary_preferred=1", flush=True)
