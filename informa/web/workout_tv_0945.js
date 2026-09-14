@@ -13,6 +13,7 @@
 
   function firstPendingIndex(cards){
     const index=cards.findIndex(card=>{
+      if(card.classList.contains('if949-archived'))return false;
       const checks=[...card.querySelectorAll('.check')];
       return checks.length?checks.some(button=>!button.classList.contains('done')):!card.querySelector('.choice button.on');
     });
@@ -39,11 +40,13 @@
     if(syncing)return;syncing=true;
     try{
       const cards=exerciseCards(),stage=ensureStage();if(!stage||!cards.length)return;
+      const forced=Number.parseInt(document.body.dataset.if950ExerciseIndex||'',10);
+      if(Number.isFinite(forced))currentIndex=forced;
       currentIndex=Math.max(0,Math.min(currentIndex,cards.length-1));
       cards.forEach((card,index)=>card.classList.toggle('if945-current',index===currentIndex));
       const current=cards[currentIndex];
       const name=current.querySelector('h2')?.textContent?.trim()||'Esercizio';
-      const next=cards[currentIndex+1]?.querySelector('h2')?.textContent?.trim()||'Fine allenamento';
+      const next=cards.slice(currentIndex+1).find(card=>!card.classList.contains('if949-archived'))?.querySelector('h2')?.textContent?.trim()||'Fine allenamento';
       const progress=sessionProgress(cards);
       stage.innerHTML=`
         <div class="if945-tv-brand"><span>In</span><b>Form</b><i>Ha</i><em>TV</em></div>

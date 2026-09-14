@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.49
+ARG BUILD_VERSION=0.9.50
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.49-workout-flow
+ARG INFORMA_CACHE_BUST=0.9.50-focused-timer
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -64,6 +64,7 @@ COPY workout_tv_0945.py /app/workout_tv_0945.py
 COPY workout_tv_layout_0946.py /app/workout_tv_layout_0946.py
 COPY health_metrics_0947.py /app/health_metrics_0947.py
 COPY workout_flow_0949.py /app/workout_flow_0949.py
+COPY workout_focus_0950.py /app/workout_focus_0950.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -120,10 +121,12 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "daily_summary_preferred=1" /app/health_metrics_0947.py \
  && grep -Fq "archive_before_replace=1" /app/workout_flow_0949.py \
  && grep -Fq "exercise_state_persistent=1" /app/web/workout_flow_0949.js \
+ && grep -Fq "single_exercise=1" /app/workout_focus_0950.py \
+ && grep -Fq "timer_auto_advance=1" /app/web/workout_focus_0950.js \
  && grep -Fq "Tipi ricevuti" /app/web/health_rest_dashboard_0944.js \
  && grep -Fq "Salute oggi · Health Auto Export" /app/web/app.js \
  && grep -Fq "<h2>Health Auto Export</h2>" /app/web/index.html \
- && printf '%s\n' "InFormha 0.9.49 workout-flow" > /app/BUILD_ID \
+ && printf '%s\n' "InFormha 0.9.50 focused-timer" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -169,9 +172,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/health_rest_dashboard_0944.js >> /app/web/app.js \
  && cat /app/web/workout_tv_0945.js >> /app/web/app.js \
  && cat /app/web/workout_tv_layout_0946.js >> /app/web/app.js \
- && cat /app/web/workout_flow_0949.js >> /app/web/app.js
+ && cat /app/web/workout_flow_0949.js >> /app/web/app.js \
+ && cat /app/web/workout_focus_0950.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "workout_flow_0949:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "workout_focus_0950:app"]
