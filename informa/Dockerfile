@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.53
+ARG BUILD_VERSION=0.9.54
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.53-approved-guides
+ARG INFORMA_CACHE_BUST=0.9.54-low-cable-catalog
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -68,6 +68,7 @@ COPY workout_focus_0950.py /app/workout_focus_0950.py
 COPY profile_weight_0951.py /app/profile_weight_0951.py
 COPY exercise_guide_0952.py /app/exercise_guide_0952.py
 COPY exercise_guides_0953.py /app/exercise_guides_0953.py
+COPY exercise_catalog_0954.py /app/exercise_catalog_0954.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -137,7 +138,9 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "Tipi ricevuti" /app/web/health_rest_dashboard_0944.js \
  && grep -Fq "Salute oggi · Health Auto Export" /app/web/app.js \
  && grep -Fq "<h2>Health Auto Export</h2>" /app/web/index.html \
- && printf '%s\n' "InFormha 0.9.53 approved-guides" > /app/BUILD_ID \
+ && grep -Fq "REMOVED_LOW_CABLE_IDS" /app/exercise_catalog_0954.py \
+ && grep -Fq "kept_preacher_curl=1" /app/web/exercise_catalog_0954.js \
+ && printf '%s\n' "InFormha 0.9.54 low-cable-catalog" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -187,9 +190,10 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/workout_focus_0950.js >> /app/web/app.js \
  && cat /app/web/profile_weight_0951.js >> /app/web/app.js \
  && cat /app/web/exercise_guide_0952.js >> /app/web/app.js \
- && cat /app/web/exercise_guides_0953.js >> /app/web/app.js
+ && cat /app/web/exercise_guides_0953.js >> /app/web/app.js \
+ && cat /app/web/exercise_catalog_0954.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_guides_0953:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_catalog_0954:app"]
