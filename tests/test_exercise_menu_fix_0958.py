@@ -40,6 +40,7 @@ class ExerciseMenuFix0958Test(unittest.TestCase):
             ),
         ]
         modules = {
+            "flask": types.SimpleNamespace(Response=DummyResponse),
             "app": root,
             "coach_library_096": types.SimpleNamespace(GROUPS=groups),
             "exercise_menu_fix_0957": types.SimpleNamespace(app=DummyApp()),
@@ -56,6 +57,9 @@ class ExerciseMenuFix0958Test(unittest.TestCase):
             self.assertEqual(2, page.count('<div class="measure">'))
             self.assertIn("Curl bicipiti al cavo basso con appoggio inclinato", page)
             self.assertIn('href="./?v=0958"', page)
+            response = module.exercise_library_0958()
+            self.assertIsInstance(response, DummyResponse)
+            self.assertIn('data-page="exercises-server"', response.body)
             self.assertEqual("0.9.58", root.VERSION)
         finally:
             for name, old in previous.items():
@@ -68,10 +72,10 @@ class ExerciseMenuFix0958Test(unittest.TestCase):
         index = (self.project / "informa" / "web" / "index.html").read_text()
         config = (self.project / "informa" / "config.yaml").read_text()
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertRegex(index, r'style\.css\?v=095[89]')
-        self.assertRegex(index, r'app\.js\?v=095[89]')
+        self.assertRegex(index, r'style\.css\?v=(?:095[89]|0960)')
+        self.assertRegex(index, r'app\.js\?v=(?:095[89]|0960)')
         self.assertRegex(config, r'version: "0\.9\.(?:5[89]|[6-9][0-9])"')
-        self.assertRegex(docker, r'exercise_menu_fix_095[89]:app')
+        self.assertRegex(docker, r'exercise_menu_fix_(?:095[89]|0960):app')
 
 
 if __name__ == "__main__":

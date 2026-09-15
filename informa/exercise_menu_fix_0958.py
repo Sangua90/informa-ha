@@ -1,5 +1,7 @@
 import html
 
+from flask import Response
+
 import app as root
 import coach_library_096
 import exercise_menu_fix_0957 as base
@@ -47,7 +49,7 @@ def _standalone_library():
 
 @app.get("/exercise-library-0958")
 def exercise_library_0958():
-    return root.Response(
+    return Response(
         _standalone_library(),
         content_type="text/html; charset=utf-8",
         headers={

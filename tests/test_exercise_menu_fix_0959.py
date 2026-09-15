@@ -13,11 +13,11 @@ class ExerciseMenuFix0959Test(unittest.TestCase):
     def test_router_is_loaded_before_the_application_script(self):
         index = (self.project / "informa" / "web" / "index.html").read_text()
         capture = index.index("document.addEventListener('click'")
-        application = index.index('<script src="app.js?v=0959"></script>')
+        application = index.index('<script src="app.js?v=0960"></script>')
         self.assertLess(capture, application)
         self.assertIn("event.stopImmediatePropagation()", index)
         self.assertIn("label!=='Esercizi'", index)
-        self.assertIn("exercise-library-0958?v=0959", index)
+        self.assertIn("exercise-library-0958?v=0960", index)
         self.assertIn("window.location.pathname.replace", index)
 
     def test_router_captures_any_exercise_control_before_old_handlers(self):
@@ -34,7 +34,7 @@ class ExerciseMenuFix0959Test(unittest.TestCase):
           const control={{textContent:'🏋️ Esercizi'}};
           handler({{target:{{closest:()=>control}},preventDefault:()=>prevented=true,stopImmediatePropagation:()=>stopped=true}});
           if(!prevented||!stopped)process.exit(2);
-          if(assigned!=='/api/hassio_ingress/token/exercise-library-0958?v=0959')process.exit(3);
+          if(assigned!=='/api/hassio_ingress/token/exercise-library-0958?v=0960')process.exit(3);
         """
         subprocess.run(["node", "-e", node], check=True)
 
@@ -65,9 +65,9 @@ class ExerciseMenuFix0959Test(unittest.TestCase):
 
         config = (self.project / "informa" / "config.yaml").read_text()
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('version: "0.9.59"', config)
+        self.assertRegex(config, r'version: "0\.9\.(?:59|6[0-9])"')
         self.assertIn("COPY exercise_menu_fix_0959.py /app/exercise_menu_fix_0959.py", docker)
-        self.assertIn("exercise_menu_fix_0959:app", docker)
+        self.assertRegex(docker, r'exercise_menu_fix_(?:0959|0960):app')
 
 
 if __name__ == "__main__":
