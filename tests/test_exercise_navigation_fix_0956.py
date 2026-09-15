@@ -52,9 +52,9 @@ class ExerciseNavigationFix0956Test(unittest.TestCase):
     def test_version_and_container_chain(self):
         config = (self.project / "informa" / "config.yaml").read_text()
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('version: "0.9.57"', config)
+        self.assertRegex(config, r'version: "0\.9\.(?:5[7-9]|[6-9][0-9])"')
         self.assertIn("COPY exercise_navigation_fix_0956.py /app/exercise_navigation_fix_0956.py", docker)
-        self.assertRegex(docker, r'exercise_(?:navigation_fix_0956|menu_fix_0957):app')
+        self.assertRegex(docker, r'exercise_(?:navigation_fix_0956|menu_fix_0957|menu_fix_0958):app')
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ class ExerciseMenuFix0957Test(unittest.TestCase):
     def test_server_injects_canonical_button_and_filtered_page(self):
         source = (self.project / "informa" / "coach_library_096.py").read_text()
         self.assertIn('id="exercisesStaticButton"', source)
-        self.assertIn("go(\\'exercises-static\\')", source)
+        self.assertIn('href="exercise-library-0958?v=0958"', source)
         self.assertIn("Curl bicipiti al cavo basso con appoggio inclinato", source)
         for removed in (
             "Rematore al cavo basso",
@@ -65,7 +65,7 @@ class ExerciseMenuFix0957Test(unittest.TestCase):
             self.assertEqual(1, response.html.count('id="exercisesStaticButton"'))
             self.assertEqual(1, response.html.count('data-page="exercises-static"'))
             self.assertEqual(24, response.html.count('<div class="measure">'))
-            self.assertIn("go('exercises-static')", response.html)
+            self.assertIn('href="exercise-library-0958?v=0958"', response.html)
         finally:
             for name, old in previous.items():
                 if old is None:
@@ -86,9 +86,9 @@ class ExerciseMenuFix0957Test(unittest.TestCase):
     def test_version_and_container_entrypoint(self):
         config = (self.project / "informa" / "config.yaml").read_text()
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('version: "0.9.57"', config)
+        self.assertRegex(config, r'version: "0\.9\.(?:5[7-9]|[6-9][0-9])"')
         self.assertIn("COPY exercise_menu_fix_0957.py /app/exercise_menu_fix_0957.py", docker)
-        self.assertIn("exercise_menu_fix_0957:app", docker)
+        self.assertRegex(docker, r'exercise_menu_fix_095[78]:app')
 
 
 if __name__ == "__main__":

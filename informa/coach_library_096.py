@@ -75,7 +75,7 @@ def _exercise_page():
         '<div class="ey">Altro</div><h1>Esercizi</h1>'
         f'<div class="sub" style="margin-bottom:14px">Libreria completa InFormha · {total} esercizi · build 0.9.8</div>'
         + "".join(cards)
-        + '<button class="btn secondary" onclick="go(\'profile\')">Indietro</button></section>'
+        + '<a class="btn secondary" href="./?v=0958">Indietro</a></section>'
     )
 
 
@@ -97,8 +97,8 @@ def exercises_backend_096(response):
             if 'id="exercisesStaticButton"' not in html:
                 marker = '<button class="btn secondary" onclick="go(\'coach\')">Settimana e Coach</button>'
                 button = (
-                    '<button id="exercisesStaticButton" class="btn secondary" '
-                    'onclick="go(\'exercises-static\')">🏋️ Esercizi</button>'
+                    '<a id="exercisesStaticButton" class="btn secondary" '
+                    'href="exercise-library-0958?v=0958">🏋️ Esercizi</a>'
                 )
                 html = html.replace(marker, button + marker, 1)
             html = html.replace("go('exercises')", "go('exercises-static')")

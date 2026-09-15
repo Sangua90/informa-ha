@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.57
+ARG BUILD_VERSION=0.9.58
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.57-exercise-menu-fix
+ARG INFORMA_CACHE_BUST=0.9.58-server-exercise-menu
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -72,6 +72,7 @@ COPY exercise_catalog_0954.py /app/exercise_catalog_0954.py
 COPY exercise_library_fix_0955.py /app/exercise_library_fix_0955.py
 COPY exercise_navigation_fix_0956.py /app/exercise_navigation_fix_0956.py
 COPY exercise_menu_fix_0957.py /app/exercise_menu_fix_0957.py
+COPY exercise_menu_fix_0958.py /app/exercise_menu_fix_0958.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -147,7 +148,9 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "direct_library_navigation=1" /app/exercise_navigation_fix_0956.py \
  && grep -Fq "canonical_page=exercises-static" /app/exercise_menu_fix_0957.py \
  && grep -Fq 'id="exercisesStaticButton"' /app/coach_library_096.py \
- && printf '%s\n' "InFormha 0.9.57 exercise-menu-fix" > /app/BUILD_ID \
+ && grep -Fq "javascript_independent=1" /app/exercise_menu_fix_0958.py \
+ && grep -Fq 'app.js?v=0958' /app/web/index.html \
+ && printf '%s\n' "InFormha 0.9.58 server-exercise-menu" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -203,4 +206,4 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_menu_fix_0957:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_menu_fix_0958:app"]
