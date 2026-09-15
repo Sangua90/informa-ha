@@ -65,9 +65,22 @@
 
   function routeExercisesButton(){
     const legacy=document.getElementById('if63ExercisesButton');
-    if(legacy)legacy.onclick=()=>{applyCatalog();renderLibraries();go('exercise-library-063')};
+    if(legacy)legacy.onclick=openExerciseLibrary;
     const modern=document.getElementById('if62ExercisesButton');
-    if(modern)modern.onclick=()=>{applyCatalog();renderLibraries();go('exercises')};
+    if(modern)modern.onclick=openExerciseLibrary;
+  }
+
+  function openExerciseLibrary(){
+    applyCatalog();
+    renderLibraries();
+    routeExercisesButton();
+    const page=ensurePage('exercise-library-063');
+    if(!page)return;
+    document.querySelectorAll('.page').forEach(item=>item.classList.remove('active'));
+    page.classList.add('active');
+    document.querySelectorAll('.nav button').forEach(button=>button.classList.toggle('on',button.dataset.nav==='profile'));
+    if(typeof window.scrollTo==='function')window.scrollTo({top:0,behavior:'auto'});
+    if(typeof history!=='undefined'&&typeof history.replaceState==='function')history.replaceState(null,'','#exercise-library-063');
   }
 
   function refresh(){
@@ -77,9 +90,17 @@
 
   refresh();
   document.addEventListener('click',event=>{
-    if(event.target.closest('[onclick*="exercises"],#if63ExercisesButton,#if62ExercisesButton'))setTimeout(refresh,80);
-  });
+    const button=event.target.closest('button');
+    const label=(button?.textContent||'').replace(/^🏋️\s*/,'').trim();
+    if(button?.closest('[data-page="profile"]')&&label==='Esercizi'){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openExerciseLibrary();
+      return;
+    }
+    if(event.target.closest('[onclick*="exercises"]'))setTimeout(refresh,80);
+  },true);
   setTimeout(refresh,500);
   setInterval(routeExercisesButton,1200);
-  console.log('[INFORMHA_EXERCISE_CATALOG] version=0.9.54 removed_low_cable=12 kept_preacher_curl=1');
+  console.log('[INFORMHA_EXERCISE_CATALOG] version=0.9.56 removed_low_cable=12 kept_preacher_curl=1 direct_library_navigation=1');
 })();

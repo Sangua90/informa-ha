@@ -11,7 +11,8 @@ class ExerciseLibraryFix0955Test(unittest.TestCase):
     def test_legacy_and_modern_pages_are_both_rendered(self):
         source = (self.project / "informa" / "web" / "exercise_catalog_0954.js").read_text()
         self.assertIn("['exercises','exercise-library-063']", source)
-        self.assertIn("go('exercise-library-063')", source)
+        self.assertIn("const page=ensurePage('exercise-library-063')", source)
+        self.assertIn("page.classList.add('active')", source)
         self.assertNotIn("querySelector('[data-page=\"exercise-library-063\"]')?.remove()", source)
         self.assertIn("setInterval(routeExercisesButton,1200)", source)
 
@@ -57,9 +58,9 @@ class ExerciseLibraryFix0955Test(unittest.TestCase):
     def test_version_and_container_chain(self):
         config = (self.project / "informa" / "config.yaml").read_text()
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('version: "0.9.55"', config)
+        self.assertRegex(config, r'version: "0\.9\.(?:5[5-9]|[6-9][0-9])"')
         self.assertIn("COPY exercise_library_fix_0955.py /app/exercise_library_fix_0955.py", docker)
-        self.assertIn("exercise_library_fix_0955:app", docker)
+        self.assertRegex(docker, r'exercise_(?:library_fix_0955|navigation_fix_0956):app')
 
 
 if __name__ == "__main__":

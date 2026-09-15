@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.55
+ARG BUILD_VERSION=0.9.56
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.55-exercise-library-fix
+ARG INFORMA_CACHE_BUST=0.9.56-exercise-navigation-fix
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -70,6 +70,7 @@ COPY exercise_guide_0952.py /app/exercise_guide_0952.py
 COPY exercise_guides_0953.py /app/exercise_guides_0953.py
 COPY exercise_catalog_0954.py /app/exercise_catalog_0954.py
 COPY exercise_library_fix_0955.py /app/exercise_library_fix_0955.py
+COPY exercise_navigation_fix_0956.py /app/exercise_navigation_fix_0956.py
 COPY web /app/web
 RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "build 0.9.11" /app/web/interface_063.js \
@@ -142,7 +143,8 @@ RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
  && grep -Fq "REMOVED_LOW_CABLE_IDS" /app/exercise_catalog_0954.py \
  && grep -Fq "kept_preacher_curl=1" /app/web/exercise_catalog_0954.js \
  && grep -Fq "legacy_page_preserved=1" /app/exercise_library_fix_0955.py \
- && printf '%s\n' "InFormha 0.9.55 exercise-library-fix" > /app/BUILD_ID \
+ && grep -Fq "direct_library_navigation=1" /app/exercise_navigation_fix_0956.py \
+ && printf '%s\n' "InFormha 0.9.56 exercise-navigation-fix" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
@@ -198,4 +200,4 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_library_fix_0955:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_navigation_fix_0956:app"]
