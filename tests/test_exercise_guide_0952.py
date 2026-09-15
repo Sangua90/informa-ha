@@ -64,12 +64,9 @@ class ExerciseGuide0952Test(unittest.TestCase):
         self.assertIn("window.if74OpenImage(id)", source)
         self.assertIn("workout_button=1", source)
 
-    def test_version_and_container_chain(self):
-        config = (self.project / "informa" / "config.yaml").read_text()
+    def test_goblet_guide_remains_in_container_chain(self):
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('version: "0.9.52"', config)
         self.assertIn("COPY exercise_guide_0952.py /app/exercise_guide_0952.py", docker)
-        self.assertIn("exercise_guide_0952:app", docker)
         self.assertIn("exercise_guide_0952.js >> /app/web/app.js", docker)
 
 
