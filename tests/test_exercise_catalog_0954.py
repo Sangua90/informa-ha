@@ -85,7 +85,7 @@ class ExerciseCatalog0954Test(unittest.TestCase):
         docker = (self.project / "informa" / "Dockerfile").read_text()
         self.assertRegex(config, r'version: "0\.9\.(?:5[4-9]|[6-9][0-9])"')
         self.assertIn("COPY exercise_catalog_0954.py /app/exercise_catalog_0954.py", docker)
-        self.assertRegex(docker, r'exercise_(?:catalog_0954|library_fix_0955|navigation_fix_0956|menu_fix_0957|menu_fix_0958):app')
+        self.assertRegex(docker, r'exercise_(?:catalog_0954|library_fix_0955|navigation_fix_0956|menu_fix_0957|menu_fix_0958|menu_fix_0959):app')
         self.assertIn("exercise_catalog_0954.js >> /app/web/app.js", docker)
 
 

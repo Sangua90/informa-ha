@@ -88,7 +88,7 @@ class ExerciseMenuFix0957Test(unittest.TestCase):
         docker = (self.project / "informa" / "Dockerfile").read_text()
         self.assertRegex(config, r'version: "0\.9\.(?:5[7-9]|[6-9][0-9])"')
         self.assertIn("COPY exercise_menu_fix_0957.py /app/exercise_menu_fix_0957.py", docker)
-        self.assertRegex(docker, r'exercise_menu_fix_095[78]:app')
+        self.assertRegex(docker, r'exercise_menu_fix_095[789]:app')
 
 
 if __name__ == "__main__":

@@ -68,10 +68,10 @@ class ExerciseMenuFix0958Test(unittest.TestCase):
         index = (self.project / "informa" / "web" / "index.html").read_text()
         config = (self.project / "informa" / "config.yaml").read_text()
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('style.css?v=0958', index)
-        self.assertIn('app.js?v=0958', index)
-        self.assertIn('version: "0.9.58"', config)
-        self.assertIn("exercise_menu_fix_0958:app", docker)
+        self.assertRegex(index, r'style\.css\?v=095[89]')
+        self.assertRegex(index, r'app\.js\?v=095[89]')
+        self.assertRegex(config, r'version: "0\.9\.(?:5[89]|[6-9][0-9])"')
+        self.assertRegex(docker, r'exercise_menu_fix_095[89]:app')
 
 
 if __name__ == "__main__":
