@@ -54,7 +54,7 @@
     page.innerHTML=`<div class="ey">Altro</div><h1>Esercizi</h1><div class="sub" style="margin-bottom:14px">Tutti gli esercizi disponibili in InFormha, divisi per gruppo muscolare.</div>${exerciseList()}<button class="btn secondary" onclick="go('profile')">Indietro</button>`;
 
     const profile=document.querySelector('[data-page="profile"]');
-    if(profile&&!document.getElementById('if62ExercisesButton')){
+    if(profile&&!document.getElementById('exercisesStaticButton')&&!document.getElementById('if62ExercisesButton')){
       const firstCard=profile.querySelector('.card');
       const b=document.createElement('button');b.id='if62ExercisesButton';b.className='btn secondary';b.textContent='🏋️ Esercizi';b.onclick=()=>go('exercises');
       if(firstCard)firstCard.insertBefore(b,firstCard.firstChild);else profile.appendChild(b);

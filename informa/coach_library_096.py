@@ -20,16 +20,12 @@ GROUPS = [
         ("Lat machine presa stretta", "3 × 10"),
         ("Lat machine presa inversa", "3 × 10"),
         ("Pull-down a braccia tese", "3 × 12"),
-        ("Rematore al cavo basso", "3 × 10"),
-        ("Rematore monobraccio al cavo basso", "3 × 10"),
         ("Rematore al cavo medio", "3 × 10"),
     ]),
     ("Spalle", [
         ("Shoulder press", "3 × 10"),
         ("Alzate laterali", "3 × 12"),
         ("Face pull con corda", "3 × 12"),
-        ("Tirata al mento al cavo basso", "3 × 12"),
-        ("Alzata frontale al cavo basso", "3 × 12"),
     ]),
     ("Tricipiti", [
         ("Push-down tricipiti con corda", "3 × 12"),
@@ -38,28 +34,20 @@ GROUPS = [
         ("Push-down tricipiti monobraccio", "3 × 12"),
     ]),
     ("Bicipiti e avambracci", [
-        ("Curl bicipiti al cavo basso", "3 × 12"),
-        ("Hammer curl con corda", "3 × 12"),
-        ("Curl bicipiti monobraccio", "3 × 12"),
-        ("Reverse curl al cavo basso", "3 × 12"),
+        ("Curl bicipiti al cavo basso con appoggio inclinato", "3 × 12"),
     ]),
     ("Gambe", [
         ("Goblet squat a box/panca", "3 × 10"),
         ("Leg extension alla macchina", "3 × 12"),
-        ("Squat al cavo basso", "3 × 10"),
     ]),
     ("Catena posteriore", [
         ("Stacco rumeno con manubri", "3 × 10"),
-        ("Leg curl in piedi al cavo", "3 × 12"),
-        ("Stacco rumeno al cavo basso", "3 × 10"),
     ]),
     ("Glutei", [
         ("Ponte glutei su panca", "3 × 12"),
-        ("Glute kickback al cavo basso", "3 × 12"),
     ]),
     ("Polpacci", [
         ("Calf raise in piedi", "3 × 15"),
-        ("Calf raise al cavo basso", "3 × 15"),
     ]),
     ("Core", [
         ("Plank", "3 × 30 sec"),
@@ -106,6 +94,13 @@ def exercises_backend_096(response):
                     html = html[:start] + html[end + len('</section>'):]
             marker = '<section class="page" data-page="profiledata">'
             html = html.replace(marker, EXERCISES_PAGE_096 + "\n" + marker, 1)
+            if 'id="exercisesStaticButton"' not in html:
+                marker = '<button class="btn secondary" onclick="go(\'coach\')">Settimana e Coach</button>'
+                button = (
+                    '<button id="exercisesStaticButton" class="btn secondary" '
+                    'onclick="go(\'exercises-static\')">🏋️ Esercizi</button>'
+                )
+                html = html.replace(marker, button + marker, 1)
             html = html.replace("go('exercises')", "go('exercises-static')")
             html = html.replace("go(\"exercises\")", "go(\"exercises-static\")")
             response.set_data(html)

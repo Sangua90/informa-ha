@@ -92,6 +92,7 @@
   document.addEventListener('click',event=>{
     const button=event.target.closest('button');
     const label=(button?.textContent||'').replace(/^🏋️\s*/,'').trim();
+    if(button?.id==='exercisesStaticButton')return;
     if(button?.closest('[data-page="profile"]')&&label==='Esercizi'){
       event.preventDefault();
       event.stopImmediatePropagation();

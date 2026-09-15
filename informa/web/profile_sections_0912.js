@@ -7,7 +7,7 @@
   function pickButton(profile,label){
     const matches=[...profile.querySelectorAll('button')].filter(b=>clean(b.textContent)===label);
     if(!matches.length)return null;
-    const preferred=matches.find(b=>b.id==='if63ExercisesButton')||matches[0];
+    const preferred=matches.find(b=>b.id==='exercisesStaticButton')||matches.find(b=>b.id==='if63ExercisesButton')||matches[0];
     matches.forEach(b=>{if(b!==preferred)b.remove()});
     return preferred;
   }

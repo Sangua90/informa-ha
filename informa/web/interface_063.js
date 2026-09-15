@@ -59,6 +59,7 @@
 
   function ensureButton(){
     const profile=document.querySelector('[data-page="profile"]');if(!profile)return;
+    if(document.getElementById('exercisesStaticButton'))return;
     let btn=document.getElementById('if63ExercisesButton');
     if(!btn){btn=document.createElement('button');btn.id='if63ExercisesButton';btn.className='btn';btn.textContent='🏋️ Esercizi';btn.onclick=()=>{ensurePage();go('exercise-library-063')};const firstCard=profile.querySelector('.card');if(firstCard)firstCard.insertBefore(btn,firstCard.firstChild);else profile.appendChild(btn)}
   }
