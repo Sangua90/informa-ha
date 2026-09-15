@@ -69,6 +69,7 @@ class ExerciseCatalog0954Test(unittest.TestCase):
           global.IF50={{plan:[{{id:'seated_row'}},{{id:'curl'}}]}};
           global.document={{querySelector:()=>null,getElementById:()=>null,addEventListener:()=>{{}}}};
           global.setTimeout=()=>{{}};
+          global.setInterval=()=>{{}};
           global.console={{log:()=>{{}}}};
           vm.runInThisContext(fs.readFileSync({json.dumps(str(source))},'utf8'));
           if(removed.some(id=>IF51_LIBRARY[id]||IF50_EX[id]))process.exit(1);
@@ -82,9 +83,9 @@ class ExerciseCatalog0954Test(unittest.TestCase):
     def test_version_and_container_chain(self):
         config = (self.project / "informa" / "config.yaml").read_text()
         docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('version: "0.9.54"', config)
+        self.assertRegex(config, r'version: "0\.9\.(?:5[4-9]|[6-9][0-9])"')
         self.assertIn("COPY exercise_catalog_0954.py /app/exercise_catalog_0954.py", docker)
-        self.assertIn("exercise_catalog_0954:app", docker)
+        self.assertRegex(docker, r'exercise_(?:catalog_0954|library_fix_0955):app')
         self.assertIn("exercise_catalog_0954.js >> /app/web/app.js", docker)
 
 

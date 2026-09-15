@@ -38,26 +38,48 @@
     if(typeof IF50!=='undefined'&&Array.isArray(IF50.plan))IF50.plan=IF50.plan.filter(ex=>!REMOVED_LOW_CABLE_IDS.has(ex.id));
   }
 
-  function renderLibrary(){
-    const page=document.querySelector('[data-page="exercises"]');
-    if(!page||typeof IF51_LIBRARY==='undefined')return;
+  function ensurePage(name){
+    let page=document.querySelector(`[data-page="${name}"]`);
+    if(!page){
+      page=document.createElement('section');
+      page.className='page';
+      page.dataset.page=name;
+      const root=document.querySelector('.app');
+      if(root)root.insertBefore(page,document.querySelector('.nav'));
+    }
+    return page;
+  }
+
+  function libraryHtml(){
+    if(typeof IF51_LIBRARY==='undefined')return '';
     const groups={};
     Object.entries(IF51_LIBRARY).forEach(([id,x])=>{const group=x.group||'Altro';(groups[group]||(groups[group]=[])).push([id,x])});
-    page.innerHTML=`<div class="ey">Altro</div><h1>Esercizi</h1><div class="sub" style="margin-bottom:14px">Libreria aggiornata in base agli attrezzi realmente disponibili.</div>${Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).map(([group,items])=>`<div class="card exercise-library-group"><div class="ey">${group}</div>${items.sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([id,x])=>`<button class="exercise-library-item" onclick="if62OpenExercise('${id}')"><span><b>${x.name}</b><small>${x.equipment||''}</small></span><span>›</span></button>`).join('')}</div>`).join('')}<button class="btn secondary" onclick="go('profile')">Indietro</button>`;
+    return `<div class="ey">Altro</div><h1>Esercizi</h1><div class="sub" style="margin-bottom:14px">Libreria aggiornata in base agli attrezzi realmente disponibili.</div>${Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).map(([group,items])=>`<div class="card exercise-library-group"><div class="ey">${group}</div>${items.sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([id,x])=>`<button class="exercise-library-item" onclick="if62OpenExercise('${id}')"><span><b>${x.name}</b><small>${x.equipment||''}</small></span><span>›</span></button>`).join('')}</div>`).join('')}<button class="btn secondary" onclick="go('profile')">Indietro</button>`;
+  }
+
+  function renderLibraries(){
+    const html=libraryHtml();
+    if(!html)return;
+    ['exercises','exercise-library-063'].forEach(name=>{const page=ensurePage(name);if(page)page.innerHTML=html});
   }
 
   function routeExercisesButton(){
     const legacy=document.getElementById('if63ExercisesButton');
-    if(legacy)legacy.onclick=()=>{applyCatalog();renderLibrary();go('exercises')};
-    document.querySelector('[data-page="exercise-library-063"]')?.remove();
+    if(legacy)legacy.onclick=()=>{applyCatalog();renderLibraries();go('exercise-library-063')};
+    const modern=document.getElementById('if62ExercisesButton');
+    if(modern)modern.onclick=()=>{applyCatalog();renderLibraries();go('exercises')};
   }
 
-  applyCatalog();
-  renderLibrary();
-  routeExercisesButton();
+  function refresh(){
+    try{applyCatalog();renderLibraries();routeExercisesButton()}
+    catch(error){if(typeof console!=='undefined'&&typeof console.error==='function')console.error('[INFORMHA_EXERCISE_CATALOG] refresh_failed',error)}
+  }
+
+  refresh();
   document.addEventListener('click',event=>{
-    if(event.target.closest('[onclick*="exercises"],#if63ExercisesButton'))setTimeout(()=>{applyCatalog();renderLibrary();routeExercisesButton()},80);
+    if(event.target.closest('[onclick*="exercises"],#if63ExercisesButton,#if62ExercisesButton'))setTimeout(refresh,80);
   });
-  setTimeout(()=>{applyCatalog();renderLibrary();routeExercisesButton()},500);
+  setTimeout(refresh,500);
+  setInterval(routeExercisesButton,1200);
   console.log('[INFORMHA_EXERCISE_CATALOG] version=0.9.54 removed_low_cable=12 kept_preacher_curl=1');
 })();
