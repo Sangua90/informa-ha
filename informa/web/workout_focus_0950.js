@@ -1,9 +1,11 @@
-// InFormha 0.9.87 - un esercizio alla volta; recupero SOLO dopo una serie completata
+// InFormha 0.9.88 - focus persistente: sostituzione resta sul nuovo esercizio
 (function(){
   let activeId=null,timerContext=null,timerLeft=0,timerTotal=0,timerPaused=false;
+  const FLOW_KEY='informha_workout_flow_0949';
   function workoutCards(){return [...document.querySelectorAll('[data-page="workout"] .if50-ex,[data-page="workout"] #if50ex_cardio')]}
   function cardId(card){return card.id==='if50ex_cardio'?'cardio':String(card.id||'').replace('if50ex_','')}
-  function isArchived(card){return card.classList.contains('if949-archived')}
+  function persistedState(id){try{return (JSON.parse(localStorage.getItem(FLOW_KEY)||'{}')||{})[id]||null}catch(e){return null}}
+  function isArchived(card){const id=cardId(card);return card.classList.contains('if949-archived')||persistedState(id)?.stage==='archived'}
   function currentCard(){const cards=workoutCards();let current=activeId?cards.find(c=>cardId(c)===activeId&&!isArchived(c)):null;if(!current)current=cards.find(c=>!isArchived(c))||null;activeId=current?cardId(current):null;return current}
   function focusWorkout(){const cards=workoutCards(),current=currentCard();cards.forEach(card=>{const selected=card===current;card.classList.toggle('if950-current',selected);card.classList.toggle('if950-hidden',!selected)});document.body.classList.toggle('if950-session-focus',!!current)}
   function nextPendingSet(id){const card=workoutCards().find(c=>cardId(c)===id);return card?.querySelector('.check:not(.done)')?.closest('.setrow')||null}
@@ -12,21 +14,15 @@
   function installRecoveryControls(){const page=document.querySelector('[data-page="recovery"]'),box=page?.querySelector('.card');if(!box)return;const primary=[...box.querySelectorAll('button')].find(b=>(b.textContent||'').includes('Torna all')||(b.textContent||'').includes('Salta recupero'));if(primary){primary.textContent='Salta recupero';primary.removeAttribute('onclick');primary.onclick=()=>window.if950SkipRecovery()}timerDraw()}
   function beginTimer(seconds){clearInterval(timerInt);timerLeft=Math.max(1,Math.round(Number(seconds)||1));timerTotal=timerLeft;timerPaused=false;timerDraw();setTimeout(installRecoveryControls,0);timerInt=setInterval(()=>{if(timerPaused)return;timerLeft-=1;timerDraw();if(timerLeft<=0){clearInterval(timerInt);const display=document.getElementById('timer');if(display)display.textContent='VAI!';setTimeout(returnToExercise,350)}},1000)}
   window.startTimer=beginTimer;window.if950SkipRecovery=returnToExercise;window.if950PauseRecovery=function(){timerPaused=!timerPaused;timerDraw()};window.if950AddRecovery=function(){timerLeft+=30;timerTotal+=30;timerDraw()};
-
-  // IMPORTANTE: iniziare un esercizio NON avvia alcun timer.
-  const start=window.if949Start;
-  if(typeof start==='function')window.if949Start=function(id){const result=start.apply(this,arguments);activeId=id;focusWorkout();return result};
-
-  // Il timer viene avviato dal if50CompleteSet originale solo dopo il salvataggio della serie.
-  const complete=window.if50CompleteSet;
-  if(typeof complete==='function')window.if50CompleteSet=async function(id,n){activeId=id;timerContext={id:id,kind:'between_sets',completedSet:n};return await complete.apply(this,arguments)};
-
+  const start=window.if949Start;if(typeof start==='function')window.if949Start=function(id){const result=start.apply(this,arguments);activeId=id;focusWorkout();return result};
+  const complete=window.if50CompleteSet;if(typeof complete==='function')window.if50CompleteSet=async function(id,n){activeId=id;timerContext={id:id,kind:'between_sets',completedSet:n};return await complete.apply(this,arguments)};
   const status=window.if50Status;if(typeof status==='function')window.if50Status=async function(id){const result=await status.apply(this,arguments);const old=workoutCards().find(c=>cardId(c)===id);if(old&&isArchived(old))activeId=null;setTimeout(focusWorkout,40);return result};
   const render=window.if50RenderWorkout;if(typeof render==='function')window.if50RenderWorkout=function(){const result=render.apply(this,arguments);setTimeout(focusWorkout,40);return result};
-  const swap=window.if60Swap;if(typeof swap==='function')window.if60Swap=async function(){const result=await swap.apply(this,arguments);activeId=null;setTimeout(focusWorkout,50);return result};
+  // Dopo una sostituzione il focus va esplicitamente al NUOVO esercizio, non al primo elemento del piano.
+  const swap=window.if60Swap;if(typeof swap==='function')window.if60Swap=async function(oldId,newId){const result=await swap.apply(this,arguments);activeId=newId||null;setTimeout(focusWorkout,80);return result};
   const remove=window.if60RemoveExercise;if(typeof remove==='function')window.if60RemoveExercise=async function(){const result=await remove.apply(this,arguments);activeId=null;setTimeout(focusWorkout,50);return result};
   const oldGo=window.go;if(typeof oldGo==='function')window.go=function(page){const result=oldGo.apply(this,arguments);if(page==='workout')setTimeout(focusWorkout,30);if(page==='recovery')setTimeout(installRecoveryControls,30);return result};
   const css=document.createElement('style');css.textContent='.if950-hidden{display:none!important}.if950-next-set{outline:2px solid var(--green);box-shadow:0 0 28px rgba(34,197,94,.32)}';document.head.appendChild(css);
   setTimeout(focusWorkout,350);
-  console.log('[INFORMHA_WORKOUT_FOCUS] version=0.9.87 no_preparation_timer=1 recovery_after_set_only=1');
+  console.log('[INFORMHA_WORKOUT_FOCUS] version=0.9.88 persistent_archive=1 replacement_focus=1 no_preparation_timer=1');
 })();
