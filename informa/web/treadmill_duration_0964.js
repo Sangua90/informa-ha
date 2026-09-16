@@ -1,52 +1,38 @@
-// InFormha 0.9.64 - scelta tapis roulant e durata nel check iniziale
+// InFormha 0.9.65 - sostituisce il vecchio tapis roulant con scelta durata
 (function(){
-  const CARD_ID='if964TreadmillCard';
   const DEFAULT_MIN=20;
   if(typeof IF50==='undefined')return;
-
-  if(typeof IF50.treadmillWanted!=='boolean')IF50.treadmillWanted=false;
+  if(!IF50.treadmill_choice)IF50.treadmill_choice='No';
   if(!Number.isFinite(Number(IF50.treadmillMinutes)))IF50.treadmillMinutes=DEFAULT_MIN;
 
-  function minutes(){
-    const n=parseInt(document.getElementById('if964TreadmillMinutes')?.value||IF50.treadmillMinutes,10);
-    return Number.isFinite(n)&&n>0?Math.min(180,n):DEFAULT_MIN;
-  }
-  function sync(){
-    const yes=!!IF50.treadmillWanted;
-    document.querySelectorAll('[data-if964-treadmill]').forEach(b=>b.classList.toggle('on',b.dataset.if964Treadmill===(yes?'yes':'no')));
-    document.getElementById('if964TreadmillMinutesWrap')?.classList.toggle('hide',!yes);
-  }
-  window.if964Treadmill=function(wanted){IF50.treadmillWanted=!!wanted;sync()};
-  window.if964TreadmillMinutes=function(v){const n=parseInt(v,10);if(Number.isFinite(n)&&n>0)IF50.treadmillMinutes=Math.min(180,n)};
+  function minutes(){const n=parseInt(document.getElementById('if965TreadmillMinutes')?.value||IF50.treadmillMinutes,10);return Number.isFinite(n)&&n>0?Math.min(180,n):DEFAULT_MIN}
+  function sync(){const yes=IF50.treadmill_choice==='Sì';document.querySelectorAll('[data-if965-treadmill]').forEach(b=>b.classList.toggle('on',b.dataset.if965Treadmill===(yes?'yes':'no')));document.getElementById('if965TreadmillMinutesWrap')?.classList.toggle('hide',!yes)}
+  window.if965Treadmill=function(wanted){IF50.treadmill_choice=wanted?'Sì':'No';sync()};
+  window.if965TreadmillMinutes=function(v){const n=parseInt(v,10);if(Number.isFinite(n)&&n>0)IF50.treadmillMinutes=Math.min(180,n)};
 
-  function inject(){
-    const p=document.querySelector('[data-page="checkin"]');
-    if(!p||document.getElementById(CARD_ID))return;
-    const generate=[...p.querySelectorAll('button')].find(b=>(b.textContent||'').includes('Genera allenamento'));
-    if(!generate)return;
-    const card=document.createElement('div');card.className='card';card.id=CARD_ID;
-    card.innerHTML=`<b>Vuoi fare tapis roulant?</b><div class="choice"><button class="on" data-if964-treadmill="no" onclick="if964Treadmill(false)">No</button><button data-if964-treadmill="yes" onclick="if964Treadmill(true)">Sì</button></div><div id="if964TreadmillMinutesWrap" class="hide" style="margin-top:12px"><label class="sub" for="if964TreadmillMinutes">Quanti minuti vuoi fare?</label><div class="grid2" style="margin-top:7px"><input class="field" id="if964TreadmillMinutes" type="number" inputmode="numeric" min="1" max="180" step="1" value="${IF50.treadmillMinutes}" onchange="if964TreadmillMinutes(this.value)"><div class="metric"><span>Durata tapis roulant</span><b>minuti</b></div></div></div>`;
-    generate.parentNode.insertBefore(card,generate);sync();
+  function replaceLegacy(){
+    const p=document.querySelector('[data-page="checkin"]');if(!p)return;
+    const extras=document.getElementById('if931Extras');if(!extras)return;
+    const legacy=[...extras.querySelectorAll('.card')].find(c=>{const b=c.querySelector('b');return b&&(b.textContent||'').trim()==='Tapis roulant?'});if(!legacy)return;
+    legacy.id='if965TreadmillCard';
+    legacy.innerHTML=`<b>Vuoi fare tapis roulant?</b><div class="choice"><button data-if965-treadmill="no" onclick="if965Treadmill(false)">No</button><button data-if965-treadmill="yes" onclick="if965Treadmill(true)">Sì</button></div><div id="if965TreadmillMinutesWrap" class="hide" style="margin-top:12px"><label class="sub" for="if965TreadmillMinutes">Quanti minuti vuoi fare?</label><div class="grid2" style="margin-top:7px"><input class="field" id="if965TreadmillMinutes" type="number" inputmode="numeric" min="1" max="180" step="1" value="${IF50.treadmillMinutes}" onchange="if965TreadmillMinutes(this.value)"><div class="metric"><span>Durata tapis roulant</span><b>minuti</b></div></div></div>`;
+    document.getElementById('if964TreadmillCard')?.remove();sync();
   }
 
-  const oldCheckin=window.if50Checkin;
-  if(typeof oldCheckin==='function')window.if50Checkin=function(){const r=oldCheckin.apply(this,arguments);setTimeout(inject,0);return r};
+  const oldCheckin=window.if50Checkin;if(typeof oldCheckin==='function')window.if50Checkin=function(){const r=oldCheckin.apply(this,arguments);setTimeout(replaceLegacy,0);return r};
 
-  const oldBuild=window.if50BuildPlan;
-  if(typeof oldBuild==='function')window.if50BuildPlan=function(){
-    const plan=oldBuild.apply(this,arguments)||IF50.plan||[];
-    IF50.treadmillMinutes=minutes();
-    const without=plan.filter(x=>!(x&&x.cardio));
-    if(IF50.treadmillWanted)without.push({id:'cardio',name:'Tapis roulant Fassi',priority:'Opzionale',sets:1,reps:null,rest:0,guide:'treadmill',cardio:true,duration:IF50.treadmillMinutes});
-    IF50.plan=without;return IF50.plan;
+  const oldBuild=window.if50BuildPlan;if(typeof oldBuild==='function')window.if50BuildPlan=function(){
+    const plan=oldBuild.apply(this,arguments)||IF50.plan||[];IF50.treadmillMinutes=minutes();
+    IF50.plan=plan.filter(x=>!(x&&(x.id==='treadmill'||x.id==='cardio'||x.cardio)));
+    if(IF50.treadmill_choice==='Sì')IF50.plan.unshift({id:'treadmill',name:'Tapis roulant Fassi',group:'Cardio',equipment:'Fassi F 7.9 HRC',priority:'Opzionale',cardio:true,guide:'treadmill',duration:IF50.treadmillMinutes,protocol:{duration:IF50.treadmillMinutes,phases:[]}});
+    return IF50.plan;
   };
 
-  const oldGenerate=window.if50Generate;
-  if(typeof oldGenerate==='function')window.if50Generate=async function(){
-    if(IF50.treadmillWanted){IF50.treadmillMinutes=minutes();const input=document.getElementById('if964TreadmillMinutes');if(input&&(!parseInt(input.value,10)||parseInt(input.value,10)<=0)){if(typeof toast==='function')toast('Inserisci i minuti di tapis roulant');return}}
-    return oldGenerate.apply(this,arguments);
+  const oldCard=window.if50ExerciseCard;if(typeof oldCard==='function')window.if50ExerciseCard=function(ex){
+    if(ex?.id==='treadmill'&&ex?.cardio&&Number(ex.duration)>0){return `<div class="card if931-treadmill" id="if50ex_treadmill"><div class="ey">Tapis roulant · ${ex.duration} min</div><h2>${ex.name}</h2><div class="sub">Durata scelta nel check iniziale. Regola velocità e inclinazione in base alla seduta e alle tue sensazioni.</div><div class="grid2" style="margin-top:10px"><input class="field" id="if931TreadmillMin" value="${ex.duration}" inputmode="numeric"><button class="btn secondary" onclick="if931SaveTreadmill()">Salva tapis roulant</button></div><div class="choice"><button onclick="if931BlockStatus('treadmill','Completato',this)">Completato</button><button onclick="if931BlockStatus('treadmill','Parziale',this)">Parziale</button><button onclick="if931BlockStatus('treadmill','Saltato',this)">Saltato</button></div></div>`}
+    return oldCard.apply(this,arguments);
   };
 
-  setTimeout(inject,350);
-  console.log('[INFORMHA_TREADMILL] version=0.9.64 yes_no=1 custom_minutes=1');
+  setTimeout(replaceLegacy,350);
+  console.log('[INFORMHA_TREADMILL] version=0.9.65 replace_legacy=1 custom_minutes=1 no_duplicate=1');
 })();
