@@ -33,7 +33,7 @@ GROUPS = (
         {"name": "Curl bicipiti al cavo basso con appoggio inclinato", "guide_id": "incline_support_cable_curl"},
         {"name": "Curl con manubri", "guide_id": "dumbbell_curl"},
         {"name": "Hammer curl con manubri", "guide_id": "dumbbell_hammer_curl"},
-        {"name": "Reverse curl", "guide_id": "reverse_curl"},
+        {"name": "Reverse curl con manubri", "guide_id": "reverse_curl"},
     )),
     ("Gambe / quadricipiti", (
         {"name": "Goblet squat a box/panca", "guide_id": "goblet_squat"},
