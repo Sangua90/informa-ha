@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import request
 
 app = base.app
-root.VERSION = "0.9.70"
+root.VERSION = "0.9.71"
 
 
 def ensure_table():
@@ -26,6 +26,42 @@ def ensure_table():
 ensure_table()
 
 
+def last_session():
+    con=root.db();r=con.execute("SELECT * FROM treadmill_sessions ORDER BY id DESC LIMIT 1").fetchone();con.close()
+    return dict(r) if r else None
+
+
+def build_plan(duration, last=None):
+    duration=max(5,int(round(duration)))
+    base_speed=5.0
+    peak_speed=6.0
+    incline=0.0
+    reason="Prima seduta: iCoach crea un profilo progressivo prudente e userà il risultato per la prossima."
+    if last:
+        base_speed=max(3.0,float(last.get('avg_speed_kmh') or 5.0))
+        peak_speed=max(base_speed+0.5,float(last.get('max_speed_kmh') or base_speed+1.0))
+        incline=max(0.0,float(last.get('avg_incline_pct') or 0.0))
+        fat=str(last.get('fatigue') or 'Giusta')
+        if fat=='Facile':
+            peak_speed=round(peak_speed+0.2,1)
+            reason="Ultima seduta facile: iCoach aumenta leggermente il tratto più veloce e lascia stabile l'inclinazione."
+        elif fat in ('Dura','Al limite'):
+            peak_speed=max(base_speed,round(peak_speed-0.2,1))
+            reason="Ultima seduta impegnativa: iCoach alleggerisce il tratto più veloce."
+        else:
+            reason="Ultima seduta adeguata: iCoach consolida il livello prima di aumentare."
+    warm=max(2,round(duration*0.20)); cool=max(2,round(duration*0.15)); work=duration-warm-cool
+    if work<1: work=1; warm=max(2,duration-3); cool=max(1,duration-warm-work)
+    first=work//2; second=work-first
+    phases=[
+      {'name':'Riscaldamento','minutes':warm,'speed_kmh':round(max(3.5,base_speed-0.7),1),'incline_pct':0},
+      {'name':'Ritmo','minutes':first,'speed_kmh':round(base_speed,1),'incline_pct':round(incline,1)},
+      {'name':'Progressione','minutes':second,'speed_kmh':round(peak_speed,1),'incline_pct':round(incline,1)},
+      {'name':'Defaticamento','minutes':cool,'speed_kmh':round(max(3.5,base_speed-0.8),1),'incline_pct':0},
+    ]
+    return phases,reason
+
+
 @app.get('/api/treadmill-0970/history')
 def treadmill_history_0970():
     con=root.db();rows=[dict(r) for r in con.execute("SELECT * FROM treadmill_sessions ORDER BY id DESC LIMIT 12")];con.close()
@@ -35,15 +71,13 @@ def treadmill_history_0970():
     return root.jsonify(ok=True,items=rows)
 
 
-@app.get('/api/treadmill-0970/suggestion')
-def treadmill_suggestion_0970():
-    con=root.db();r=con.execute("SELECT * FROM treadmill_sessions ORDER BY id DESC LIMIT 1").fetchone();con.close()
-    if not r:return root.jsonify(ok=True,suggestion=None,reason="Nessuno storico: inserisci velocità e inclinazione realmente utilizzate.")
-    r=dict(r);speed=float(r.get('avg_speed_kmh') or 0);incl=float(r.get('avg_incline_pct') or 0);fat=str(r.get('fatigue') or 'Giusta')
-    suggested_speed=speed;suggested_incline=incl;reason="Ripropongo i valori dell'ultima seduta e valuterò la progressione dai nuovi dati."
-    if fat=='Facile' and speed>0:suggested_speed=round(speed+0.2,1);reason="Ultima seduta facile: piccolo aumento della velocità media, senza aumentare anche l'inclinazione."
-    elif fat in ('Dura','Al limite'):reason="Ultima seduta impegnativa: mantengo i parametri senza aumentare."
-    return root.jsonify(ok=True,suggestion={'speed_kmh':suggested_speed,'incline_pct':suggested_incline,'duration_min':r.get('duration_min')},last=r,reason=reason)
+@app.get('/api/treadmill-0970/plan')
+def treadmill_plan_0970():
+    try:duration=float(request.args.get('minutes') or 0)
+    except Exception:duration=0
+    if duration<=0:return root.jsonify(ok=False,error='Durata non valida'),400
+    phases,reason=build_plan(duration,last_session())
+    return root.jsonify(ok=True,duration_min=int(round(duration)),phases=phases,reason=reason)
 
 
 @app.post('/api/treadmill-0970')
@@ -56,6 +90,6 @@ def treadmill_save_0970():
 
 
 @app.get('/api/treadmill-0970-info')
-def treadmill_info_0970():return root.jsonify(version=root.VERSION,adaptive=True,saves_speed=True,saves_incline=True,saves_duration=True,saves_phases=True)
+def treadmill_info_0970():return root.jsonify(version=root.VERSION,icoach_generated=True,saves_speed=True,saves_incline=True,saves_duration=True,saves_phases=True)
 
-print('[INFORMHA_TREADMILL_ADAPTIVE] version=0.9.70 speed=1 incline=1 history=1 progression=1',flush=True)
+print('[INFORMHA_TREADMILL_ADAPTIVE] version=0.9.71 icoach_generated=1 multistage=1 history=1',flush=True)
