@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.67
+ARG BUILD_VERSION=0.9.68
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.67-treadmill-active-if932
+ARG INFORMA_CACHE_BUST=0.9.68-adaptive-coach-step1
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -21,8 +21,9 @@ RUN grep -Fq 'Expected 37 exercises' /app/coach_library_0962.py \
  && grep -Fq 'CATALOG.length!==37' /app/web/guide_manager_0963.js \
  && grep -Fq 'Reverse curl con manubri' /app/coach_library_0962.py \
  && grep -Fq 'active_if932=1' /app/web/treadmill_duration_0964.js \
+ && grep -Fq 'history_recovery=1' /app/web/adaptive_coach_0968.js \
  && python -c "import coach_library_0962 as c; assert c.exercise_count() == 37; assert len(c.guide_ids()) == 37" \
- && printf '%s\n' "InFormha 0.9.67 treadmill-active-if932" > /app/BUILD_ID \
+ && printf '%s\n' "InFormha 0.9.68 adaptive-coach-step1" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
@@ -77,7 +78,8 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/exercise_catalog_0954.js >> /app/web/app.js \
  && cat /app/web/guide_manager_0914.js >> /app/web/app.js \
  && cat /app/web/guide_manager_0963.js >> /app/web/app.js \
- && cat /app/web/treadmill_duration_0964.js >> /app/web/app.js
+ && cat /app/web/treadmill_duration_0964.js >> /app/web/app.js \
+ && cat /app/web/adaptive_coach_0968.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
