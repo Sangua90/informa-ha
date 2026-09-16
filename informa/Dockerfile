@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.62
+ARG BUILD_VERSION=0.9.63
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.62-exercise-catalog
+ARG INFORMA_CACHE_BUST=0.9.63-guide-manager-37
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -12,24 +12,18 @@ LABEL \
 WORKDIR /app
 RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0 websocket-client==1.8.0
 
-# Keep every incremental Python patch available. The active 0.9.62 module
-# imports the already-tested 0.9.61/0.9.60 chain, so historical behaviour is
-# preserved while the exercise catalog is replaced incrementally.
 COPY *.py /app/
 COPY web /app/web
 
-# 0.9.62 build guards: fail the image build instead of publishing a broken
-# exercise page if the catalog/guide chain is incomplete.
 RUN grep -Fq 'Expected 37 exercises' /app/coach_library_0962.py \
  && grep -Fq 'fixed_prescriptions=False' /app/exercise_menu_catalog_0962.py \
  && grep -Fq 'registered_guide_ids=len(CATALOG_GUIDES)' /app/exercise_guides_catalog_0962.py \
- && grep -Fq 'exercise_menu_guides_0961 as base' /app/exercise_menu_catalog_0962.py \
- && grep -Fq 'exercise_menu_catalog_0962 as base' /app/exercise_guides_catalog_0962.py \
+ && grep -Fq 'CATALOG.length!==37' /app/web/guide_manager_0963.js \
+ && grep -Fq 'Reverse curl con manubri' /app/coach_library_0962.py \
  && python -c "import coach_library_0962 as c; assert c.exercise_count() == 37; assert len(c.guide_ids()) == 37" \
- && printf '%s\n' "InFormha 0.9.62 exercise-catalog" > /app/BUILD_ID \
+ && printf '%s\n' "InFormha 0.9.63 guide-manager-37" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 
-# Preserve the existing front-end assembly exactly as before.
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
  && cat /app/web/guides_039.js >> /app/web/app.js \
@@ -79,7 +73,9 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/profile_weight_0951.js >> /app/web/app.js \
  && cat /app/web/exercise_guide_0952.js >> /app/web/app.js \
  && cat /app/web/exercise_guides_0953.js >> /app/web/app.js \
- && cat /app/web/exercise_catalog_0954.js >> /app/web/app.js
+ && cat /app/web/exercise_catalog_0954.js >> /app/web/app.js \
+ && cat /app/web/guide_manager_0914.js >> /app/web/app.js \
+ && cat /app/web/guide_manager_0963.js >> /app/web/app.js
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
