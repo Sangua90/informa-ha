@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.66
+ARG BUILD_VERSION=0.9.67
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.66-treadmill-visibility
+ARG INFORMA_CACHE_BUST=0.9.67-treadmill-active-if932
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -20,9 +20,9 @@ RUN grep -Fq 'Expected 37 exercises' /app/coach_library_0962.py \
  && grep -Fq 'registered_guide_ids=len(CATALOG_GUIDES)' /app/exercise_guides_catalog_0962.py \
  && grep -Fq 'CATALOG.length!==37' /app/web/guide_manager_0963.js \
  && grep -Fq 'Reverse curl con manubri' /app/coach_library_0962.py \
- && grep -Fq 'visibility_fix=1' /app/web/treadmill_duration_0964.js \
+ && grep -Fq 'active_if932=1' /app/web/treadmill_duration_0964.js \
  && python -c "import coach_library_0962 as c; assert c.exercise_count() == 37; assert len(c.guide_ids()) == 37" \
- && printf '%s\n' "InFormha 0.9.66 treadmill-visibility" > /app/BUILD_ID \
+ && printf '%s\n' "InFormha 0.9.67 treadmill-active-if932" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
