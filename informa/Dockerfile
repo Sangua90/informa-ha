@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.70
+ARG BUILD_VERSION=0.9.71
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.70-adaptive-treadmill
+ARG INFORMA_CACHE_BUST=0.9.71-icoach-treadmill-program
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -19,10 +19,10 @@ RUN grep -Fq 'Expected 37 exercises' /app/coach_library_0962.py \
  && grep -Fq 'active_if932=1' /app/web/treadmill_duration_0964.js \
  && grep -Fq 'history_recovery=1' /app/web/adaptive_coach_0968.js \
  && grep -Fq 'history_prefill=1' /app/web/load_progression_0969.js \
- && grep -Fq 'progression=1' /app/web/treadmill_progression_0970.js \
- && grep -Fq 'saves_phases=True' /app/treadmill_progression_0970.py \
+ && grep -Fq 'icoach_generated=1' /app/web/treadmill_progression_0970.js \
+ && grep -Fq 'icoach_generated=True' /app/treadmill_progression_0970.py \
  && python -c "import coach_library_0962 as c; assert c.exercise_count() == 37; assert len(c.guide_ids()) == 37" \
- && printf '%s\n' "InFormha 0.9.70 adaptive-treadmill" > /app/BUILD_ID \
+ && printf '%s\n' "InFormha 0.9.71 icoach-treadmill-program" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
