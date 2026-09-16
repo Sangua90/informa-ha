@@ -1,4 +1,4 @@
-// InFormha 0.9.72 - vero planner adattivo sulla libreria completa
+// InFormha 0.9.73 - planner adattivo 37 esercizi + scelta tapis roulant corretta
 (function(){
  if(typeof IF50==='undefined')return;
  const LIB={
@@ -14,25 +14,17 @@
   Core:[['plank','Plank','plank','bodyweight'],['mid_cable_crunch','Crunch al cavo medio','mid_cable_crunch','plates'],['dead_bug','Dead bug','dead_bug','bodyweight']]
  };
  function painBlocks(group){const p=String(IF50.pain||'').toLowerCase();if(!p||p==='nessuno')return false;if(p.includes('ginoc'))return ['Gambe','Polpacci'].includes(group);if(p.includes('spalla'))return ['Petto','Spalle','Tricipiti'].includes(group);if(p.includes('schiena'))return ['Schiena','Femorali'].includes(group);return false}
- function prescription(group){let sets=IF50.energy==='Bassa'?2:3,reps=['Core'].includes(group)?10:10,rest=['Gambe','Femorali','Petto','Schiena'].includes(group)?120:90;if(IF50.time<=30)sets=2;return {sets,reps,rest}}
+ function prescription(group){let sets=IF50.energy==='Bassa'?2:3,reps=10,rest=['Gambe','Femorali','Petto','Schiena'].includes(group)?120:90;if(IF50.time<=30)sets=2;return {sets,reps,rest}}
  function pickExercise(group,index){const a=LIB[group]||[];if(!a.length)return null;const x=a[index%a.length],p=prescription(group);return {id:x[0],name:x[1],guide:x[2],loadType:x[3],group,priority:index<2?'Essenziale':'Utile',...p}}
  window.if50BuildPlan=function(){
   IF50.intent='Coach automatico';IF50.focus='Automatico';
-  let ranked=(IF50.adaptiveGroups||['Petto','Schiena','Gambe','Femorali','Spalle','Glutei','Core','Tricipiti','Bicipiti','Polpacci']).filter(g=>!painBlocks(g));
+  const ranked=(IF50.adaptiveGroups||['Petto','Schiena','Gambe','Femorali','Spalle','Glutei','Core','Tricipiti','Bicipiti','Polpacci']).filter(g=>!painBlocks(g));
   const target=IF50.time<=20?2:IF50.time<=30?3:IF50.time<=45?4:5;
-  const chosen=ranked.slice(0,target);IF50.plan=chosen.map((g,i)=>pickExercise(g,i)).filter(Boolean);
-  if(IF50.treadmillWanted&&Number(IF50.treadmillMinutes)>0)IF50.plan.push({id:'treadmill',name:'Tapis roulant Fassi',priority:'Cardio',sets:1,reps:null,rest:0,guide:'treadmill',cardio:true,duration:Number(IF50.treadmillMinutes),minutes:Number(IF50.treadmillMinutes)});
+  IF50.plan=ranked.slice(0,target).map((g,i)=>pickExercise(g,i)).filter(Boolean);
+  if(IF50.treadmill_choice==='Sì'&&Number(IF50.treadmillMinutes)>0)IF50.plan.unshift({id:'treadmill',name:'Tapis roulant Fassi',group:'Cardio',priority:'Cardio',sets:1,reps:null,rest:0,guide:'treadmill',cardio:true,duration:Number(IF50.treadmillMinutes),minutes:Number(IF50.treadmillMinutes),protocol:{duration:Number(IF50.treadmillMinutes),phases:[]}});
   return IF50.plan;
  };
- window.if50CompleteSet=async function(id,n){
-  const ex=(IF50.plan||[]).find(x=>x.id===id);if(!ex||ex.cardio)return;
-  const reps=if50Num(`if50r_${id}_${n}`),inp=document.getElementById(`if50w_${id}_${n}`),fatigue=document.getElementById(`if50f_${id}`)?.value||'Giusta';let weight=if50Num(`if50w_${id}_${n}`);
-  if(reps===null){toast('Inserisci le ripetizioni');return}
-  if(ex.loadType==='plates'){if(weight===null||weight<1){toast('Per la Fassi inserisci almeno 1 piastra');return}weight=Math.round(weight);if(inp)inp.value=weight}
-  else if(ex.loadType==='kg'){if(weight===null||weight<0){toast('Inserisci il carico in kg');return}}
-  else weight=null;
-  try{const out=await api('api/set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId,workout_title:'Seduta adattata',exercise:ex.name,set_no:n,weight,reps,fatigue,rest_sec:ex.rest})});currentWorkoutId=out.workout_id;const b=document.getElementById(`if50c_${id}_${n}`);if(b){b.classList.add('done');b.textContent='✓'}if(typeof if50Progress==='function')if50Progress(id);startTimer(fatigue==='Al limite'?Math.max(ex.rest,120):ex.rest);go('recovery')}catch(e){toast(e.message||'Errore salvataggio')}
- };
+ window.if50CompleteSet=async function(id,n){const ex=(IF50.plan||[]).find(x=>x.id===id);if(!ex||ex.cardio)return;const reps=if50Num(`if50r_${id}_${n}`),inp=document.getElementById(`if50w_${id}_${n}`),fatigue=document.getElementById(`if50f_${id}`)?.value||'Giusta';let weight=if50Num(`if50w_${id}_${n}`);if(reps===null){toast('Inserisci le ripetizioni');return}if(ex.loadType==='plates'){if(weight===null||weight<1){toast('Per la Fassi inserisci almeno 1 piastra');return}weight=Math.round(weight);if(inp)inp.value=weight}else if(ex.loadType==='kg'){if(weight===null||weight<0){toast('Inserisci il carico in kg');return}}else weight=null;try{const out=await api('api/set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId,workout_title:'Seduta adattata',exercise:ex.name,set_no:n,weight,reps,fatigue,rest_sec:ex.rest})});currentWorkoutId=out.workout_id;const b=document.getElementById(`if50c_${id}_${n}`);if(b){b.classList.add('done');b.textContent='✓'}if(typeof if50Progress==='function')if50Progress(id);startTimer(fatigue==='Al limite'?Math.max(ex.rest,120):ex.rest);go('recovery')}catch(e){toast(e.message||'Errore salvataggio')}};
  window.if50Status=async function(id,status,priority,btn){const ex=(IF50.plan||[]).find(x=>x.id===id);btn?.parentElement?.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===btn));try{await api('api/coach/exercise-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId,exercise:ex?.name||'Cardio',priority,status})})}catch(e){}};
- console.log('[INFORMHA_ADAPTIVE_LIBRARY] version=0.9.72 library37=1 adaptive_selection=1 load_metadata=1 bodyweight=1');
+ console.log('[INFORMHA_ADAPTIVE_LIBRARY] version=0.9.73 library37=1 adaptive_selection=1 treadmill_choice=1 load_metadata=1 bodyweight=1');
 })();
