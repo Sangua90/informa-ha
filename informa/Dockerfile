@@ -1,8 +1,8 @@
 FROM python:3.13-alpine
 
-ARG BUILD_VERSION=0.9.60
+ARG BUILD_VERSION=0.9.62
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.9.60-exercise-response-fix
+ARG INFORMA_CACHE_BUST=0.9.62-exercise-catalog
 
 LABEL \
   io.hass.version="${BUILD_VERSION}" \
@@ -12,152 +12,24 @@ LABEL \
 WORKDIR /app
 RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0 websocket-client==1.8.0
 
-COPY app.py /app/app.py
-COPY guide_patch.py /app/guide_patch.py
-COPY coach_patch_060.py /app/coach_patch_060.py
-COPY coach_progression_068.py /app/coach_progression_068.py
-COPY coach_week_069.py /app/coach_week_069.py
-COPY coach_advance_070.py /app/coach_advance_070.py
-COPY coach_resume_072.py /app/coach_resume_072.py
-COPY coach_search_073.py /app/coach_search_073.py
-COPY coach_guides_074.py /app/coach_guides_074.py
-COPY coach_refine_075.py /app/coach_refine_075.py
-COPY nutrition_080.py /app/nutrition_080.py
-COPY supplements_081.py /app/supplements_081.py
-COPY ai_coach_090.py /app/ai_coach_090.py
-COPY ai_gemini_091.py /app/ai_gemini_091.py
-COPY ai_gemini_092.py /app/ai_gemini_092.py
-COPY ai_context_093.py /app/ai_context_093.py
-COPY coach_library_094.py /app/coach_library_094.py
-COPY coach_library_096.py /app/coach_library_096.py
-COPY coach_diag_099.py /app/coach_diag_099.py
-COPY guide_manager_0914.py /app/guide_manager_0914.py
-COPY exercise_toggle_0915.py /app/exercise_toggle_0915.py
-COPY compact_management_0916.py /app/compact_management_0916.py
-COPY compact_management_0917.py /app/compact_management_0917.py
-COPY compact_management_0918.py /app/compact_management_0918.py
-COPY compact_management_0919.py /app/compact_management_0919.py
-COPY compact_management_0920.py /app/compact_management_0920.py
-COPY management_accordion_0921.py /app/management_accordion_0921.py
-COPY remove_legacy_guide_manager_0922.py /app/remove_legacy_guide_manager_0922.py
-COPY supplements_split_0923.py /app/supplements_split_0923.py
-COPY supplements_settings_fix_0926.py /app/supplements_settings_fix_0926.py
-COPY nutrition_homestock_0927.py /app/nutrition_homestock_0927.py
-COPY workout_activation_0928.py /app/workout_activation_0928.py
-COPY pain_detail_0929.py /app/pain_detail_0929.py
-COPY pain_select_0930.py /app/pain_select_0930.py
-COPY warmup_stretching_0931.py /app/warmup_stretching_0931.py
-COPY warmup_ui_fix_0932.py /app/warmup_ui_fix_0932.py
-COPY workout_history_0933.py /app/workout_history_0933.py
-COPY healthsync_status_0934.py /app/healthsync_status_0934.py
-COPY healthsync_relocate_0935.py /app/healthsync_relocate_0935.py
-COPY equipment_details_0936.py /app/equipment_details_0936.py
-COPY calibration_mode_0937.py /app/calibration_mode_0937.py
-COPY calibration_mode_0938.py /app/calibration_mode_0938.py
-COPY health_context_0939.py /app/health_context_0939.py
-COPY health_dashboard_0940.py /app/health_dashboard_0940.py
-COPY health_dashboard_0941.py /app/health_dashboard_0941.py
-COPY health_rest_0942.py /app/health_rest_0942.py
-COPY health_branding_0943.py /app/health_branding_0943.py
-COPY health_rest_dashboard_0944.py /app/health_rest_dashboard_0944.py
-COPY workout_tv_0945.py /app/workout_tv_0945.py
-COPY workout_tv_layout_0946.py /app/workout_tv_layout_0946.py
-COPY health_metrics_0947.py /app/health_metrics_0947.py
-COPY workout_flow_0949.py /app/workout_flow_0949.py
-COPY workout_focus_0950.py /app/workout_focus_0950.py
-COPY profile_weight_0951.py /app/profile_weight_0951.py
-COPY exercise_guide_0952.py /app/exercise_guide_0952.py
-COPY exercise_guides_0953.py /app/exercise_guides_0953.py
-COPY exercise_catalog_0954.py /app/exercise_catalog_0954.py
-COPY exercise_library_fix_0955.py /app/exercise_library_fix_0955.py
-COPY exercise_navigation_fix_0956.py /app/exercise_navigation_fix_0956.py
-COPY exercise_menu_fix_0957.py /app/exercise_menu_fix_0957.py
-COPY exercise_menu_fix_0958.py /app/exercise_menu_fix_0958.py
-COPY exercise_menu_fix_0959.py /app/exercise_menu_fix_0959.py
-COPY exercise_menu_fix_0960.py /app/exercise_menu_fix_0960.py
+# Keep every incremental Python patch available. The active 0.9.62 module
+# imports the already-tested 0.9.61/0.9.60 chain, so historical behaviour is
+# preserved while the exercise catalog is replaced incrementally.
+COPY *.py /app/
 COPY web /app/web
-RUN test "$(grep -Fc "    ['" /app/web/interface_063.js)" -eq 36 \
- && grep -Fq "build 0.9.11" /app/web/interface_063.js \
- && grep -Fq "SETTINGS_LABELS=['Profilo','Connessioni e dispositivi','Integratori','Alimentazione']" /app/web/profile_sections_0912.js \
- && grep -Fq "Piastra / pin" /app/web/load_fields_0913.js \
- && grep -Fq "GUIDE_IDS_36" /app/guide_manager_0914.py \
- && grep -Fq "persistent_toggle=1" /app/exercise_toggle_0915.py \
- && grep -Fq "native_accordion=1" /app/management_accordion_0921.py \
- && grep -Fq "legacy_upload_manager_removed=1" /app/web/guides_040.js \
- && grep -Fq "settings_daily_split=1" /app/supplements_split_0923.py \
- && grep -Fq "app.appendChild(page)" /app/web/supplements_split_0923.js \
- && grep -Fq "settings_page_dom_fix=1" /app/supplements_settings_fix_0926.py \
- && grep -Fq "api/homestock/catalog" /app/web/nutrition_homestock_0927.js \
- && grep -Fq "nutrition-settings-0927" /app/web/nutrition_homestock_0927.js \
- && grep -Fq "homestock_catalog=1" /app/nutrition_homestock_0927.py \
- && grep -Fq "home_preparation_unlock=1" /app/workout_activation_0928.py \
- && grep -Fq "informha_workout_prepared_0928" /app/web/workout_activation_0928.js \
- && grep -Fq "pain_detail=1" /app/pain_detail_0929.py \
- && grep -Fq "pain_zone_selector=1" /app/pain_select_0930.py \
- && grep -Fq "treadmill_modular=1" /app/warmup_stretching_0931.py \
- && grep -Fq "stretching_selective=1" /app/warmup_stretching_0931.py \
- && grep -Fq "existing_checkin_injection=1" /app/warmup_ui_fix_0932.py \
- && grep -Fq "workout_history=1" /app/workout_history_0933.py \
- && grep -Fq "status_ui=1" /app/healthsync_status_0934.py \
- && grep -Fq "relocated_to_apple_card=1" /app/healthsync_relocate_0935.py \
- && grep -Fq "equipment_details=1" /app/equipment_details_0936.py \
- && grep -Fq "adaptive_after=3" /app/calibration_mode_0937.py \
- && grep -Fq "api/calibration-0937" /app/web/calibration_mode_0937.js \
- && grep -Fq "persistent_home_counter=1" /app/calibration_mode_0938.py \
- && grep -Fq "api/calibration-0938" /app/web/calibration_mode_0938.js \
- && grep -Fq "hae_entities=1" /app/health_context_0939.py \
- && grep -Fq "coach_context=1" /app/health_context_0939.py \
- && grep -Fq "gemini_context=1" /app/health_context_0939.py \
- && grep -Fq "api/health-context-0939" /app/health_context_0939.py \
- && grep -Fq "apple_health_categories=1" /app/health_dashboard_0940.py \
- && grep -Fq "per_metric_timestamp=1" /app/web/health_dashboard_0940.js \
- && grep -Fq "show_all_hae_metrics=1" /app/health_dashboard_0941.py \
- && grep -Fq "dynamic_uncategorized=1" /app/web/health_dashboard_0941.js \
- && grep -Fq "ha_event_bridge=1" /app/health_rest_0942.py \
- && grep -Fq "raw_payload_archive=1" /app/health_rest_0942.py \
- && grep -Fq "metric_history=1" /app/health_rest_0942.py \
- && grep -Fq "workout_dedup=1" /app/health_rest_0942.py \
- && grep -Fq "api/health-auto-export/rest-status" /app/health_rest_0942.py \
- && grep -Fq "health_auto_export_name=1" /app/health_branding_0943.py \
- && grep -Fq "rest_metrics_ui=1" /app/health_rest_dashboard_0944.py \
- && grep -Fq "legacy_fallback=1" /app/health_rest_dashboard_0944.py \
- && grep -Fq "rest_workouts_ui=1" /app/web/health_rest_dashboard_0944.js \
- && grep -Fq "landscape_auto=1" /app/workout_tv_0945.py \
- && grep -Fq "recovery_timer=1" /app/web/workout_tv_0945.js \
- && grep -Fq "full_width=1" /app/workout_tv_layout_0946.py \
- && grep -Fq "compact_sets=1" /app/web/workout_tv_layout_0946.js \
- && grep -Fq "daily_aggregation=1" /app/health_metrics_0947.py \
- && grep -Fq "heart_min_avg_max=1" /app/health_metrics_0947.py \
- && grep -Fq "daily_summary_preferred=1" /app/health_metrics_0947.py \
- && grep -Fq "archive_before_replace=1" /app/workout_flow_0949.py \
- && grep -Fq "exercise_state_persistent=1" /app/web/workout_flow_0949.js \
- && grep -Fq "single_exercise=1" /app/workout_focus_0950.py \
- && grep -Fq "timer_auto_advance=1" /app/web/workout_focus_0950.js \
- && grep -Fq "apple_weight_profile=1" /app/profile_weight_0951.py \
- && grep -Fq "weight_source_ui=1" /app/web/profile_weight_0951.js \
- && grep -Fq "guide=goblet_squat" /app/exercise_guide_0952.py \
- && grep -Fq "workout_button=1" /app/web/exercise_guide_0952.js \
- && test -s /app/web/guides_default/goblet_squat.webp \
- && grep -Fq "approved_guides=6" /app/exercise_guides_0953.py \
- && grep -Fq "workout_buttons=1" /app/web/exercise_guides_0953.js \
- && for guide in plank glute_bridge calf_raise shoulder_press lateral_raise romanian_deadlift; do test -s "/app/web/guides_default/$guide.webp"; done \
- && grep -Fq "Tipi ricevuti" /app/web/health_rest_dashboard_0944.js \
- && grep -Fq "Salute oggi · Health Auto Export" /app/web/app.js \
- && grep -Fq "<h2>Health Auto Export</h2>" /app/web/index.html \
- && grep -Fq "REMOVED_LOW_CABLE_IDS" /app/exercise_catalog_0954.py \
- && grep -Fq "kept_preacher_curl=1" /app/web/exercise_catalog_0954.js \
- && grep -Fq "legacy_page_preserved=1" /app/exercise_library_fix_0955.py \
- && grep -Fq "direct_library_navigation=1" /app/exercise_navigation_fix_0956.py \
- && grep -Fq "canonical_page=exercises-static" /app/exercise_menu_fix_0957.py \
- && grep -Fq 'id="exercisesStaticButton"' /app/coach_library_096.py \
- && grep -Fq "javascript_independent=1" /app/exercise_menu_fix_0958.py \
- && grep -Fq "early_click_capture=1" /app/exercise_menu_fix_0959.py \
- && grep -Fq "response_import_fixed=1" /app/exercise_menu_fix_0960.py \
- && grep -Fq "from flask import Response" /app/exercise_menu_fix_0958.py \
- && grep -Fq 'app.js?v=0960' /app/web/index.html \
- && grep -Fq "event.stopImmediatePropagation()" /app/web/index.html \
- && printf '%s\n' "InFormha 0.9.60 exercise-response-fix" > /app/BUILD_ID \
+
+# 0.9.62 build guards: fail the image build instead of publishing a broken
+# exercise page if the catalog/guide chain is incomplete.
+RUN grep -Fq 'Expected 37 exercises' /app/coach_library_0962.py \
+ && grep -Fq 'fixed_prescriptions=False' /app/exercise_menu_catalog_0962.py \
+ && grep -Fq 'registered_guide_ids=len(CATALOG_GUIDES)' /app/exercise_guides_catalog_0962.py \
+ && grep -Fq 'exercise_menu_guides_0961 as base' /app/exercise_menu_catalog_0962.py \
+ && grep -Fq 'exercise_menu_catalog_0962 as base' /app/exercise_guides_catalog_0962.py \
+ && python -c "import coach_library_0962 as c; assert c.exercise_count() == 37; assert len(c.guide_ids()) == 37" \
+ && printf '%s\n' "InFormha 0.9.62 exercise-catalog" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
+
+# Preserve the existing front-end assembly exactly as before.
 RUN cat /app/web/guides_034.js >> /app/web/app.js \
  && cat /app/web/guides_038.js >> /app/web/app.js \
  && cat /app/web/guides_039.js >> /app/web/app.js \
@@ -212,4 +84,4 @@ RUN cat /app/web/guides_034.js >> /app/web/app.js \
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8099
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_menu_fix_0960:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8099", "--workers", "1", "--threads", "4", "exercise_guides_catalog_0962:app"]
