@@ -1,0 +1,43 @@
+// InFormha 0.9.63 - gestione foto allineata al catalogo 0.9.62 (37 esercizi)
+(function(){
+  const CATALOG=[
+    ['Petto','Chest press alla macchina','chest'],['Petto','Aperture / pec deck alla macchina','pec_fly'],['Petto','Piegamenti a terra (Push-up)','push_up'],
+    ['Schiena','Lat machine al petto','lat'],['Schiena','Lat machine presa stretta','lat_close_grip'],['Schiena','Lat machine presa inversa','lat_reverse_grip'],['Schiena','Pull-down a braccia tese','straight_arm_pulldown'],['Schiena','Rematore monobraccio con manubrio su panca','one_arm_dumbbell_row'],
+    ['Spalle','Shoulder press con manubri','dumbbell_shoulder_press'],['Spalle','Alzate laterali con manubri','dumbbell_lateral_raise'],['Spalle','Face pull alla Fassi','face_pull'],['Spalle','Reverse fly con manubri','dumbbell_reverse_fly'],
+    ['Tricipiti','Push-down tricipiti con corda','pushdown'],['Tricipiti','Push-down tricipiti con barra corta leggermente piegata','triceps_short_bar_pushdown'],['Tricipiti','Estensione tricipiti sopra la testa','overhead_triceps_extension'],['Tricipiti','Push-down tricipiti monobraccio','single_arm_triceps_pushdown'],
+    ['Bicipiti e avambracci','Curl bicipiti al cavo basso con appoggio inclinato','incline_support_cable_curl'],['Bicipiti e avambracci','Curl con manubri','dumbbell_curl'],['Bicipiti e avambracci','Hammer curl con manubri','dumbbell_hammer_curl'],['Bicipiti e avambracci','Reverse curl con manubri','reverse_curl'],
+    ['Gambe / quadricipiti','Goblet squat a box/panca','goblet_squat'],['Gambe / quadricipiti','Leg extension alla macchina','leg_extension'],['Gambe / quadricipiti','Split squat con manubri','dumbbell_split_squat'],['Gambe / quadricipiti','Step-up sul gradino','step_up'],
+    ['Femorali / catena posteriore','Stacco rumeno con manubri','romanian_deadlift'],['Femorali / catena posteriore','Stacco rumeno a una gamba con manubrio','single_leg_romanian_deadlift'],['Femorali / catena posteriore','Hamstring walkout','hamstring_walkout'],
+    ['Glutei','Ponte glutei / Hip thrust','glute_bridge'],['Glutei','Glute kickback a corpo libero','bodyweight_glute_kickback'],
+    ['Polpacci','Calf raise in piedi','calf_raise'],['Polpacci','Calf raise a una gamba sul gradino','single_leg_step_calf_raise'],['Polpacci','Seated calf raise con manubrio sulla panca','seated_dumbbell_calf_raise'],
+    ['Core','Plank','plank'],['Core','Crunch al cavo medio','mid_cable_crunch'],['Core','Dead bug','dead_bug'],
+    ['Cardio','Tapis roulant Fassi','treadmill'],['Cardio','Mini stepper','stepper']
+  ].map(([group,name,id])=>({group,name,id}));
+  if(CATALOG.length!==37) throw new Error('InFormha photo catalog must contain 37 exercises');
+
+  async function status(){try{return await api('api/guides')}catch(e){return {guides:{}}}}
+  function shell(){
+    const conn=document.querySelector('[data-page="connections"]');if(!conn)return null;
+    document.getElementById('if914Manager')?.remove();
+    let box=document.getElementById('if963Manager');if(box)return box;
+    box=document.createElement('div');box.id='if963Manager';box.className='card';
+    box.innerHTML=`<div class="ey">Guide / Foto esercizi</div><h2>Libreria immagini completa</h2><div class="sub">Tutti i 37 esercizi della libreria attuale. Puoi cercare, filtrare quelli senza immagine e caricare o sostituire direttamente il file.</div><div class="if963-controls"><input class="field" id="if963Search" placeholder="Cerca esercizio…"><select class="field" id="if963Group"><option value="">Tutti i gruppi</option></select><label class="if963-check"><input type="checkbox" id="if963Missing"> Solo senza immagine</label></div><div class="if963-summary" id="if963Summary"></div><div id="if963Rows"></div>`;
+    conn.appendChild(box);
+    const sel=box.querySelector('#if963Group');[...new Set(CATALOG.map(x=>x.group))].forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o)});
+    ['input','change'].forEach(ev=>box.addEventListener(ev,e=>{if(e.target.matches('#if963Search,#if963Group,#if963Missing'))render()}));
+    return box;
+  }
+  async function render(){
+    const box=shell();if(!box)return;const d=await status();
+    const q=(box.querySelector('#if963Search')?.value||'').trim().toLowerCase(),g=box.querySelector('#if963Group')?.value||'',missing=!!box.querySelector('#if963Missing')?.checked;
+    const all=CATALOG.map(x=>({...x,installed:!!d.guides?.[x.id]?.installed}));
+    const rows=all.filter(x=>(!q||`${x.name} ${x.group}`.toLowerCase().includes(q))&&(!g||x.group===g)&&(!missing||!x.installed));
+    const installed=all.filter(x=>x.installed).length;box.querySelector('#if963Summary').textContent=`${installed}/37 immagini presenti · ${rows.length} esercizi visualizzati`;
+    box.querySelector('#if963Rows').innerHTML=rows.map(x=>`<div class="if963-row"><div class="if963-info"><b>${x.name}</b><span>${x.group}</span><small class="${x.installed?'ok':'missing'}">${x.installed?'✓ Immagine presente':'Immagine mancante'}</small></div><div class="if963-actions">${x.installed?`<button class="btn secondary" onclick="if74OpenImage('${x.id}')">Apri</button>`:''}<input type="file" id="if963File_${x.id}" accept="image/jpeg,image/png,image/webp" hidden onchange="if963Upload('${x.id}',this)"><button class="btn secondary" onclick="document.getElementById('if963File_${x.id}').click()">${x.installed?'Sostituisci':'Carica file'}</button>${x.installed?`<button class="btn secondary if963-danger" onclick="if963Remove('${x.id}')">Rimuovi</button>`:''}</div></div>`).join('');
+  }
+  window.if963Upload=async function(id,input){const file=input.files?.[0];if(!file)return;const fd=new FormData();fd.append('image',file,file.name);try{await api(`api/guides/${id}`,{method:'POST',body:fd});toast('Immagine caricata');input.value='';await render()}catch(e){toast(e.message||'Errore caricamento')}};
+  window.if963Remove=async function(id){try{await api(`api/guides/${id}`,{method:'DELETE'});toast('Immagine rimossa');await render()}catch(e){toast(e.message||'Errore rimozione')}};
+  const css=document.createElement('style');css.textContent=`.if963-controls{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin:14px 0}.if963-check{display:flex;align-items:center;gap:8px;color:var(--m);font-size:13px;font-weight:700}.if963-summary{font-size:12px;color:var(--m);margin-bottom:8px}.if963-row{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--ln)}.if963-info{display:flex;flex-direction:column;gap:4px}.if963-info span{font-size:12px;color:var(--m)}.if963-info small{font-size:11px}.if963-info small.ok{color:var(--green2)}.if963-actions{display:flex;gap:7px;flex-wrap:wrap}.if963-actions .btn{width:auto;margin:0;padding:9px 11px}.if963-danger{opacity:.78}@media(max-width:760px){.if963-controls{grid-template-columns:1fr}.if963-row{align-items:flex-start;flex-direction:column}.if963-actions{width:100%}}`;document.head.appendChild(css);
+  document.addEventListener('click',e=>{if(e.target.closest('[onclick*="connections"]'))setTimeout(()=>{shell();render()},120)});setTimeout(()=>{shell();render()},450);
+  console.log('[INFORMHA_GUIDE_MANAGER] catalog37=1');
+})();
