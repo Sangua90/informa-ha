@@ -1,7 +1,7 @@
 FROM python:3.13-alpine
-ARG BUILD_VERSION=0.10.3
+ARG BUILD_VERSION=0.10.4
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.10.3-nutrition-single-renderer
+ARG INFORMA_CACHE_BUST=0.10.4-nutrition-single-renderer-refresh
 LABEL io.hass.version="${BUILD_VERSION}" io.hass.type="app" io.hass.arch="${BUILD_ARCH}"
 WORKDIR /app
 RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0 websocket-client==1.8.0
@@ -13,7 +13,7 @@ RUN grep -Fq 'Expected 36 exercises' /app/coach_library_0962.py \
  && grep -Fq 'audio=1 photo=1 homestock=1 history=1 edit=1 delete=1' /app/nutrition_ai_0102.py \
  && grep -Fq 'clean=1 mediarecorder=1 camera=1 history_menu=1 homestock_hidden=1' /app/web/nutrition_final_0102.js \
  && python -c "import coach_library_0962 as c; assert c.exercise_count() == 36; assert len(c.guide_ids()) == 36" \
- && printf '%s\n' "InFormha 0.10.3 nutrition-single-renderer" > /app/BUILD_ID \
+ && printf '%s\n' "InFormha 0.10.4 nutrition-single-renderer-refresh" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
 RUN for f in guides_034.js guides_038.js guides_039.js guides_040.js coach_full_050.js fullbody_051.js coach_controls_060.js interface_061.js interface_063.js exercise_gallery_066.js workout_ui_067.js progression_068.js week_069.js advance_070.js pain_071.js resume_072.js muscle_search_073.js coach_refine_075.js ai_coach_090.js ai_gemini_091.js ai_context_093.js library_094.js profile_sections_0912.js load_fields_0913.js management_accordion_0921.js supplements_split_0923.js workout_activation_0928.js pain_detail_0929.js pain_select_0930.js warmup_stretching_0931.js warmup_ui_fix_0932.js workout_history_0933.js healthsync_status_0934.js healthsync_relocate_0935.js equipment_details_0936.js health_dashboard_0940.js health_dashboard_0941.js health_rest_dashboard_0944.js workout_tv_0945.js workout_tv_layout_0946.js workout_flow_0949.js workout_focus_0950.js profile_weight_0951.js exercise_guide_0952.js exercise_guides_0953.js exercise_catalog_0954.js guide_manager_0914.js guide_manager_0963.js treadmill_duration_0964.js adaptive_coach_0968.js load_progression_0969.js treadmill_progression_0970.js adaptive_library_0972.js treadmill_focus_fix_0974.js treadmill_render_fix_0975.js preworkout_stretching_0976.js remove_calibration_0977.js automatic_stretching_0978.js temporary_equipment_0979.js recovery_audio_test_0982.js treadmill_flow_fix_0983.js treadmill_complete_fix_0984.js treadmill_advance_fix_0990.js exercise_complete_fix_0994.js treadmill_final_fix_0995.js measurements_0978.js nutrition_final_0102.js; do cat "/app/web/$f" >> /app/web/app.js; done
 ENV PYTHONUNBUFFERED=1
