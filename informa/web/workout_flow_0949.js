@@ -1,4 +1,4 @@
-// InFormha 0.9.49 - stato esercizi persistente e archiviazione sicura
+// InFormha 0.9.93 - stato esercizi persistente, completamento esplicito e archiviazione sicura
 (function(){
   const KEY='informha_workout_flow_0949';
   let states={};
@@ -11,85 +11,32 @@
   function cardId(c){return c.id==='if50ex_cardio'?'cardio':String(c.id||'').replace('if50ex_','')}
   function cards(){return [...document.querySelectorAll('[data-page="workout"] .if50-ex,[data-page="workout"] #if50ex_cardio')]}
   function choice(c){return [...c.querySelectorAll('.choice')].find(x=>[...x.querySelectorAll('button')].some(b=>['Completato','Parziale','Saltato'].includes((b.textContent||'').trim())))}
-  function capture(c){
-    const id=cardId(c),s=state(id);
-    c.querySelectorAll('.setrow').forEach(row=>{
-      const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;
-      const input=row.querySelectorAll('input');
-      s.sets[m[1]]={weight:input[0]?.value??'',reps:input[1]?.value??'',done:!!check?.classList.contains('done')};
-      if(s.sets[m[1]].done&&s.stage==='planned')s.stage='started';
-    });
-    const f=c.querySelector('select[id^="if50f_"]');if(f)s.fatigue=f.value||s.fatigue;save();
-  }
+  function capture(c){const id=cardId(c),s=state(id);c.querySelectorAll('.setrow').forEach(row=>{const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;const input=row.querySelectorAll('input');s.sets[m[1]]={weight:input[0]?.value??'',reps:input[1]?.value??'',done:!!check?.classList.contains('done')};if(s.sets[m[1]].done&&s.stage==='planned')s.stage='started'});const f=c.querySelector('select[id^="if50f_"]');if(f)s.fatigue=f.value||s.fatigue;save()}
   function captureAll(){cards().forEach(capture)}
   function done(s){return Object.values(s.sets||{}).filter(x=>x.done).length}
-  function restore(c,s){
-    c.querySelectorAll('.setrow').forEach(row=>{
-      const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;
-      const v=s.sets?.[m[1]],input=row.querySelectorAll('input');if(!v)return;
-      if(input[0])input[0].value=v.weight??'';if(input[1])input[1].value=v.reps??'';
-      if(v.done){check.classList.add('done');check.textContent='✓'}
-    });
-    const f=c.querySelector('select[id^="if50f_"]');if(f&&s.fatigue){f.value=s.fatigue;f.dispatchEvent(new Event('change',{bubbles:true}))}
-  }
+  function restore(c,s){c.querySelectorAll('.setrow').forEach(row=>{const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;const v=s.sets?.[m[1]],input=row.querySelectorAll('input');if(!v)return;if(input[0])input[0].value=v.weight??'';if(input[1])input[1].value=v.reps??'';if(v.done){check.classList.add('done');check.textContent='✓'}});const f=c.querySelector('select[id^="if50f_"]');if(f&&s.fatigue){f.value=s.fatigue;f.dispatchEvent(new Event('change',{bubbles:true}))}}
   function decorateCard(c){
-    const id=cardId(c),s=state(id);restore(c,s);
-    let bar=c.querySelector('.if949-flow');if(!bar){bar=document.createElement('div');bar.className='if949-flow';c.querySelector(':scope > .row')?.insertAdjacentElement('afterend',bar)}
+    const id=cardId(c),s=state(id);restore(c,s);let bar=c.querySelector('.if949-flow');if(!bar){bar=document.createElement('div');bar.className='if949-flow';c.querySelector(':scope > .row')?.insertAdjacentElement('afterend',bar)}
+    const total=c.querySelectorAll('.setrow').length,finished=total>0&&done(s)>=total;
     if(s.stage==='planned')bar.innerHTML='<div><b>Da iniziare</b><span>Puoi sostituirlo o saltarlo prima di cominciare.</span></div><button class="btn" onclick="if949Start(\''+id+'\')">Inizia esercizio</button>';
-    else if(s.stage==='started')bar.innerHTML='<div><b class="green">Esercizio in corso</b><span>'+done(s)+' serie registrate. Alla fine scegli Completato o Parziale.</span></div>';
+    else if(s.stage==='started'&&finished)bar.innerHTML='<div><b class="green">Tutte le serie completate</b><span>'+done(s)+'/'+total+' serie registrate. Conferma per passare al prossimo esercizio.</span></div><button class="btn" onclick="if949CompleteExercise(\''+id+'\',this)">Completa esercizio</button>';
+    else if(s.stage==='started')bar.innerHTML='<div><b class="green">Esercizio in corso</b><span>'+done(s)+(total?' / '+total:'')+' serie registrate.</span></div>';
     else bar.innerHTML='<div><b class="green">Archiviato · '+String(s.status||'Salvato')+'</b><span>'+done(s)+' serie conservate nello storico.</span></div>';
     c.querySelectorAll('.setrow input,.setrow .check').forEach(el=>{const isDone=el.classList.contains('check')&&el.classList.contains('done');el.disabled=s.stage!=='started'||isDone});
-    const f=c.querySelector('select[id^="if50f_"]'),ch=choice(c);
-    if(f?.closest('.row'))f.closest('.row').style.display=s.stage==='planned'?'none':'';
-    if(ch){ch.style.display=s.stage==='planned'?'none':'';ch.querySelectorAll('button').forEach(b=>{b.classList.toggle('on',(b.textContent||'').trim()===s.status);b.disabled=s.stage==='archived'})}
-    c.querySelectorAll('.if60-actions button').forEach(b=>{if((b.textContent||'').trim()==='Togli')b.textContent='Salta';b.disabled=s.stage==='archived'});
-    c.classList.toggle('if949-archived',s.stage==='archived');
+    const f=c.querySelector('select[id^="if50f_"]'),ch=choice(c);if(f?.closest('.row'))f.closest('.row').style.display=s.stage==='planned'?'none':'';if(ch){ch.style.display='none'}
+    c.querySelectorAll('.if60-actions button').forEach(b=>{if((b.textContent||'').trim()==='Togli')b.textContent='Salta';b.disabled=s.stage==='archived'});c.classList.toggle('if949-archived',s.stage==='archived')
   }
   function decorate(){cards().forEach(decorateCard)}
-  async function archive(id,status,priority,notes){
-    const ex=exercise(id),name=ex?.name||(id==='cardio'?'Tapis roulant / cardio':id);
-    const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:name,priority:priority||ex?.priority||'Utile',status,notes:notes||null})});
-    currentWorkoutId=out.workout_id;const s=state(id);s.stage='archived';s.status=status;s.archivedAt=new Date().toISOString();save();return out;
-  }
-  function next(id){const all=cards(),i=all.findIndex(c=>cardId(c)===id),n=all.slice(i+1).find(c=>state(cardId(c)).stage==='planned');if(n)setTimeout(()=>n.scrollIntoView({behavior:'smooth',block:'start'}),120)}
+  async function archive(id,status,priority,notes){const ex=exercise(id),name=ex?.name||(id==='cardio'?'Tapis roulant / cardio':id);const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:name,priority:priority||ex?.priority||'Utile',status,notes:notes||null})});currentWorkoutId=out.workout_id;const s=state(id);s.stage='archived';s.status=status;s.archivedAt=new Date().toISOString();save();return out}
+  function next(id){const all=cards(),i=all.findIndex(c=>cardId(c)===id),n=all.slice(i+1).find(c=>state(cardId(c)).stage==='planned');if(n){const nid=cardId(n);setTimeout(()=>{if(typeof window.if949Start==='function')window.if949Start(nid);n.scrollIntoView({behavior:'smooth',block:'start'})},120)}}
   window.if949Start=function(id){captureAll();const s=state(id);if(s.stage!=='planned')return;s.stage='started';s.startedAt=new Date().toISOString();save();const c=card(id);if(c){decorateCard(c);c.querySelector('.setrow input')?.focus()}};
-
-  const render=window.if50RenderWorkout;
-  if(typeof render==='function')window.if50RenderWorkout=function(){captureAll();const r=render.apply(this,arguments);setTimeout(decorate,0);return r};
-  const generate=window.if50Generate;
-  if(typeof generate==='function')window.if50Generate=async function(){reset();const r=await generate.apply(this,arguments);setTimeout(decorate,0);return r};
-  const complete=window.if50CompleteSet;
-  if(typeof complete==='function')window.if50CompleteSet=async function(id,n){
-    if(state(id).stage!=='started'){toast('Prima premi Inizia esercizio');return}
-    captureAll();const r=await complete.apply(this,arguments),b=document.getElementById('if50c_'+id+'_'+n);
-    if(b?.classList.contains('done')){const s=state(id);s.sets[String(n)]=s.sets[String(n)]||{};s.sets[String(n)].done=true;save()}return r;
-  };
-  window.if50Status=async function(id,status,priority,btn){
-    captureAll();const c=card(id),s=state(id),total=c?.querySelectorAll('.setrow').length||0;
-    if(s.stage==='archived'){toast('Esercizio già archiviato');return}
-    if(s.stage==='planned'&&status!=='Saltato'){toast('Prima premi Inizia esercizio');return}
-    if(status==='Completato'&&total&&done(s)<total){toast('Mancano delle serie: scegli Parziale');return}
-    try{await archive(id,status,priority,'Fatica: '+(s.fatigue||'Giusta'));if(c)decorateCard(c);toast('Esercizio archiviato: '+status.toLowerCase());next(id)}
-    catch(e){toast(e.message||'Errore archiviazione')}
-  };
-  const swap=window.if60Swap;
-  if(typeof swap==='function')window.if60Swap=async function(oldId,newId){
-    captureAll();const s=state(oldId),ex=exercise(oldId);if(s.stage==='archived'){toast('L’esercizio è già archiviato');return}
-    if(s.stage==='started'){if(!confirm('Hai già iniziato '+(ex?.name||'questo esercizio')+'. Salvarlo come parziale e sostituirlo?'))return;try{await archive(oldId,'Parziale',ex?.priority,'Sostituito dopo '+done(s)+' serie')}catch(e){toast(e.message||'Errore archiviazione');return}}
-    delete states[newId];save();const r=swap.apply(this,arguments);setTimeout(decorate,0);return r;
-  };
-  const remove=window.if60RemoveExercise;
-  if(typeof remove==='function')window.if60RemoveExercise=async function(id){
-    captureAll();const s=state(id),ex=exercise(id);if(s.stage==='archived'){toast('L’esercizio è già archiviato');return}
-    const status=s.stage==='started'?'Parziale':'Saltato',q=status==='Parziale'?'Salvare il lavoro svolto come parziale e passare oltre?':'Segnare questo esercizio come saltato?';
-    if(!confirm(q))return;try{await archive(id,status,ex?.priority,status==='Parziale'?'Interrotto dopo '+done(s)+' serie':'Saltato prima di iniziare')}catch(e){toast(e.message||'Errore archiviazione');return}
-    const r=remove.apply(this,arguments);setTimeout(decorate,0);return r;
-  };
-  const resume=window.if60ResumePending;if(typeof resume==='function')window.if60ResumePending=function(){reset();const r=resume.apply(this,arguments);setTimeout(decorate,0);return r};
-  const finish=window.if50Finish;if(typeof finish==='function')window.if50Finish=async function(){const r=await finish.apply(this,arguments);reset();return r};
-  document.addEventListener('input',e=>{if(e.target.closest('[data-page="workout"]'))captureAll()});
-  document.addEventListener('change',e=>{if(e.target.closest('[data-page="workout"]'))captureAll()});
-  const css=document.createElement('style');css.textContent='.if949-flow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;padding:12px;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:rgba(0,0,0,.18)}.if949-flow b,.if949-flow span{display:block}.if949-flow span{margin-top:3px;color:var(--m);font-size:12px}.if949-flow .btn{width:auto;min-width:145px;margin:0}.if949-archived{border-color:rgba(34,197,94,.3);opacity:.88}.if949-archived .if60-actions{display:none}@media(max-width:520px){.if949-flow{align-items:stretch;flex-direction:column}.if949-flow .btn{width:100%}}';document.head.appendChild(css);
-  load();setTimeout(decorate,250);
-  console.log('[INFORMHA_WORKOUT_FLOW] version=0.9.49 exercise_state_persistent=1 archive_before_replace=1 start_gate=1');
+  window.if949CompleteExercise=async function(id,btn){captureAll();const c=card(id),s=state(id),total=c?.querySelectorAll('.setrow').length||0;if(s.stage!=='started'){toast('Esercizio non in corso');return}if(total&&done(s)<total){toast('Completa prima tutte le serie');return}if(btn){btn.disabled=true;btn.textContent='Salvataggio…'}try{await window.if50Status(id,'Completato',exercise(id)?.priority,btn)}catch(e){if(btn){btn.disabled=false;btn.textContent='Completa esercizio'}}};
+  const render=window.if50RenderWorkout;if(typeof render==='function')window.if50RenderWorkout=function(){captureAll();const r=render.apply(this,arguments);setTimeout(decorate,0);return r};
+  const generate=window.if50Generate;if(typeof generate==='function')window.if50Generate=async function(){reset();const r=await generate.apply(this,arguments);setTimeout(decorate,0);return r};
+  const complete=window.if50CompleteSet;if(typeof complete==='function')window.if50CompleteSet=async function(id,n){if(state(id).stage!=='started'){toast('Prima premi Inizia esercizio');return}captureAll();const r=await complete.apply(this,arguments),b=document.getElementById('if50c_'+id+'_'+n);if(b?.classList.contains('done')){const s=state(id);s.sets[String(n)]=s.sets[String(n)]||{};s.sets[String(n)].done=true;save();setTimeout(()=>{const c=card(id);if(c)decorateCard(c)},0)}return r};
+  window.if50Status=async function(id,status,priority,btn){captureAll();const c=card(id),s=state(id),total=c?.querySelectorAll('.setrow').length||0;if(s.stage==='archived'){toast('Esercizio già archiviato');return}if(s.stage==='planned'&&status!=='Saltato'){toast('Prima premi Inizia esercizio');return}if(status==='Completato'&&total&&done(s)<total){toast('Mancano delle serie');return}try{await archive(id,status,priority,'Fatica: '+(s.fatigue||'Giusta'));if(c)decorateCard(c);toast('Esercizio archiviato: '+status.toLowerCase());next(id)}catch(e){toast(e.message||'Errore archiviazione');if(btn){btn.disabled=false;btn.textContent='Completa esercizio'}}};
+  const swap=window.if60Swap;if(typeof swap==='function')window.if60Swap=async function(oldId,newId){captureAll();const s=state(oldId),ex=exercise(oldId);if(s.stage==='archived'){toast('L’esercizio è già archiviato');return}if(s.stage==='started'){if(!confirm('Hai già iniziato '+(ex?.name||'questo esercizio')+'. Salvarlo come parziale e sostituirlo?'))return;try{await archive(oldId,'Parziale',ex?.priority,'Sostituito dopo '+done(s)+' serie')}catch(e){toast(e.message||'Errore archiviazione');return}}delete states[newId];save();const r=swap.apply(this,arguments);setTimeout(decorate,0);return r};
+  const remove=window.if60RemoveExercise;if(typeof remove==='function')window.if60RemoveExercise=async function(id){captureAll();const s=state(id),ex=exercise(id);if(s.stage==='archived'){toast('L’esercizio è già archiviato');return}const status=s.stage==='started'?'Parziale':'Saltato',q=status==='Parziale'?'Salvare il lavoro svolto come parziale e passare oltre?':'Segnare questo esercizio come saltato?';if(!confirm(q))return;try{await archive(id,status,ex?.priority,status==='Parziale'?'Interrotto dopo '+done(s)+' serie':'Saltato prima di iniziare')}catch(e){toast(e.message||'Errore archiviazione');return}const r=remove.apply(this,arguments);setTimeout(decorate,0);return r};
+  const resume=window.if60ResumePending;if(typeof resume==='function')window.if60ResumePending=function(){reset();const r=resume.apply(this,arguments);setTimeout(decorate,0);return r};const finish=window.if50Finish;if(typeof finish==='function')window.if50Finish=async function(){const r=await finish.apply(this,arguments);reset();return r};document.addEventListener('input',e=>{if(e.target.closest('[data-page="workout"]'))captureAll()});document.addEventListener('change',e=>{if(e.target.closest('[data-page="workout"]'))captureAll()});
+  const css=document.createElement('style');css.textContent='.if949-flow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;padding:12px;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:rgba(0,0,0,.18)}.if949-flow b,.if949-flow span{display:block}.if949-flow span{margin-top:3px;color:var(--m);font-size:12px}.if949-flow .btn{width:auto;min-width:145px;margin:0}.if949-archived{border-color:rgba(34,197,94,.3);opacity:.88}.if949-archived .if60-actions{display:none}@media(max-width:520px){.if949-flow{align-items:stretch;flex-direction:column}.if949-flow .btn{width:100%}}';document.head.appendChild(css);load();setTimeout(decorate,250);console.log('[INFORMHA_WORKOUT_FLOW] version=0.9.93 explicit_complete=1 auto_next=1 exercise_state_persistent=1');
 })();
