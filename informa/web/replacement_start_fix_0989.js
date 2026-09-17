@@ -1,4 +1,4 @@
-// InFormha 0.9.89 - esercizio sostitutivo pronto per essere iniziato
+// InFormha 0.9.91 - esercizio sostitutivo subito attivo
 (function(){
  const swap=window.if60Swap;
  if(typeof swap!=='function')return;
@@ -7,14 +7,12 @@
   setTimeout(()=>{
    const card=document.getElementById('if50ex_'+newId);
    if(!card)return;
-   // Il nuovo esercizio deve restare "Da iniziare": il click abilita carico/ripetizioni/check.
-   const startBtn=[...card.querySelectorAll('.if949-flow button')].find(b=>(b.textContent||'').includes('Inizia esercizio'));
-   if(startBtn){
-    startBtn.disabled=false;
-    startBtn.onclick=()=>window.if949Start(newId);
-   }
-  },120);
+   // Scegliere il sostituto equivale a passare a quell'esercizio: lo avviamo subito.
+   // if949Start abilita carico/piastre, ripetizioni e check senza avviare recupero.
+   if(typeof window.if949Start==='function')window.if949Start(newId);
+   card.querySelector('.setrow input')?.focus();
+  },160);
   return result;
  };
- console.log('[INFORMHA_REPLACEMENT_START_FIX] version=0.9.89 replacement_start_enabled=1 load_and_check_after_start=1');
+ console.log('[INFORMHA_REPLACEMENT_START_FIX] version=0.9.91 replacement_auto_start=1 load_inputs_enabled=1 set_check_enabled=1');
 })();
