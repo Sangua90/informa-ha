@@ -18,11 +18,35 @@ const IF60_GROUPS={
  'Cardio':['treadmill','stepper']
 };
 let IF60_PENDING=[];
-function if60Library(id){return IF51_LIBRARY[id]||IF50_EX[id]||null}
+function if60Library(id){return window.IF72_LIBRARY?.[id]||IF51_LIBRARY[id]||IF50_EX[id]||null}
 function if60PainBlocks(id){const ex=if60Library(id);return !!(ex?.painAvoid||[]).includes(IF50.pain)}
+const IF60_FAMILIES=[
+ ['chest','pec_fly','push_up'],
+ ['lat','lat_close_grip','lat_reverse_grip','straight_arm_pulldown','one_arm_dumbbell_row'],
+ ['dumbbell_shoulder_press','dumbbell_lateral_raise','face_pull','dumbbell_reverse_fly'],
+ ['pushdown','triceps_short_bar_pushdown','overhead_triceps_extension','single_arm_triceps_pushdown'],
+ ['dumbbell_curl','dumbbell_hammer_curl','reverse_curl','curl'],
+ ['goblet_squat','leg_extension','dumbbell_split_squat','step_up'],
+ ['romanian_deadlift','single_leg_romanian_deadlift','hamstring_walkout'],
+ ['glute_bridge','bodyweight_glute_kickback'],
+ ['calf_raise','single_leg_step_calf_raise','seated_dumbbell_calf_raise'],
+ ['plank','mid_cable_crunch','dead_bug'],
+ ['treadmill','stepper']
+];
+function if60NormGroup(g){g=String(g||'').toLowerCase();if(g.includes('bicip'))return'Bicipiti';if(g.includes('tricip'))return'Tricipiti';if(g.includes('petto'))return'Petto';if(g.includes('schiena'))return'Schiena';if(g.includes('spall'))return'Spalle';if(g.includes('femoral')||g.includes('catena'))return'Femorali';if(g.includes('gamb')||g.includes('quadric'))return'Gambe';if(g.includes('glute'))return'Glutei';if(g.includes('polp'))return'Polpacci';if(g.includes('core'))return'Core';if(g.includes('cardio'))return'Cardio';return g}
+function if60Family(id){return IF60_FAMILIES.find(a=>a.includes(id))||[]}
+function if60AllIds(){return [...new Set([...Object.keys(window.IF72_LIBRARY||{}),...Object.keys(IF51_LIBRARY||{}),...Object.keys(IF50_EX||{})])]}
 function if60AlternativeList(id){
- let ids=(IF60_ALTERNATIVES[id]||Object.keys(IF51_LIBRARY));
- return ids.filter(x=>x!==id&&if60Library(x)&&!if60PainBlocks(x)).slice(0,6)
+ const src=if60Library(id);if(!src)return[];
+ const group=if60NormGroup(src.group),family=if60Family(id),used=new Set((IF50.plan||[]).map(x=>x.id));
+ return if60AllIds().filter(x=>x!==id&&!used.has(x)&&if60Library(x)&&!if60PainBlocks(x)).map(x=>{
+   const e=if60Library(x);let score=0;
+   if(if60NormGroup(e.group)===group)score+=100;
+   if(family.includes(x))score+=40;
+   if(src.loadType&&e.loadType===src.loadType)score+=8;
+   if(src.equipment&&e.equipment&&src.equipment===e.equipment)score+=5;
+   return {id:x,score,name:e.name||x};
+ }).filter(x=>x.score>=100).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name)).slice(0,6).map(x=>x.id)
 }
 function if60ToPlan(id){const x=if60Library(id);if(!x)return null;return {id,name:x.name,priority:x.priority||'Utile',sets:x.sets||3,reps:x.reps,rest:x.rest||90,guide:x.guide||null,cardio:!!x.cardio,duration:x.duration||null,equipment:x.equipment||'',group:x.group||''}}
 function if60AddExerciseControls(){
@@ -38,7 +62,7 @@ function if60AddExerciseControls(){
 }
 function if60Modal(title,html){let m=document.getElementById('if60Modal');if(!m){m=document.createElement('div');m.id='if60Modal';m.className='if60-modal';m.innerHTML='<div class="if60-sheet"><div class="row"><h2 id="if60Title" style="flex:1"></h2><button class="btn secondary" style="width:auto" onclick="if60Close()">✕</button></div><div id="if60Body"></div></div>';document.body.appendChild(m)}document.getElementById('if60Title').textContent=title;document.getElementById('if60Body').innerHTML=html;m.classList.add('open')}
 function if60Close(){document.getElementById('if60Modal')?.classList.remove('open')}
-function if60ShowSwap(id){const opts=if60AlternativeList(id);if60Modal('Sostituisci esercizio',opts.map(x=>{const e=if60Library(x);return `<button class="btn secondary" onclick="if60Swap('${id}','${x}')"><b>${e.name}</b><br><span class="sub">${e.group||''} · ${e.equipment||''}</span></button>`}).join('')||'<div class="sub">Nessuna alternativa prudente disponibile con il fastidio segnalato.</div>')}
+function if60ShowSwap(id){const opts=if60AlternativeList(id),src=if60Library(id);if60Modal('Sostituisci esercizio',`<div class="sub" style="margin-bottom:10px">Alternative per <b>${src?.name||'esercizio'}</b>: stesso gruppo muscolare, senza duplicati e compatibili con eventuali fastidi.</div>`+opts.map(x=>{const e=if60Library(x);return `<button class="btn secondary" onclick="if60Swap('${id}','${x}')"><b>${e.name}</b><br><span class="sub">${e.group||''} · ${e.equipment||''}</span></button>`}).join('')||'<div class="sub">Nessuna alternativa equivalente disponibile con il fastidio segnalato.</div>')}
 function if60Swap(oldId,newId){const idx=IF50.plan.findIndex(x=>x.id===oldId);if(idx<0)return;const p=if60ToPlan(newId);if(!p)return;IF50.plan[idx]=p;if60Close();if50RenderWorkout();if60AddExerciseControls();toast('Esercizio sostituito')}
 function if60RemoveExercise(id){IF50.plan=IF50.plan.filter(x=>x.id!==id);if50RenderWorkout();if60AddExerciseControls();toast('Esercizio tolto dalla seduta')}
 function if60ChangeGroup(){if60Modal('Cambia gruppo muscolare',Object.keys(IF60_GROUPS).map(g=>`<button class="btn secondary" onclick="if60UseGroup('${g.replace(/'/g,"\\'")}')">${g}</button>`).join(''))}
