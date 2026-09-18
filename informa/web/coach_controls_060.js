@@ -56,7 +56,7 @@ function if60AddExerciseControls(){
    const box=document.createElement('div');box.className='if60-actions row';box.innerHTML=`<button class="btn secondary" onclick="if60ShowSwap('${id}')">Sostituisci</button><button class="btn secondary" onclick="if60RemoveExercise('${id}')">Togli</button>`;card.appendChild(box)
  });
  const work=document.querySelector('[data-page="workout"]');if(work&&!document.getElementById('if60SessionControls')){
-   const box=document.createElement('div');box.id='if60SessionControls';box.className='card';box.innerHTML=`<div class="ey">Modifica seduta</div><div class="grid2"><button class="btn secondary" onclick="if60ChangeGroup()">Cambia gruppo</button><button class="btn secondary" onclick="if60AddExercise()">Aggiungi esercizio</button></div><button class="btn blue" onclick="if60Suspend()">Sospendi e continua più tardi</button><div class="sub" style="margin-top:8px">Solo gli esercizi Essenziali non conclusi vengono proposti come recupero. Utile e Opzionale non diventano debito.</div>`;
+   const box=document.createElement('div');box.id='if60SessionControls';box.className='card';box.innerHTML=`<div class="ey">Gestisci allenamento</div><button class="btn secondary" onclick="if60AddExercise()">＋ Aggiungi esercizio</button>`;
    const end=[...work.querySelectorAll('button')].find(b=>b.textContent.includes('Fine allenamento'));work.insertBefore(box,end||null)
  }
 }
