@@ -5,7 +5,6 @@ import app as root
 import ai_gemini_091 as gem
 
 app=base.app
-root.VERSION='0.10.8'
 
 def _catalog():
     try:return root.hass_request('food_scanner/informha/catalog')
@@ -69,4 +68,4 @@ def nutrition_update_0102(entry_id):
 def nutrition_delete_0102(entry_id):
     con=root.db();con.execute('DELETE FROM nutrition_entries WHERE id=?',(entry_id,));con.commit();con.close();return root.jsonify(ok=True)
 
-print('[INFORMHA_NUTRITION_AI] version=0.10.8 audio=1 photo=1 homestock=1 history=1 edit=1 delete=1',flush=True)
+print('[INFORMHA_NUTRITION_AI] version=runtime audio=1 photo=1 homestock=1 history=1 edit=1 delete=1',flush=True)
