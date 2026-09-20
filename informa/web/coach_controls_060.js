@@ -30,12 +30,12 @@ const IF60_FAMILIES=[
  ['romanian_deadlift','single_leg_romanian_deadlift','hamstring_walkout'],
  ['glute_bridge','bodyweight_glute_kickback'],
  ['calf_raise','single_leg_step_calf_raise','seated_dumbbell_calf_raise'],
- ['plank','mid_cable_crunch','dead_bug'],
+ ['plank','incline_bench_crunch','heel_taps','reverse_crunch'],
  ['treadmill','stepper']
 ];
 function if60NormGroup(g){g=String(g||'').toLowerCase();if(g.includes('bicip'))return'Bicipiti';if(g.includes('tricip'))return'Tricipiti';if(g.includes('petto'))return'Petto';if(g.includes('schiena'))return'Schiena';if(g.includes('spall'))return'Spalle';if(g.includes('femoral')||g.includes('catena'))return'Femorali';if(g.includes('gamb')||g.includes('quadric'))return'Gambe';if(g.includes('glute'))return'Glutei';if(g.includes('polp'))return'Polpacci';if(g.includes('core'))return'Core';if(g.includes('cardio'))return'Cardio';return g}
 function if60Family(id){return IF60_FAMILIES.find(a=>a.includes(id))||[]}
-function if60AllIds(){return [...new Set([...Object.keys(window.IF72_LIBRARY||{}),...Object.keys(IF51_LIBRARY||{}),...Object.keys(IF50_EX||{})])]}
+function if60AllIds(){const supported=Object.keys(window.IF72_LIBRARY||{});return supported.length?supported:[...new Set([...Object.keys(IF51_LIBRARY||{}),...Object.keys(IF50_EX||{})])]}
 function if60AlternativeList(id){
  const src=if60Library(id);if(!src)return[];
  const group=if60NormGroup(src.group),family=if60Family(id),used=new Set((IF50.plan||[]).map(x=>x.id));
@@ -67,7 +67,7 @@ function if60Swap(oldId,newId){const idx=IF50.plan.findIndex(x=>x.id===oldId);if
 function if60RemoveExercise(id){IF50.plan=IF50.plan.filter(x=>x.id!==id);if50RenderWorkout();if60AddExerciseControls();toast('Esercizio tolto dalla seduta')}
 function if60ChangeGroup(){if60Modal('Cambia gruppo muscolare',Object.keys(IF60_GROUPS).map(g=>`<button class="btn secondary" onclick="if60UseGroup('${g.replace(/'/g,"\\'")}')">${g}</button>`).join(''))}
 function if60UseGroup(group){let ids=IF60_GROUPS[group]||[];ids=ids.filter(id=>!if60PainBlocks(id));IF50.plan=ids.map(if60ToPlan).filter(Boolean);IF50.planTitle=group;if60Close();if50RenderWorkout();if60AddExerciseControls();toast('Gruppo cambiato')}
-function if60AddExercise(){const ids=Object.keys(IF51_LIBRARY).filter(id=>!IF50.plan.some(x=>x.id===id)&&!if60PainBlocks(id));if60Modal('Aggiungi esercizio',ids.map(id=>{const e=if60Library(id);return `<button class="btn secondary" onclick="if60Append('${id}')">${e.name}<br><span class="sub">${e.group||''}</span></button>`}).join(''))}
+function if60AddExercise(){const ids=if60AllIds().filter(id=>!IF50.plan.some(x=>x.id===id)&&!if60PainBlocks(id));if60Modal('Aggiungi esercizio',ids.map(id=>{const e=if60Library(id);return `<button class="btn secondary" onclick="if60Append('${id}')">${e.name}<br><span class="sub">${e.group||''}</span></button>`}).join(''))}
 function if60Append(id){const p=if60ToPlan(id);if(!p)return;IF50.plan.push(p);if60Close();if50RenderWorkout();if60AddExerciseControls();toast('Esercizio aggiunto')}
 function if60ExerciseDone(id){const card=document.getElementById(`if50ex_${id}`);if(!card)return false;const checks=[...card.querySelectorAll('.check')];return checks.length>0&&checks.every(x=>x.classList.contains('done'))}
 async function if60Suspend(){
