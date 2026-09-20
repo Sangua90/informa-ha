@@ -13,7 +13,7 @@
   function showOnly(id){const target=card(id);if(!target||isArchived(id,target))return false;cards().forEach(c=>{const on=c===target;c.classList.toggle('if950-current',on);c.classList.toggle('if950-hidden',!on)});setActive(id);return true}
   function firstPending(){const c=cards().find(x=>!isArchived(idOf(x),x));return c?idOf(c):null}
   function restoreActive(){const id=getActive();if(id&&showOnly(id))return id;const next=firstPending();if(next)showOnly(next);else setActive(null);return next}
-  function ensureStarted(id){const all=states(),s=all[id]||(all[id]={stage:'planned',sets:{},fatigue:'Giusta',status:null});if(s.stage==='archived'){s.stage='planned';s.status=null;delete s.archivedAt}saveStates(all);setActive(id);try{if(s.stage==='planned'&&typeof window.if949Start==='function')window.if949Start(id)}catch(e){}setTimeout(()=>showOnly(id),40)}
+  function ensureStarted(id){const all=states(),s=all[id]||(all[id]={stage:'planned',sets:{},fatigue:'Giusta',status:null});if(s.stage==='archived')return false;saveStates(all);setActive(id);try{if(s.stage==='planned'&&typeof window.if949Start==='function')window.if949Start(id)}catch(e){}setTimeout(()=>showOnly(id),40);return true}
 
   window.openGuide=function(id){if(!id)return;if(typeof window.openGuideZoom040==='function'){window.openGuideZoom040(id);return}if(typeof window.if74OpenImage==='function'){window.if74OpenImage(id);return}window.open(`guide-local/${encodeURIComponent(id)}?t=${Date.now()}`,'_blank')};
   document.addEventListener('click',function(e){const b=e.target.closest('[data-page="workout"] button');if(!b||(b.textContent||'').trim().toLowerCase()!=='guida')return;const c=b.closest('.if50-ex,#if50ex_cardio');if(!c)return;e.preventDefault();e.stopImmediatePropagation();window.openGuide(idOf(c))},true);
@@ -39,5 +39,5 @@
   const go=window.go;
   if(typeof go==='function')window.go=function(page){const out=go.apply(this,arguments);if(page==='workout')setTimeout(restoreActive,120);return out};
   setTimeout(restoreActive,350);
-  console.log('[INFORMHA_WORKOUT_CONTROLLER] version=0.10.9 active_lock=1 set_save_lock=1 render_preserve=1 atomic_swap=1 guide_all=1');
+  console.log('[INFORMHA_WORKOUT_CONTROLLER] version=0.10.14 active_lock=1 set_save_lock=1 render_preserve=1 atomic_swap=2 guide_all=1');
 })();
