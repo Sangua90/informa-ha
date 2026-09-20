@@ -3,9 +3,6 @@ import app as root
 from datetime import datetime, timedelta
 
 app = base.app
-root.VERSION = "0.9.98"
-
-
 def _measurement_rows(limit=50):
     con = root.db()
     rows = [dict(r) for r in con.execute(
