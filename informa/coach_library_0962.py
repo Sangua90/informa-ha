@@ -60,6 +60,22 @@ GROUPS = (
         {"name": "Heel taps / Tocchi ai talloni", "guide_id": "heel_taps"},
         {"name": "Crunch inverso", "guide_id": "reverse_crunch"},
     )),
+    ("Mobilità", (
+        {"name": "Mobilità dinamica parte alta", "guide_id": "mobility_upper"},
+        {"name": "Mobilità dinamica schiena e dorsali", "guide_id": "mobility_back_lats"},
+        {"name": "Mobilità dinamica anche", "guide_id": "mobility_hips"},
+        {"name": "Mobilità dinamica caviglie", "guide_id": "mobility_ankles"},
+        {"name": "Mobilità dinamica tronco", "guide_id": "mobility_trunk"},
+    )),
+    ("Stretching", (
+        {"name": "Stretching petto", "guide_id": "stretch_chest"},
+        {"name": "Stretching schiena e dorsali", "guide_id": "stretch_back_lats"},
+        {"name": "Stretching spalle e tricipiti", "guide_id": "stretch_shoulders_triceps"},
+        {"name": "Stretching bicipiti e avambracci", "guide_id": "stretch_biceps_forearms"},
+        {"name": "Stretching femorali e glutei", "guide_id": "stretch_hamstrings_glutes"},
+        {"name": "Stretching polpacci", "guide_id": "stretch_calves"},
+        {"name": "Stretching tronco e core", "guide_id": "stretch_trunk_core"},
+    )),
     ("Cardio", (
         {"name": "Tapis roulant Fassi", "guide_id": "treadmill"},
         {"name": "Mini stepper", "guide_id": "stepper"},
@@ -70,5 +86,5 @@ def all_exercises(): return tuple(exercise for _, exercises in GROUPS for exerci
 def exercise_count(): return len(all_exercises())
 def guide_ids(): return tuple(exercise["guide_id"] for exercise in all_exercises())
 
-assert exercise_count() == 37, f"Expected 37 exercises, got {exercise_count()}"
+assert exercise_count() == 49, f"Expected 49 exercises, got {exercise_count()}"
 assert len(set(guide_ids())) == 37, "Each exercise must have a unique guide_id"
