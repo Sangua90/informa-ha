@@ -11,7 +11,7 @@
   Femorali:[['romanian_deadlift','Stacco rumeno con manubri','romanian_deadlift','kg'],['single_leg_romanian_deadlift','Stacco rumeno a una gamba con manubrio','single_leg_romanian_deadlift','kg'],['hamstring_walkout','Hamstring walkout','hamstring_walkout','bodyweight']],
   Glutei:[['glute_bridge','Ponte glutei / Hip thrust','glute_bridge','bodyweight'],['bodyweight_glute_kickback','Glute kickback a corpo libero','bodyweight_glute_kickback','bodyweight']],
   Polpacci:[['calf_raise','Calf raise in piedi','calf_raise','bodyweight'],['single_leg_step_calf_raise','Calf raise a una gamba sul gradino','single_leg_step_calf_raise','bodyweight'],['seated_dumbbell_calf_raise','Seated calf raise con manubrio sulla panca','seated_dumbbell_calf_raise','kg']],
-  Core:[['plank','Plank','plank','bodyweight'],['mid_cable_crunch','Crunch al cavo medio','mid_cable_crunch','plates'],['dead_bug','Dead bug','dead_bug','bodyweight']]
+  Core:[['plank','Plank','plank','bodyweight'],['incline_bench_crunch','Crunch su panca inclinata','incline_bench_crunch','bodyweight'],['heel_taps','Heel taps / Tocchi ai talloni','heel_taps','bodyweight'],['reverse_crunch','Crunch inverso','reverse_crunch','bodyweight']]
  };
  window.IF72_LIBRARY=Object.fromEntries(Object.entries(LIB).flatMap(([group,items])=>items.map(x=>[x[0],{id:x[0],name:x[1],guide:x[2],loadType:x[3],group,equipment:x[3]==='kg'?'Manubri':x[3]==='plates'?'Fassi':'Corpo libero'}])));
  function painBlocks(group){const p=String(IF50.pain||'').toLowerCase();if(!p||p==='nessuno')return false;if(p.includes('ginoc'))return ['Gambe','Polpacci'].includes(group);if(p.includes('spalla'))return ['Petto','Spalle','Tricipiti'].includes(group);if(p.includes('schiena'))return ['Schiena','Femorali'].includes(group);return false}
