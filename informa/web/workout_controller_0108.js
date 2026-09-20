@@ -11,7 +11,7 @@
   function card(id){return cards().find(c=>idOf(c)===id)||null}
   function isArchived(id,c){const s=states()[id];return s?.stage==='archived'||!!c?.classList.contains('if949-archived')}
   function showOnly(id){const target=card(id);if(!target||isArchived(id,target))return false;cards().forEach(c=>{const on=c===target;c.classList.toggle('if950-current',on);c.classList.toggle('if950-hidden',!on)});setActive(id);return true}
-  function firstPending(){const c=cards().find(x=>!isArchived(idOf(x),x));return c?idOf(c):null}
+  function firstPending(){const all=cards().filter(x=>!isArchived(idOf(x),x));const strength=all.find(x=>{const id=idOf(x);const ex=(typeof IF50!=='undefined'&&Array.isArray(IF50.plan))?IF50.plan.find(y=>y.id===id):null;return id!=='cardio'&&id!=='treadmill'&&!ex?.cardio});const c=strength||all[0];return c?idOf(c):null}
   function restoreActive(){const id=getActive();if(id&&showOnly(id))return id;const next=firstPending();if(next)showOnly(next);else setActive(null);return next}
   function ensureStarted(id){const all=states(),s=all[id]||(all[id]={stage:'planned',sets:{},fatigue:'Giusta',status:null});if(s.stage==='archived')return false;saveStates(all);setActive(id);try{if(s.stage==='planned'&&typeof window.if949Start==='function')window.if949Start(id)}catch(e){}setTimeout(()=>showOnly(id),40);return true}
 
@@ -39,5 +39,5 @@
   const go=window.go;
   if(typeof go==='function')window.go=function(page){const out=go.apply(this,arguments);if(page==='workout')setTimeout(restoreActive,120);return out};
   setTimeout(restoreActive,350);
-  console.log('[INFORMHA_WORKOUT_CONTROLLER] version=0.10.14 active_lock=1 set_save_lock=1 render_preserve=1 atomic_swap=2 guide_all=1');
+  console.log('[INFORMHA_WORKOUT_CONTROLLER] version=0.10.17 active_lock=1 set_save_lock=1 render_preserve=1 atomic_swap=2 guide_all=1 skip_strength_first=1');
 })();
