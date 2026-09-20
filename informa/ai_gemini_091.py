@@ -8,8 +8,6 @@ import ai_coach_090 as base
 import app as root
 
 app = base.app
-root.VERSION = "0.9.1"
-
 OPTIONS_FILE = "/data/options.json"
 DEFAULT_MODEL = "gemini-2.5-flash"
 
