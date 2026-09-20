@@ -56,8 +56,9 @@ GROUPS = (
     )),
     ("Core", (
         {"name": "Plank", "guide_id": "plank"},
-        {"name": "Crunch al cavo medio", "guide_id": "mid_cable_crunch"},
-        {"name": "Dead bug", "guide_id": "dead_bug"},
+        {"name": "Crunch su panca inclinata", "guide_id": "incline_bench_crunch"},
+        {"name": "Heel taps / Tocchi ai talloni", "guide_id": "heel_taps"},
+        {"name": "Crunch inverso", "guide_id": "reverse_crunch"},
     )),
     ("Cardio", (
         {"name": "Tapis roulant Fassi", "guide_id": "treadmill"},
@@ -69,5 +70,5 @@ def all_exercises(): return tuple(exercise for _, exercises in GROUPS for exerci
 def exercise_count(): return len(all_exercises())
 def guide_ids(): return tuple(exercise["guide_id"] for exercise in all_exercises())
 
-assert exercise_count() == 36, f"Expected 36 exercises, got {exercise_count()}"
-assert len(set(guide_ids())) == 36, "Each exercise must have a unique guide_id"
+assert exercise_count() == 37, f"Expected 37 exercises, got {exercise_count()}"
+assert len(set(guide_ids())) == 37, "Each exercise must have a unique guide_id"
