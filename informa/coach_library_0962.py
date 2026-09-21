@@ -87,4 +87,4 @@ def exercise_count(): return len(all_exercises())
 def guide_ids(): return tuple(exercise["guide_id"] for exercise in all_exercises())
 
 assert exercise_count() == 49, f"Expected 49 exercises, got {exercise_count()}"
-assert len(set(guide_ids())) == 37, "Each exercise must have a unique guide_id"
+assert len(set(guide_ids())) == 49, "Each exercise must have a unique guide_id"
