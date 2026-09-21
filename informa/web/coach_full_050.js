@@ -31,7 +31,7 @@ async function if50Generate(){
 }
 function if50Checkin(){
  const p=document.querySelector('[data-page="checkin"]');if(!p)return;
- p.innerHTML=`<div class="ey">Check iniziale</div><h1>Come stai oggi?</h1>
+ p.classList.add('if1044-checkin');p.innerHTML=`<div class="ey">Check iniziale</div><h1>Come stai oggi?</h1>
  <div class="card"><b>Quanto tempo hai?</b><div class="choice"><button class="on" data-if50-group="time" data-val="45" onclick="if50Pick('time',45)">45 min</button><button data-if50-group="time" data-val="20" onclick="if50Pick('time',20)">20 min</button><button data-if50-group="time" data-val="30" onclick="if50Pick('time',30)">30 min</button><button data-if50-group="time" data-val="60" onclick="if50Pick('time',60)">60+ min</button></div></div>
  <div class="card"><b>Energia</b><div class="choice"><button data-if50-group="energy" data-val="Bassa" onclick="if50Pick('energy','Bassa')">Bassa</button><button class="on" data-if50-group="energy" data-val="Normale" onclick="if50Pick('energy','Normale')">Normale</button><button data-if50-group="energy" data-val="Alta" onclick="if50Pick('energy','Alta')">Alta</button></div></div>
  <div class="card"><b>Dolori o fastidi?</b><div class="choice"><button class="on" data-if50-group="pain" data-val="Nessuno" onclick="if50Pick('pain','Nessuno')">Nessuno</button><button data-if50-group="pain" data-val="Ginocchio" onclick="if50Pick('pain','Ginocchio')">Ginocchio</button><button data-if50-group="pain" data-val="Schiena" onclick="if50Pick('pain','Schiena')">Schiena</button><button data-if50-group="pain" data-val="Spalla" onclick="if50Pick('pain','Spalla')">Spalla</button><button data-if50-group="pain" data-val="Altro" onclick="if50Pick('pain','Altro')">Altro</button></div></div>
@@ -76,3 +76,5 @@ function installIF50(){
  const legacy=document.getElementById('coach041Workout');if(legacy)legacy.remove();if50Checkin();if50End();if50LoadWeek();
 }
 installIF50();
+
+(function(){const st=document.createElement('style');st.textContent='.if1044-checkin .card{padding:14px 16px!important;margin-bottom:9px!important;border-radius:20px!important}.if1044-checkin h1{margin-bottom:12px!important}.if1044-checkin .choice{margin-top:8px!important;gap:7px!important}.if1044-checkin .choice button{padding:10px 12px!important;min-height:44px}.if1044-checkin .card.coach{display:none!important}.if1044-checkin>.btn{min-height:56px!important;margin-top:10px!important}.if1044-checkin .sub{font-size:12px!important;line-height:1.35!important}';document.head.appendChild(st)})();
