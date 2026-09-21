@@ -32,7 +32,7 @@ RUN grep -Fq 'Expected 49 exercises' /app/coach_library_0962.py \
  && grep -Fq 'recovery_preserved=1' /app/web/workout_runner_01041.js \
  && grep -Fq 'canonical_finish=1' /app/web/workout_runner_01041.js \
  && grep -Fq "rows.every(r=>r.querySelector('.check')?.classList.contains('done'))" /app/web/workout_controller_0108.js \
- && grep -Fq 'if(isArchived(id,card(id)))advanceFrom(id)' /app/web/workout_controller_0108.js \
+ && grep -Fq 'if(isArchived(id,card(id)))advanceFrom(id);' /app/web/workout_controller_0108.js \
  && ! grep -Fq "setTimeout(()=>showOnly(id),220)" /app/web/workout_controller_0108.js \
  && grep -Fq "card.coach:not(#if970Treadmill)" /app/web/workout_runner_01041.js \
  && grep -Fq 'if1048Toggle' /app/web/workout_runner_01041.js \
