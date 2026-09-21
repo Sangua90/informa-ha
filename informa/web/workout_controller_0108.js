@@ -23,7 +23,7 @@
 
   // Salvataggio serie: blocca l'esercizio corrente PRIMA del salvataggio e lo ripristina dopo ogni render.
   const completeSet=window.if50CompleteSet;
-  if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){setActive(id);const out=await completeSet.apply(this,arguments);return out};
+  if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){setActive(id);const out=await completeSet.apply(this,arguments);const c=card(id),rows=[...(c?.querySelectorAll('.setrow')||[])],finished=rows.length>0&&rows.every(r=>r.querySelector('.check')?.classList.contains('done'));if(finished){setTimeout(async()=>{try{await window.if949CompleteExercise?.(id,null)}catch(e){}},0)}return out};
 
   const render=window.if50RenderWorkout;
   if(typeof render==='function')window.if50RenderWorkout=function(){const locked=getActive();const out=render.apply(this,arguments);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},0);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},80);return out};
@@ -33,7 +33,7 @@
 
   // Solo il completamento dell'esercizio può liberare il focus e passare al successivo.
   const status=window.if50Status;
-  if(typeof status==='function')window.if50Status=async function(id){setActive(id);const out=await status.apply(this,arguments);setTimeout(()=>{if(isArchived(id,card(id))){setActive(null);restoreActive()}else showOnly(id)},180);return out};
+  if(typeof status==='function')window.if50Status=async function(id){setActive(id);const out=await status.apply(this,arguments);if(isArchived(id,card(id))advanceFrom(id);else setTimeout(()=>showOnly(id),180);return out};
   const remove=window.if60RemoveExercise;
   if(typeof remove==='function')window.if60RemoveExercise=async function(id){const current=getActive();const out=await remove.apply(this,arguments);setTimeout(()=>{if(!current||current===id||isArchived(current,card(current)))setActive(null);restoreActive()},180);return out};
 
