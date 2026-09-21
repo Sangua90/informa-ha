@@ -1,3 +1,4 @@
+from container_contract import assert_container
 import importlib.util
 import sys
 import types
@@ -84,11 +85,7 @@ class ExerciseMenuFix0957Test(unittest.TestCase):
         self.assertIn("if(document.getElementById('exercisesStaticButton'))return", legacy)
 
     def test_version_and_container_entrypoint(self):
-        config = (self.project / "informa" / "config.yaml").read_text()
-        docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertRegex(config, r'version: "0\.9\.(?:5[7-9]|[6-9][0-9])"')
-        self.assertIn("COPY exercise_menu_fix_0957.py /app/exercise_menu_fix_0957.py", docker)
-        self.assertRegex(docker, r'exercise_menu_fix_(?:095[789]|0960):app')
+        assert_container(self, "exercise_menu_fix_0957", "0.9.57")
 
 
 if __name__ == "__main__":

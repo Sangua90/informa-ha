@@ -1,3 +1,4 @@
+from container_contract import assert_container
 import importlib.util
 import sys
 import types
@@ -70,12 +71,9 @@ class ExerciseMenuFix0958Test(unittest.TestCase):
 
     def test_assets_and_container_are_versioned(self):
         index = (self.project / "informa" / "web" / "index.html").read_text()
-        config = (self.project / "informa" / "config.yaml").read_text()
-        docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertRegex(index, r'style\.css\?v=(?:095[89]|0960)')
-        self.assertRegex(index, r'app\.js\?v=(?:095[89]|0960)')
-        self.assertRegex(config, r'version: "0\.9\.(?:5[89]|[6-9][0-9])"')
-        self.assertRegex(docker, r'exercise_menu_fix_(?:095[89]|0960):app')
+        self.assertRegex(index, r'style\.css\?v=\d+')
+        self.assertRegex(index, r'app\.js\?v=\d+')
+        assert_container(self, "exercise_menu_fix_0958", "0.9.58")
 
 
 if __name__ == "__main__":

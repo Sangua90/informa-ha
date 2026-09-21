@@ -22,25 +22,38 @@
   document.addEventListener('pointerdown',function(e){const c=e.target.closest('[data-page="workout"] .if50-ex,[data-page="workout"] #if50ex_cardio');if(c&&!isArchived(idOf(c),c))setActive(idOf(c))},true);
 
   // Salvataggio serie: blocca l'esercizio corrente PRIMA del salvataggio e lo ripristina dopo ogni render.
+  const savingSets=new Set(),finishing=new Set();
+  window.if108RecoveryFinished=async function(id){
+    const c=card(id),rows=[...(c?.querySelectorAll('.setrow')||[])];
+    if(!c||isArchived(id,c)||finishing.has(id)||!rows.length||!rows.every(r=>r.querySelector('.check')?.classList.contains('done')))return;
+    finishing.add(id);
+    try{await window.if949CompleteExercise?.(id,null)}finally{finishing.delete(id)}
+  };
   const completeSet=window.if50CompleteSet;
-  if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){setActive(id);const out=await completeSet.apply(this,arguments);const c=card(id),rows=[...(c?.querySelectorAll('.setrow')||[])],finished=rows.length>0&&rows.every(r=>r.querySelector('.check')?.classList.contains('done'));if(finished){setTimeout(async()=>{try{await window.if949CompleteExercise?.(id,null)}catch(e){}},0)}return out};
+  if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){
+    if(savingSets.has(id)||isArchived(id,card(id)))return;
+    savingSets.add(id);setActive(id);
+    try{return await completeSet.apply(this,arguments)}finally{savingSets.delete(id)}
+  };
+  // Anche il pulsante storico usa lo stesso completamento e avanzamento.
+  window.if994CompleteExercise=function(id,btn){return window.if949CompleteExercise(id,btn)};
 
   const render=window.if50RenderWorkout;
   if(typeof render==='function')window.if50RenderWorkout=function(){const locked=getActive();const out=render.apply(this,arguments);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},0);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},80);return out};
 
   const swap=window.if60Swap;
-  if(typeof swap==='function')window.if60Swap=async function(oldId,newId){setActive(newId);const out=await swap.apply(this,arguments);const all=states();if(all[oldId]?.stage!=='archived'){all[oldId]=all[oldId]||{};all[oldId].stage='archived';all[oldId].status=all[oldId].status||'Sostituito'}all[newId]={stage:'planned',sets:{},fatigue:'Giusta',status:null};saveStates(all);setTimeout(()=>ensureStarted(newId),180);return out};
+  if(typeof swap==='function')window.if60Swap=async function(oldId,newId){setActive(newId);const out=await swap.apply(this,arguments);if(!(typeof IF50!=='undefined'&&IF50.plan?.some(x=>x.id===newId)&&!IF50.plan?.some(x=>x.id===oldId))){setActive(oldId);restoreActive();return out}window.if950CancelRecovery?.(oldId);const all=states();if(all[oldId]?.stage!=='archived'){all[oldId]=all[oldId]||{};all[oldId].stage='archived';all[oldId].status=all[oldId].status||'Sostituito'}all[newId]={stage:'planned',sets:{},fatigue:'Giusta',status:null};saveStates(all);setTimeout(()=>ensureStarted(newId),180);return out};
 
   // Solo il completamento dell'esercizio può liberare il focus e passare al successivo.
   const status=window.if50Status;
-  if(typeof status==='function')window.if50Status=async function(id){setActive(id);const out=await status.apply(this,arguments);if(isArchived(id,card(id))advanceFrom(id);else setTimeout(()=>showOnly(id),180);return out};
+  if(typeof status==='function')window.if50Status=async function(id){setActive(id);const out=await status.apply(this,arguments);if(isArchived(id,card(id)))advanceFrom(id);else setTimeout(()=>showOnly(id),180);return out};
   const remove=window.if60RemoveExercise;
   if(typeof remove==='function')window.if60RemoveExercise=async function(id){const current=getActive();const out=await remove.apply(this,arguments);setTimeout(()=>{if(!current||current===id||isArchived(current,card(current)))setActive(null);restoreActive()},180);return out};
 
   function archiveLocal(id,status){const all=states(),s=all[id]||(all[id]={stage:'planned',sets:{},fatigue:'Giusta',status:null});s.stage='archived';s.status=status;s.archivedAt=new Date().toISOString();saveStates(all)}
   function advanceFrom(id){setActive(null);const all=cards(),i=all.findIndex(c=>idOf(c)===id),next=all.slice(i+1).find(c=>!isArchived(idOf(c),c))||all.find(c=>!isArchived(idOf(c),c));if(next)ensureStarted(idOf(next));else restoreActive();setTimeout(()=>{try{window.if67Refresh?.()}catch(e){}},60)}
-  window.if108Skip=async function(id){const c=card(id);if(!c||isArchived(id,c))return;try{await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:(IF50.plan||[]).find(x=>x.id===id)?.name||id,priority:(IF50.plan||[]).find(x=>x.id===id)?.priority||'Utile',status:'Saltato',notes:'Saltato durante allenamento'})})}catch(e){}archiveLocal(id,'Saltato');c.classList.add('if949-archived','if950-hidden');c.classList.remove('if950-current');advanceFrom(id);toast('Esercizio saltato')};
-  window.if108Remove=async function(id){const c=card(id);if(!c||isArchived(id,c))return;try{await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:(IF50.plan||[]).find(x=>x.id===id)?.name||id,priority:(IF50.plan||[]).find(x=>x.id===id)?.priority||'Utile',status:'Saltato',notes:'Tolto dalla seduta'})})}catch(e){}archiveLocal(id,'Saltato');IF50.plan=(IF50.plan||[]).filter(x=>x.id!==id);c.remove();advanceFrom(id);toast('Esercizio tolto dalla seduta')};
+  window.if108Skip=async function(id){const c=card(id);if(!c||isArchived(id,c))return;try{const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:(IF50.plan||[]).find(x=>x.id===id)?.name||id,priority:(IF50.plan||[]).find(x=>x.id===id)?.priority||'Utile',status:'Saltato',notes:'Saltato durante allenamento'})});if(out?.workout_id)currentWorkoutId=out.workout_id}catch(e){toast(e.message||'Errore archiviazione');return}window.if950CancelRecovery?.(id);archiveLocal(id,'Saltato');c.classList.add('if949-archived','if950-hidden');c.classList.remove('if950-current');advanceFrom(id);toast('Esercizio saltato')};
+  window.if108Remove=async function(id){const c=card(id);if(!c||isArchived(id,c))return;try{const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:(IF50.plan||[]).find(x=>x.id===id)?.name||id,priority:(IF50.plan||[]).find(x=>x.id===id)?.priority||'Utile',status:'Saltato',notes:'Tolto dalla seduta'})});if(out?.workout_id)currentWorkoutId=out.workout_id}catch(e){toast(e.message||'Errore archiviazione');return}window.if950CancelRecovery?.(id);archiveLocal(id,'Saltato');IF50.plan=(IF50.plan||[]).filter(x=>x.id!==id);c.remove();advanceFrom(id);toast('Esercizio tolto dalla seduta')};
   document.addEventListener('click',function(e){const b=e.target.closest('[data-page="workout"] button');if(!b)return;const txt=(b.textContent||'').trim().toLowerCase(),c=b.closest('.if50-ex,#if50ex_cardio');if(!c)return;const id=idOf(c);if(txt==='salta'){e.preventDefault();e.stopImmediatePropagation();window.if108Skip(id)}else if(txt==='togli'){e.preventDefault();e.stopImmediatePropagation();window.if108Remove(id)}},true);
 
   const go=window.go;
