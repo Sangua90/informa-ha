@@ -48,7 +48,7 @@ function if50ExerciseCard(ex){
 function if50RenderWorkout(){
  const p=document.querySelector('[data-page="workout"]');if(!p)return;
  const title=IF50.intent==='Cambia gruppo'?IF50.focus:'Seduta adattata';
- p.innerHTML=`<div class="ey">Coach adattivo</div><h1>${title}</h1><div class="status">● ${IF50.time} min · energia ${IF50.energy.toLowerCase()} · ${IF50.intent}</div>${if50PainNote()}<div class="card"><div class="measure"><span>Essenziale</span><b>da completare per primo</b></div><div class="measure"><span>Utile</span><b>se tempo e recupero lo permettono</b></div><div class="measure"><span>Opzionale</span><b>può sparire senza debito</b></div></div>${IF50.plan.map(if50ExerciseCard).join('')}<button class="btn secondary" onclick="go('endworkout')">Fine allenamento</button>`;
+ p.innerHTML=`<div class="ey">Coach adattivo</div><h1>${title}</h1><div class="status">● ${IF50.time} min · energia ${IF50.energy.toLowerCase()} · ${IF50.intent}</div>${if50PainNote()}${IF50.plan.map(if50ExerciseCard).join('')}<button class="btn secondary" onclick="go('endworkout')">Fine allenamento</button>`;
 }
 function if50Num(id){const e=document.getElementById(id);if(!e)return null;const n=parseFloat(String(e.value||'').replace(',','.'));return Number.isFinite(n)?n:null}
 async function if50CompleteSet(id,n){
