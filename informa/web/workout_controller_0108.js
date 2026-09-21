@@ -23,7 +23,7 @@
 
   // Salvataggio serie: blocca l'esercizio corrente PRIMA del salvataggio e lo ripristina dopo ogni render.
   const completeSet=window.if50CompleteSet;
-  if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){setActive(id);const out=await completeSet.apply(this,arguments);setTimeout(()=>showOnly(id),0);setTimeout(()=>showOnly(id),80);setTimeout(()=>showOnly(id),220);return out};
+  if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){setActive(id);const out=await completeSet.apply(this,arguments);return out};
 
   const render=window.if50RenderWorkout;
   if(typeof render==='function')window.if50RenderWorkout=function(){const locked=getActive();const out=render.apply(this,arguments);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},0);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},80);return out};
