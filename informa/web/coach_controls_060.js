@@ -48,7 +48,7 @@ function if60AlternativeList(id){
    return {id:x,score,name:e.name||x};
  }).filter(x=>x.score>=100).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name)).slice(0,6).map(x=>x.id)
 }
-function if60ToPlan(id){const x=if60Library(id);if(!x)return null;const reps=x.reps??(x.repType==='seconds'?30:10);return {id,name:x.name,priority:x.priority||'Utile',sets:x.sets||3,reps,rest:x.rest||90,repType:x.repType||'reps',perSide:!!x.perSide,loadType:x.loadType||'bodyweight',guide:x.guide||null,cardio:!!x.cardio,duration:x.duration||null,equipment:x.equipment||'',group:x.group||''}}
+function if60ToPlan(id){const x=if60Library(id);if(!x)return null;const reps=x.reps??(x.repType==='seconds'?30:10);return {id,name:x.name,priority:x.priority||'Utile',sets:x.sets||3,reps,rest:x.rest||90,repType:x.repType||'reps',perSide:!!x.perSide,loadType:x.loadType||'bodyweight',guide:x.guide||null,cardio:!!x.cardio,mobility:!!x.mobility,stretching:!!x.stretching,seconds:x.seconds||((x.mobility||x.stretching)&&x.repType==='seconds'?reps:null),duration:x.duration||null,equipment:x.equipment||'',group:x.group||''}}
 function if60AddExerciseControls(){
  document.querySelectorAll('[data-page="workout"] .if50-ex').forEach(card=>{
    if(card.querySelector('.if60-actions'))return;
