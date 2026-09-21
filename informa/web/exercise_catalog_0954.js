@@ -45,7 +45,7 @@
       page.className='page';
       page.dataset.page=name;
       const root=document.querySelector('.app');
-      if(root)root.insertBefore(page,document.querySelector('.nav'));
+      if(root)root.appendChild(page);
     }
     return page;
   }
