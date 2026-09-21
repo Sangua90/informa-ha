@@ -34,7 +34,7 @@
     let page=document.querySelector('[data-page="exercise-detail"]');
     if(!page){
       page=document.createElement('section'); page.className='page'; page.dataset.page='exercise-detail';
-      document.querySelector('.app')?.insertBefore(page,document.querySelector('.nav'));
+      document.querySelector('.app')?.appendChild(page);
     }
     const guide=!!x.guide;
     const image=guide?`<div class="card"><img src="guide-local/${x.guide}?t=${Date.now()}" alt="${x.name}" style="width:100%;border-radius:18px;display:block" onerror="this.parentElement.style.display='none'"></div>`:'';
@@ -49,7 +49,7 @@
     let page=document.querySelector('[data-page="exercises"]');
     if(!page){
       page=document.createElement('section');page.className='page';page.dataset.page='exercises';
-      document.querySelector('.app')?.insertBefore(page,document.querySelector('.nav'));
+      document.querySelector('.app')?.appendChild(page);
     }
     page.innerHTML=`<div class="ey">Altro</div><h1>Esercizi</h1><div class="sub" style="margin-bottom:14px">Tutti gli esercizi disponibili in InFormha, divisi per gruppo muscolare.</div>${exerciseList()}<button class="btn secondary" onclick="go('profile')">Indietro</button>`;
 

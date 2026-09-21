@@ -32,7 +32,7 @@
   const completeSet=window.if50CompleteSet;
   if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){
     if(savingSets.has(id)||isArchived(id,card(id)))return;
-    savingSets.add(id);setActive(id);
+    savingSets.add(id);setActive(id);window.if950SetContext?.(id,n);
     try{return await completeSet.apply(this,arguments)}finally{savingSets.delete(id)}
   };
   // Anche il pulsante storico usa lo stesso completamento e avanzamento.
@@ -45,8 +45,9 @@
   if(typeof swap==='function')window.if60Swap=async function(oldId,newId){setActive(newId);const out=await swap.apply(this,arguments);if(!(typeof IF50!=='undefined'&&IF50.plan?.some(x=>x.id===newId)&&!IF50.plan?.some(x=>x.id===oldId))){setActive(oldId);restoreActive();return out}window.if950CancelRecovery?.(oldId);const all=states();if(all[oldId]?.stage!=='archived'){all[oldId]=all[oldId]||{};all[oldId].stage='archived';all[oldId].status=all[oldId].status||'Sostituito'}all[newId]={stage:'planned',sets:{},fatigue:'Giusta',status:null};saveStates(all);setTimeout(()=>ensureStarted(newId),180);return out};
 
   // Solo il completamento dell'esercizio può liberare il focus e passare al successivo.
-  const status=window.if50Status;
-  if(typeof status==='function')window.if50Status=async function(id){setActive(id);const out=await status.apply(this,arguments);if(isArchived(id,card(id)))advanceFrom(id);else setTimeout(()=>showOnly(id),180);return out};
+  const legacyStatus=window.if50Status;
+  const status=window.if949ArchiveStatus||legacyStatus;
+  if(typeof status==='function')window.if50Status=async function(id){setActive(id);const handler=(id==='treadmill'||id==='cardio')?legacyStatus:status;const out=await handler.apply(this,arguments);if(isArchived(id,card(id)))advanceFrom(id);else setTimeout(()=>showOnly(id),180);return out};
   const remove=window.if60RemoveExercise;
   if(typeof remove==='function')window.if60RemoveExercise=async function(id){const current=getActive();const out=await remove.apply(this,arguments);setTimeout(()=>{if(!current||current===id||isArchived(current,card(current)))setActive(null);restoreActive()},180);return out};
 

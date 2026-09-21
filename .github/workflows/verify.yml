@@ -16,7 +16,8 @@ jobs:
       - run: pip install flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0 websocket-client==1.8.0
       - run: python verify_build.py
       - run: python -m unittest discover -s tests -q
-      - run: node --test tests/workout_01055.cjs
+      - run: npm ci --prefix .test-runtime --no-audit --no-fund
+      - run: node --test tests/workout_01055.cjs tests/workout_runtime_01056.cjs
   docker:
     runs-on: ubuntu-latest
     strategy:
