@@ -2,19 +2,19 @@
 (function(){
  if(typeof IF50==='undefined')return;
  const EXTRA={
-  mobility_upper:{id:'mobility_upper',name:'Mobilità dinamica parte alta',group:'Mobilità',mobility:true,seconds:120,guide:'mobility_upper'},
-  mobility_back:{id:'mobility_back',name:'Mobilità dinamica schiena e dorsali',group:'Mobilità',mobility:true,seconds:120,guide:'mobility_back'},
-  mobility_hips:{id:'mobility_hips',name:'Mobilità dinamica anche',group:'Mobilità',mobility:true,seconds:120,guide:'mobility_hips'},
-  mobility_ankles:{id:'mobility_ankles',name:'Mobilità dinamica caviglie',group:'Mobilità',mobility:true,seconds:90,guide:'mobility_ankles'},
-  mobility_trunk:{id:'mobility_trunk',name:'Mobilità dinamica tronco',group:'Mobilità',mobility:true,seconds:90,guide:'mobility_trunk'},
-  stretch_chest:{id:'stretch_chest',name:'Stretching petto',group:'Stretching',stretching:true,seconds:90,guide:'stretch_chest'},
-  stretch_back_lats:{id:'stretch_back_lats',name:'Stretching schiena e dorsali',group:'Stretching',stretching:true,seconds:90,guide:'stretch_back_lats'},
-  stretch_shoulders_triceps:{id:'stretch_shoulders_triceps',name:'Stretching spalle e tricipiti',group:'Stretching',stretching:true,seconds:90,guide:'stretch_shoulders_triceps'},
-  stretch_biceps_forearms:{id:'stretch_biceps_forearms',name:'Stretching bicipiti e avambracci',group:'Stretching',stretching:true,seconds:90,guide:'stretch_biceps_forearms'},
-  stretch_quads:{id:'stretch_quads',name:'Stretching quadricipiti',group:'Stretching',stretching:true,seconds:90,guide:'stretch_quads'},
-  stretch_hamstrings_glutes:{id:'stretch_hamstrings_glutes',name:'Stretching femorali e glutei',group:'Stretching',stretching:true,seconds:90,guide:'stretch_hamstrings_glutes'},
-  stretch_calves:{id:'stretch_calves',name:'Stretching polpacci',group:'Stretching',stretching:true,seconds:90,guide:'stretch_calves'},
-  stretch_trunk:{id:'stretch_trunk',name:'Stretching tronco e core',group:'Stretching',stretching:true,seconds:90,guide:'stretch_trunk'}
+  mobility_upper:{id:'mobility_upper',name:'Mobilità dinamica parte alta',group:'Mobilità',mobility:true,seconds:60,perSide:true,guide:'mobility_upper'},
+  mobility_back:{id:'mobility_back',name:'Mobilità dinamica schiena e dorsali',group:'Mobilità',mobility:true,seconds:60,perSide:true,guide:'mobility_back'},
+  mobility_hips:{id:'mobility_hips',name:'Mobilità dinamica anche',group:'Mobilità',mobility:true,seconds:60,perSide:true,guide:'mobility_hips'},
+  mobility_ankles:{id:'mobility_ankles',name:'Mobilità dinamica caviglie',group:'Mobilità',mobility:true,seconds:45,perSide:true,guide:'mobility_ankles'},
+  mobility_trunk:{id:'mobility_trunk',name:'Mobilità dinamica tronco',group:'Mobilità',mobility:true,seconds:45,perSide:true,guide:'mobility_trunk'},
+  stretch_chest:{id:'stretch_chest',name:'Stretching petto',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_chest'},
+  stretch_back_lats:{id:'stretch_back_lats',name:'Stretching schiena e dorsali',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_back_lats'},
+  stretch_shoulders_triceps:{id:'stretch_shoulders_triceps',name:'Stretching spalle e tricipiti',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_shoulders_triceps'},
+  stretch_biceps_forearms:{id:'stretch_biceps_forearms',name:'Stretching bicipiti e avambracci',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_biceps_forearms'},
+  stretch_quads:{id:'stretch_quads',name:'Stretching quadricipiti',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_quads'},
+  stretch_hamstrings_glutes:{id:'stretch_hamstrings_glutes',name:'Stretching femorali e glutei',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_hamstrings_glutes'},
+  stretch_calves:{id:'stretch_calves',name:'Stretching polpacci',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_calves'},
+  stretch_trunk:{id:'stretch_trunk',name:'Stretching tronco e core',group:'Stretching',stretching:true,seconds:45,perSide:true,guide:'stretch_trunk'}
  };
  const MAP={Petto:{pre:['mobility_upper'],post:['stretch_chest']},Schiena:{pre:['mobility_back'],post:['stretch_back_lats']},Spalle:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Tricipiti:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Bicipiti:{pre:['mobility_upper'],post:['stretch_biceps_forearms']},Gambe:{pre:['mobility_hips','mobility_ankles'],post:['stretch_quads']},Femorali:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Glutei:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Polpacci:{pre:['mobility_ankles'],post:['stretch_calves']},Core:{pre:['mobility_trunk'],post:['stretch_trunk']}};
  const uniq=a=>[...new Set(a)];
@@ -54,3 +54,5 @@
  const css=document.createElement('style');css.textContent='.if978-timer{margin-top:14px;padding:16px;border:1px solid var(--ln);border-radius:16px;text-align:center}.if978-timer b{display:block;font-size:30px}.if978-timer span{font-size:13px;color:var(--m)}.if978-extra .choice{display:grid!important;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;margin-top:14px}.if978-extra .choice.if978-timed-controls:has(.if978-start:only-child){grid-template-columns:1fr}.if978-extra .choice button{min-height:58px!important;width:100%!important;font-size:17px!important;font-weight:800!important;padding:14px 16px!important;border-radius:18px!important}.if978-extra .if978-start{background:linear-gradient(135deg,#16a34a,#22c55e)!important;color:#fff!important;border:1px solid #4ade80!important;box-shadow:0 0 0 1px rgba(74,222,128,.18),0 0 24px rgba(34,197,94,.32)!important}.if978-extra .if978-start.if978-paused{background:linear-gradient(135deg,#b45309,#f59e0b)!important;border-color:#fbbf24!important;box-shadow:0 0 24px rgba(245,158,11,.28)!important}.if978-extra .if978-timer{background:linear-gradient(180deg,rgba(56,189,248,.10),rgba(34,197,94,.06))!important;border:1px solid rgba(56,189,248,.42)!important;box-shadow:inset 0 0 24px rgba(56,189,248,.05),0 0 18px rgba(56,189,248,.10)!important}.if978-extra .if978-timer b{font-size:38px!important;color:#7dd3fc!important;font-variant-numeric:tabular-nums}.if978-extra .if978-timer span{font-size:14px!important;font-weight:700!important;letter-spacing:.04em}@media(max-width:520px){.if978-extra .choice{grid-template-columns:1fr}.if978-extra .choice button{min-height:60px!important}}';document.head.appendChild(css);
  console.log('[INFORMHA_AUTO_STRETCH] version=0.9.78 automatic=1 treadmill_replaces_mobility=1 final_stretch=1 total_time_budget=1');
 })();
+
+
