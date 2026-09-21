@@ -16,7 +16,7 @@
       const firstCard=cards[0]; page.insertBefore(head,firstCard||page.firstChild);
     }
     const total=cards.length;let flow={};try{flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}')||{}}catch(e){}const completedExercises=cards.filter(c=>{const id=c.id==='if50ex_cardio'?'cardio':String(c.id||'').replace('if50ex_','');return flow[id]?.stage==='archived'&&['Completato','Parziale'].includes(flow[id]?.status)}).length;const pct=total?Math.round(completedExercises/total*100):0;const segments=cards.map((c,i)=>{const id=c.id==='if50ex_cardio'?'cardio':String(c.id||'').replace('if50ex_',''),s=flow[id],done=s?.stage==='archived'&&['Completato','Parziale'].includes(s?.status),active=c.classList.contains('if950-current')||localStorage.getItem('informha_workout_active_0109')===id;return `<i class="${done?'done':active?'active':''}" title="Esercizio ${i+1}"></i>`}).join('');
-    head.innerHTML=`<div class="row"><div style="flex:1"><div class="ey">Seduta in corso</div><b>${completedExercises}/${total} esercizi completati</b></div><div class="if67-pct">${pct}%</div></div><div class="if67-progress if67-segmented">${segments}</div><div class="sub">Ogni tacca è un esercizio. Si colora man mano che completi l’allenamento.</div>`;
+    head.innerHTML=`<div class="row"><div style="flex:1"><div class="ey">Seduta in corso</div><b>${completedExercises}/${total} esercizi completati</b></div><div class="if67-pct">${pct}%</div></div><div class="if67-progress if67-segmented">${segments}</div>`;
   }
   const css=document.createElement('style');css.textContent=`
     .if67-session-head{position:sticky;top:8px;z-index:5;background:rgba(12,15,19,.94);backdrop-filter:blur(18px);box-shadow:0 12px 32px rgba(0,0,0,.28)}
