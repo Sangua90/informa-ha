@@ -37,6 +37,16 @@
   };
   // Anche il pulsante storico usa lo stesso completamento e avanzamento.
   window.if994CompleteExercise=function(id,btn){return window.if949CompleteExercise(id,btn)};
+  // Gestore finale del pulsante: alcuni moduli legacy riassegnano l'onclick
+  // dopo il caricamento e impediscono l'archiviazione/avanzamento.
+  const completeExercise=window.if949CompleteExercise;
+  window.if108Complete=async function(id,btn){
+    if(!id||isArchived(id,card(id)))return;
+    if(typeof completeExercise==='function'){
+      try{await completeExercise.call(this,id,btn)}catch(e){toast(e.message||'Errore completamento esercizio');return}
+    }
+    if(isArchived(id,card(id)))advanceFrom(id);
+  };
 
   const render=window.if50RenderWorkout;
   if(typeof render==='function')window.if50RenderWorkout=function(){const locked=getActive();const out=render.apply(this,arguments);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},0);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},80);return out};
@@ -55,10 +65,11 @@
   function advanceFrom(id){setActive(null);const all=cards(),i=all.findIndex(c=>idOf(c)===id),next=all.slice(i+1).find(c=>!isArchived(idOf(c),c))||all.find(c=>!isArchived(idOf(c),c));if(next)ensureStarted(idOf(next));else restoreActive();setTimeout(()=>{try{window.if67Refresh?.()}catch(e){}},60)}
   window.if108Skip=async function(id){const c=card(id);if(!c||isArchived(id,c))return;try{const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:(IF50.plan||[]).find(x=>x.id===id)?.name||id,priority:(IF50.plan||[]).find(x=>x.id===id)?.priority||'Utile',status:'Saltato',notes:'Saltato durante allenamento'})});if(out?.workout_id)currentWorkoutId=out.workout_id}catch(e){toast(e.message||'Errore archiviazione');return}window.if950CancelRecovery?.(id);archiveLocal(id,'Saltato');c.classList.add('if949-archived','if950-hidden');c.classList.remove('if950-current');advanceFrom(id);toast('Esercizio saltato')};
   window.if108Remove=async function(id){const c=card(id);if(!c||isArchived(id,c))return;try{const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:(IF50.plan||[]).find(x=>x.id===id)?.name||id,priority:(IF50.plan||[]).find(x=>x.id===id)?.priority||'Utile',status:'Saltato',notes:'Tolto dalla seduta'})});if(out?.workout_id)currentWorkoutId=out.workout_id}catch(e){toast(e.message||'Errore archiviazione');return}window.if950CancelRecovery?.(id);archiveLocal(id,'Saltato');IF50.plan=(IF50.plan||[]).filter(x=>x.id!==id);c.remove();advanceFrom(id);toast('Esercizio tolto dalla seduta')};
-  document.addEventListener('click',function(e){const b=e.target.closest('[data-page="workout"] button');if(!b)return;const txt=(b.textContent||'').trim().toLowerCase(),c=b.closest('.if50-ex,#if50ex_cardio');if(!c)return;const id=idOf(c);if(txt==='salta'){e.preventDefault();e.stopImmediatePropagation();window.if108Skip(id)}else if(txt==='togli'){e.preventDefault();e.stopImmediatePropagation();window.if108Remove(id)}},true);
+  document.addEventListener('click',function(e){const b=e.target.closest('[data-page="workout"] button');if(!b)return;const txt=(b.textContent||'').trim().toLowerCase(),c=b.closest('.if50-ex,#if50ex_cardio');if(!c)return;const id=idOf(c);if(txt==='completa esercizio'){e.preventDefault();e.stopImmediatePropagation();window.if108Complete(id,b)}else if(txt==='salta'){e.preventDefault();e.stopImmediatePropagation();window.if108Skip(id)}else if(txt==='togli'){e.preventDefault();e.stopImmediatePropagation();window.if108Remove(id)}},true);
 
   const go=window.go;
   if(typeof go==='function')window.go=function(page){const out=go.apply(this,arguments);if(page==='workout')setTimeout(restoreActive,120);return out};
   setTimeout(restoreActive,350);
   console.log('[INFORMHA_WORKOUT_CONTROLLER] version=0.10.17 active_lock=1 set_save_lock=1 render_preserve=1 atomic_swap=2 guide_all=1 skip_strength_first=1');
 })();
+
