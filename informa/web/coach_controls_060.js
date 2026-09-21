@@ -53,7 +53,7 @@ function if60AddExerciseControls(){
  document.querySelectorAll('[data-page="workout"] .if50-ex').forEach(card=>{
    if(card.querySelector('.if60-actions'))return;
    const id=(card.id||'').replace('if50ex_',''); if(!id)return;
-   const box=document.createElement('div');box.className='if60-actions row';box.innerHTML=`<button class="btn secondary" onclick="if60ShowSwap('${id}')">Sostituisci</button><button class="btn secondary" onclick="if60RemoveExercise('${id}')">Togli</button>`;card.appendChild(box)
+   const box=document.createElement('div');box.className='if60-actions row';box.innerHTML=`<button class="btn secondary" onclick="if60ShowSwap('${id}')">Sostituisci</button>`;card.appendChild(box)
  });
  const work=document.querySelector('[data-page="workout"]');if(work&&!document.getElementById('if60SessionControls')){
    const box=document.createElement('div');box.id='if60SessionControls';box.className='card';box.innerHTML=`<div class="ey">Gestisci allenamento</div><button class="btn secondary" onclick="if60AddExercise()">＋ Aggiungi esercizio</button>`;
