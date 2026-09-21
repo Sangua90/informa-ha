@@ -18,7 +18,7 @@
  };
  const MAP={Petto:{pre:['mobility_upper'],post:['stretch_chest']},Schiena:{pre:['mobility_back'],post:['stretch_back_lats']},Spalle:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Tricipiti:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Bicipiti:{pre:['mobility_upper'],post:['stretch_biceps_forearms']},Gambe:{pre:['mobility_hips','mobility_ankles'],post:['stretch_quads']},Femorali:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Glutei:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Polpacci:{pre:['mobility_ankles'],post:['stretch_calves']},Core:{pre:['mobility_trunk'],post:['stretch_trunk']}};
  const uniq=a=>[...new Set(a)];
- function extras(kind,strength){return uniq(strength.flatMap(x=>MAP[x.group]?.[kind]||[])).slice(0,3).map(id=>({...EXTRA[id],priority:'Opzionale',sets:1,reps:null,rest:0}))}
+ function extras(kind,strength){return uniq(strength.flatMap(x=>MAP[x.group]?.[kind]||[])).slice(0,3).map(id=>({...EXTRA[id],priority:'Opzionale',sets:1,reps:null,rest:0,repType:'seconds',loadType:'bodyweight'}))}
  function trimStrength(strength,minutes){const perExercise=8;const max=Math.max(1,Math.floor(minutes/perExercise));return strength.slice(0,max)}
  const build0=window.if50BuildPlan;if(typeof build0!=='function')return;
  window.if50BuildPlan=function(){
@@ -41,6 +41,15 @@
  };
  const card0=window.if50ExerciseCard;
  window.if50ExerciseCard=function(ex){
-  if(ex?.mobility||ex?.stretching){const sec=ex.seconds||90,label=ex.mobility?'Mobilità dinamica':'Stretching finale';return `<div class="card if50-ex if978-extra" id="if50ex_${ex.id}"><div class="ey">${label} · circa ${Math.round(sec/60*10)/10} min</div><h2>${ex.name}</h2><div class="sub">${ex.mobility?'Preparazione dinamica mirata alla seduta di oggi.':'Allungamento finale scelto da iCoach per i gruppi allenati.'}</div>${ex.guide?`<button class="btn secondary" onclick="openGuide('${ex.guide}')">Guida</button>`:''}<div class="choice"><button onclick="if50Status('${ex.id}','Completato','Opzionale',this)">Completato</button><button onclick="if50Status('${ex.id}','Saltato','Opzionale',this)">Saltato</button></div></div>`}return card0.apply(this,arguments)};
+  if(ex?.mobility||ex?.stretching){const sec=ex.seconds||90,label=ex.mobility?'Mobilità dinamica':'Stretching finale';return `<div class="card if50-ex if978-extra" id="if50ex_${ex.id}"><div class="ey">${label} · circa ${Math.round(sec/60*10)/10} min</div><h2>${ex.name}</h2><div class="sub">${ex.mobility?'Preparazione dinamica mirata alla seduta di oggi.':'Allungamento finale scelto da iCoach per i gruppi allenati.'}</div>${ex.guide?`<button class="btn secondary" onclick="openGuide('${ex.guide}')">Guida</button>`:''}<div class="if978-timer" id="if978timer_${ex.id}"><b>${sec} s</b><span>Tempo esercizio</span></div><div class="choice"><button class="if978-start" onclick="if978Start('${ex.id}',${sec},this)">▶ Avvia esercizio</button><button onclick="if50Status('${ex.id}','Saltato','Opzionale',this)">Salta</button></div></div>`}return card0.apply(this,arguments)};
+ let if978Timer=null;
+ window.if978Start=function(id,sec,btn){
+  if(if978Timer){clearInterval(if978Timer);if978Timer=null}
+  let left=Math.max(1,Number(sec)||90),box=document.getElementById('if978timer_'+id);btn.disabled=true;btn.textContent='In corso…';
+  const draw=()=>{if(box)box.innerHTML='<b>'+left+' s</b><span>Tempo rimanente</span>'};draw();
+  if978Timer=setInterval(async()=>{left--;draw();if(left<=0){clearInterval(if978Timer);if978Timer=null;if(box)box.innerHTML='<b>✓</b><span>Esercizio completato</span>';btn.textContent='✓ Completato';try{await if50Status(id,'Completato','Opzionale',btn)}catch(e){}setTimeout(()=>{if(typeof window.if978Advance==='function')window.if978Advance(id);else document.querySelector('#if50ex_'+id+' + .if50-ex')?.scrollIntoView({behavior:'smooth',block:'center'})},250)}},1000)
+ };
+ window.if978Advance=function(id){const cards=[...document.querySelectorAll('.if50-ex')],i=cards.findIndex(x=>x.id==='if50ex_'+id),next=cards.slice(i+1).find(x=>x.offsetParent!==null);if(next)next.scrollIntoView({behavior:'smooth',block:'center'})};
+ const css=document.createElement('style');css.textContent='.if978-timer{margin-top:14px;padding:14px;border:1px solid var(--ln);border-radius:16px;text-align:center}.if978-timer b{display:block;font-size:28px}.if978-timer span{font-size:12px;color:var(--m)}';document.head.appendChild(css);
  console.log('[INFORMHA_AUTO_STRETCH] version=0.9.78 automatic=1 treadmill_replaces_mobility=1 final_stretch=1 total_time_budget=1');
 })();
