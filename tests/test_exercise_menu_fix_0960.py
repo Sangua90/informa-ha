@@ -1,3 +1,4 @@
+from container_contract import assert_container
 import unittest
 from pathlib import Path
 
@@ -13,11 +14,7 @@ class ExerciseMenuFix0960Test(unittest.TestCase):
         self.assertNotIn("return root.Response(", source)
 
     def test_version_and_container_entrypoint(self):
-        config = (self.project / "informa" / "config.yaml").read_text()
-        docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn('version: "0.9.60"', config)
-        self.assertIn("COPY exercise_menu_fix_0960.py /app/exercise_menu_fix_0960.py", docker)
-        self.assertIn("exercise_menu_fix_0960:app", docker)
+        assert_container(self, "exercise_menu_fix_0960", "0.9.60")
 
 
 if __name__ == "__main__":

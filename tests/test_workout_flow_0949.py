@@ -93,7 +93,7 @@ class WorkoutFlow0949Test(unittest.TestCase):
 
     def test_frontend_keeps_state_and_does_not_enable_timer_change(self):
         source = (Path(__file__).parents[1] / "informa" / "web" / "workout_flow_0949.js").read_text()
-        for marker in ("exercise_state_persistent=1", "archive_before_replace=1", "if949Start", "Mancano delle serie: scegli Parziale"):
+        for marker in ("exercise_state_persistent=1", "await archive(oldId,'Parziale'", "if949Start", "Mancano delle serie"):
             self.assertIn(marker, source)
         self.assertNotIn("startTimer(", source)
 

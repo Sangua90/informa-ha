@@ -9,19 +9,19 @@ class WorkoutFocus0950Test(unittest.TestCase):
     def test_only_current_exercise_is_visible(self):
         source = (self.project / "informa" / "web" / "workout_focus_0950.js").read_text()
         for marker in (
-            "single_exercise=1",
+            "shared_active=1",
             "if950-hidden",
             "if950-current",
-            "dataset.if950ExerciseIndex",
+            "setSharedActive(id)",
         ):
             self.assertIn(marker, source)
 
     def test_timer_returns_to_next_set_automatically(self):
         source = (self.project / "informa" / "web" / "workout_focus_0950.js").read_text()
         for marker in (
-            "timer_auto_advance=1",
+            "recovery_last5_audio=1",
             "window.startTimer=beginTimer",
-            "setTimeout(returnToExercise,350)",
+            "setTimeout(returnToExercise,450)",
             "Serie successiva pronta",
             "if950SkipRecovery",
             "if950PauseRecovery",

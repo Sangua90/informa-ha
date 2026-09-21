@@ -1,0 +1,33 @@
+name: Verify InFormha
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pip install flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0 websocket-client==1.8.0
+      - run: python verify_build.py
+      - run: python -m unittest discover -s tests -q
+      - run: node --test tests/workout_01055.cjs
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build actual add-on image
+        run: |
+          platform=linux/amd64
+          if [ '${{ matrix.arch }}' = aarch64 ]; then platform=linux/arm64; fi
+          docker buildx build --platform "$platform" --build-arg BUILD_ARCH=${{ matrix.arch }} --load -t informa:verify informa

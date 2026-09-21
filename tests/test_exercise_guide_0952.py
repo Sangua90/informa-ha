@@ -1,3 +1,4 @@
+from container_contract import assert_container
 import importlib.util
 import sys
 import tempfile
@@ -65,9 +66,7 @@ class ExerciseGuide0952Test(unittest.TestCase):
         self.assertIn("workout_button=1", source)
 
     def test_goblet_guide_remains_in_container_chain(self):
-        docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertIn("COPY exercise_guide_0952.py /app/exercise_guide_0952.py", docker)
-        self.assertIn("exercise_guide_0952.js >> /app/web/app.js", docker)
+        assert_container(self, "exercise_guide_0952", "0.9.52")
 
 
 if __name__ == "__main__":

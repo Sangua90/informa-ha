@@ -1,3 +1,4 @@
+from container_contract import assert_container
 import json
 import subprocess
 import unittest
@@ -56,11 +57,7 @@ class ExerciseLibraryFix0955Test(unittest.TestCase):
         subprocess.run(["node", "-e", node], check=True)
 
     def test_version_and_container_chain(self):
-        config = (self.project / "informa" / "config.yaml").read_text()
-        docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertRegex(config, r'version: "0\.9\.(?:5[5-9]|[6-9][0-9])"')
-        self.assertIn("COPY exercise_library_fix_0955.py /app/exercise_library_fix_0955.py", docker)
-        self.assertRegex(docker, r'exercise_(?:library_fix_0955|navigation_fix_0956|menu_fix_0957|menu_fix_0958|menu_fix_0959|menu_fix_0960):app')
+        assert_container(self, "exercise_library_fix_0955", "0.9.55")
 
 
 if __name__ == "__main__":

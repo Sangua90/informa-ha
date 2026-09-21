@@ -1,3 +1,4 @@
+from container_contract import assert_container
 import importlib.util
 import sys
 import tempfile
@@ -77,12 +78,7 @@ class ExerciseGuides0953Test(unittest.TestCase):
         self.assertIn("workout_buttons=1", source)
 
     def test_version_and_container_chain(self):
-        config = (self.project / "informa" / "config.yaml").read_text()
-        docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertRegex(config, r'version: "0\.9\.(?:5[3-9]|[6-9][0-9])"')
-        self.assertIn("COPY exercise_guides_0953.py /app/exercise_guides_0953.py", docker)
-        self.assertRegex(docker, r'exercise_(?:guides_0953|catalog_0954|library_fix_0955|navigation_fix_0956|menu_fix_0957|menu_fix_0958|menu_fix_0959|menu_fix_0960):app')
-        self.assertIn("exercise_guides_0953.js >> /app/web/app.js", docker)
+        assert_container(self, "exercise_guides_0953", "0.9.53")
 
 
 if __name__ == "__main__":

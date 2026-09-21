@@ -1,3 +1,4 @@
+from container_contract import assert_container
 import importlib.util
 import subprocess
 import sys
@@ -63,11 +64,7 @@ class ExerciseMenuFix0959Test(unittest.TestCase):
                 else:
                     sys.modules[name] = old
 
-        config = (self.project / "informa" / "config.yaml").read_text()
-        docker = (self.project / "informa" / "Dockerfile").read_text()
-        self.assertRegex(config, r'version: "0\.9\.(?:59|6[0-9])"')
-        self.assertIn("COPY exercise_menu_fix_0959.py /app/exercise_menu_fix_0959.py", docker)
-        self.assertRegex(docker, r'exercise_menu_fix_(?:0959|0960):app')
+        assert_container(self, "exercise_menu_fix_0959", "0.9.59")
 
 
 if __name__ == "__main__":
