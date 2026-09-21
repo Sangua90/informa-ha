@@ -3,9 +3,9 @@
   const KEY='informha_workout_flow_0949';
   let states={};
   function load(){try{states=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){states={}}}
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(states))}catch(e){}}
+  function sync(){try{const disk=JSON.parse(localStorage.getItem(KEY)||'{}')||{};states={...disk,...states};Object.keys(disk).forEach(id=>{if(disk[id]?.stage==='archived'&&states[id]?.stage!=='archived')states[id]=disk[id]})}catch(e){}}function save(){sync();try{localStorage.setItem(KEY,JSON.stringify(states))}catch(e){}}
   function reset(){states={};try{localStorage.removeItem(KEY)}catch(e){}}
-  function state(id){return states[id]||(states[id]={stage:'planned',sets:{},fatigue:'Giusta',status:null})}
+  function state(id){sync();return states[id]||(states[id]={stage:'planned',sets:{},fatigue:'Giusta',status:null})}
   function exercise(id){const p=(typeof IF50!=='undefined'&&Array.isArray(IF50.plan))?IF50.plan:[];return p.find(x=>x.id===id)||(typeof if60Library==='function'?if60Library(id):null)}
   function card(id){return id==='cardio'?document.getElementById('if50ex_cardio'):document.getElementById('if50ex_'+id)}
   function cardId(c){return c.id==='if50ex_cardio'?'cardio':String(c.id||'').replace('if50ex_','')}
