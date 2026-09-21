@@ -17,6 +17,8 @@
   function restore(c,s){c.querySelectorAll('.setrow').forEach(row=>{const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;const v=s.sets?.[m[1]],input=row.querySelectorAll('input');if(!v)return;if(input[0])input[0].value=v.weight??'';if(input[1])input[1].value=v.reps??'';if(v.done){check.classList.add('done');check.textContent='✓'}});const f=c.querySelector('select[id^="if50f_"]');if(f&&s.fatigue){f.value=s.fatigue;f.dispatchEvent(new Event('change',{bubbles:true}))}}
   function decorateCard(c){
     const id=cardId(c),s=state(id);restore(c,s);let bar=c.querySelector('.if949-flow');if(!bar){bar=document.createElement('div');bar.className='if949-flow';c.querySelector(':scope > .row')?.insertAdjacentElement('afterend',bar)}
+    const ex=exercise(id),timedExtra=!!(ex?.mobility||ex?.stretching);
+    if(timedExtra){bar.style.display='none';return}else bar.style.display='';
     const total=c.querySelectorAll('.setrow').length,finished=total>0&&done(s)>=total;
     if(s.stage==='planned')bar.innerHTML='<div><b>Da iniziare</b><span>Puoi sostituirlo o saltarlo prima di cominciare.</span></div><button class="btn" onclick="if949Start(\''+id+'\')">Inizia esercizio</button>';
     else if(s.stage==='started'&&finished)bar.innerHTML='<div><b class="green">Tutte le serie completate</b><span>'+done(s)+'/'+total+' serie registrate. Conferma per passare al prossimo esercizio.</span></div><button class="btn" onclick="if949CompleteExercise(\''+id+'\',this)">Completa esercizio</button>';
