@@ -1,7 +1,7 @@
 FROM python:3.13-alpine
 ARG BUILD_VERSION=0.10.84
 ARG BUILD_ARCH=amd64
-ARG INFORMA_CACHE_BUST=0.10.84-focused-50-minute-workout
+ARG INFORMA_CACHE_BUST=0.10.84-exercise-count-estimator
 LABEL io.hass.version="${BUILD_VERSION}" io.hass.type="app" io.hass.arch="${BUILD_ARCH}"
 WORKDIR /app
 RUN pip install --no-cache-dir flask==3.1.1 gunicorn==23.0.0 pillow==11.3.0 websocket-client==1.8.0
@@ -49,9 +49,10 @@ RUN grep -Fq 'Expected 49 exercises' /app/coach_library_0962.py \
  && grep -Fq 'Sostituisci' /app/web/workout_runner_01041.js \
  && grep -Fq -- '--green:#ff7a00;--green2:#ff9818;--blue:#ff7a00' /app/web/style.css \
  && grep -Fq 'if1044-checkin' /app/web/coach_full_050.js \
- && grep -Fq 'data-val="50"' /app/web/coach_full_050.js \
- && grep -Fq 'primary_pair=1 companion=1 core_at_50=1' /app/web/adaptive_library_0972.js \
- && grep -Fq 'fifty_minute_strength_minimum=1' /app/web/automatic_stretching_0978.js \
+ && grep -Fq 'Durata stimata' /app/web/coach_full_050.js \
+ && grep -Fq 'Quanti esercizi di forza vuoi fare?' /app/web/coach_full_050.js \
+ && grep -Fq 'primary_pair=1 companion=1 core_when_selected=1 exercise_count_driven=1' /app/web/adaptive_library_0972.js \
+ && grep -Fq 'selected_exercise_count_preserved=1' /app/web/automatic_stretching_0978.js \
  && python -c "import coach_library_0962 as c; assert c.exercise_count() == 49; assert len(c.guide_ids()) == 49" \
  && printf '%s\n' "InFormha 0.10.84 runtime-workout-flow" > /app/BUILD_ID \
  && echo "$INFORMA_CACHE_BUST" >> /app/BUILD_ID
