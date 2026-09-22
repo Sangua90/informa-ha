@@ -7,8 +7,8 @@
 
   function minutes(){const n=parseInt(document.getElementById('if967TreadmillMinutes')?.value||IF50.treadmillMinutes,10);return Number.isFinite(n)&&n>0?Math.min(180,n):DEFAULT_MIN}
   function sync(){const yes=IF50.treadmill_choice==='Sì';document.querySelectorAll('[data-if967-treadmill]').forEach(b=>b.classList.toggle('on',b.dataset.if967Treadmill===(yes?'yes':'no')));const w=document.getElementById('if967TreadmillMinutesWrap');if(w)w.style.display=yes?'block':'none'}
-  window.if967Treadmill=function(wanted){IF50.treadmill_choice=wanted?'Sì':'No';sync()};
-  window.if967TreadmillMinutes=function(v){const n=parseInt(v,10);if(Number.isFinite(n)&&n>0)IF50.treadmillMinutes=Math.min(180,n)};
+  window.if967Treadmill=function(wanted){IF50.treadmill_choice=wanted?'Sì':'No';sync();window.if50Estimate?.()};
+  window.if967TreadmillMinutes=function(v){const n=parseInt(v,10);if(Number.isFinite(n)&&n>0)IF50.treadmillMinutes=Math.min(180,n);window.if50Estimate?.()};
 
   function replaceActive(){
     const p=document.querySelector('[data-page="checkin"]');if(!p)return;
