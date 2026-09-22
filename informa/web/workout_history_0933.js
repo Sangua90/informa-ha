@@ -63,10 +63,11 @@
     const host=document.getElementById('if933DetailHost');const title=document.getElementById('if933DetailTitle');
     host.innerHTML='<div class="card"><div class="sub">Caricamento dettaglio…</div></div>';
     try{
-      const d=await api(`api/workouts-0933/${id}`);const w=d.workout||{},sets=d.sets||[];title.textContent=w.title||'Allenamento';
+      const d=await api(`api/workouts-0933/${id}`);const w=d.workout||{},sets=d.sets||[],cardio=d.cardio||[];title.textContent=w.title||'Allenamento';
       const groups={};sets.forEach(s=>(groups[s.exercise]||(groups[s.exercise]=[])).push(s));
-      const body=Object.entries(groups).map(([name,rows])=>`<div class="card"><div class="ey">${name}</div>${rows.map(s=>`<div class="measure"><span>Serie ${s.set_no||'—'} · ${num(s.reps,' rep')}</span><b>${s.weight===null||s.weight===undefined?'—':s.weight} · ${s.fatigue||'—'}</b></div>`).join('')}</div>`).join('')||'<div class="card"><div class="sub">Nessuna serie registrata.</div></div>';
-      host.innerHTML=`<div class="card"><div class="measure"><span>Data</span><b>${fmtDate(w.ts)}</b></div><div class="measure"><span>Durata</span><b>${num(w.duration_min,' min')}</b></div><div class="measure"><span>Serie registrate</span><b>${sets.length}</b></div>${w.notes?`<div class="sub" style="margin-top:8px">${w.notes}</div>`:''}</div>${body}<button class="btn" style="background:#6b2525" onclick="if933DeleteWorkout(${id})">Elimina allenamento</button>`;
+      const cardioBody=cardio.map(x=>`<div class="card"><div class="ey">${x.activity||'Tapis roulant'}</div><div class="measure"><span>Durata</span><b>${num(x.duration_min,' min')}</b></div>${x.notes?`<div class="sub" style="margin-top:8px">${x.notes}</div>`:''}</div>`).join('');
+      const body=cardioBody+Object.entries(groups).map(([name,rows])=>`<div class="card"><div class="ey">${name}</div>${rows.map(s=>`<div class="measure"><span>Serie ${s.set_no||'—'} · ${num(s.reps,' rep')}</span><b>${s.weight===null||s.weight===undefined?'—':s.weight} · ${s.fatigue||'—'}</b></div>`).join('')}</div>`).join('')||(cardioBody?'':'<div class="card"><div class="sub">Nessuna attività registrata.</div></div>');
+      host.innerHTML=`<div class="card"><div class="measure"><span>Data</span><b>${fmtDate(w.ts)}</b></div><div class="measure"><span>Durata</span><b>${num(w.duration_min,' min')}</b></div><div class="measure"><span>Attività registrate</span><b>${Object.keys(groups).length+cardio.length}</b></div>${w.notes?`<div class="sub" style="margin-top:8px">${w.notes}</div>`:''}</div>${body}<button class="btn" style="background:#6b2525" onclick="if933DeleteWorkout(${id})">Elimina allenamento</button>`;
     }catch(e){host.innerHTML=`<div class="card warning"><div class="sub">${e.message||'Errore caricamento dettaglio'}</div></div>`}
   };
 
