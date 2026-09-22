@@ -44,6 +44,7 @@
   c.querySelectorAll('.setrow').forEach(x=>x.classList.toggle('if1041-current-set',x===row));
   b.innerHTML='<div class="if1041-kicker">ESERCIZIO '+(ix+1)+' DI '+a.length+'</div><h2>'+e.name+'</h2><div class="if1041-line">Serie <b>'+setNo+' di '+e.sets+'</b><span>·</span><b>'+reps+' '+repLabel+'</b><span>·</span> recupero <b>'+e.rest+' s</b></div>'+(weighted?'<div class="if1041-weight"><small>PESO · '+unit+'</small><div><button onclick="if1041Weight(\''+id+'\',-1)">−</button><b>'+(w?.value||'—')+'</b><button onclick="if1041Weight(\''+id+'\',1)">＋</button></div></div>':'')+'<div class="if1041-actions"><button onclick="if60ShowSwap(\''+id+'\')">⇄ Sostituisci</button>'+(e.guide?'<button onclick="openGuide(\''+e.guide+'\')">ⓘ Guida</button>':'')+'</div><button class="if1046-series btn" onclick="if1041Primary(\''+id+'\')">'+(stage(id)==='planned'?'Inizia esercizio':c.querySelector('.check:not(.done)')?'Completa serie '+setNo:'Completa esercizio')+'</button><button class="btn secondary" onclick="if108Skip(\''+id+'\')">Salta esercizio</button>';
  }
+ window.if1041Refresh=()=>draw();
  function refresh(){setTimeout(draw,0);setTimeout(draw,150)}
  const r=window.if50RenderWorkout;if(typeof r==='function')window.if50RenderWorkout=function(){const x=r.apply(this,arguments);refresh();return x};
  const st=window.if50Status;if(typeof st==='function')window.if50Status=async function(){const x=await st.apply(this,arguments);refresh();return x};
