@@ -18,7 +18,7 @@
  };
  const MAP={Petto:{pre:['mobility_upper'],post:['stretch_chest']},Schiena:{pre:['mobility_back'],post:['stretch_back_lats']},Spalle:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Tricipiti:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Bicipiti:{pre:['mobility_upper'],post:['stretch_biceps_forearms']},Gambe:{pre:['mobility_hips','mobility_ankles'],post:['stretch_quads']},Femorali:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Glutei:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Polpacci:{pre:['mobility_ankles'],post:['stretch_calves']},Core:{pre:['mobility_trunk'],post:['stretch_trunk']}};
  const uniq=a=>[...new Set(a)];
- function extras(kind,strength){return uniq(strength.flatMap(x=>MAP[x.group]?.[kind]||[])).slice(0,3).map(id=>({...EXTRA[id],priority:'Opzionale',sets:1,reps:null,rest:0,repType:'seconds',loadType:'bodyweight'}))}
+ function extras(kind,strength){const groups=uniq(strength.map(x=>x.group));return uniq(strength.flatMap(x=>MAP[x.group]?.[kind]||[])).slice(0,3).map(id=>({...EXTRA[id],priority:'Opzionale',sets:1,reps:null,rest:0,repType:'seconds',loadType:'bodyweight',targetGroups:(kind==='post'?groups.filter(g=>(MAP[g]?.post||[]).includes(id)):[])}))}
  function trimStrength(strength,minutes){const perExercise=8;const max=Math.max(1,Math.floor(minutes/perExercise));return strength.slice(0,max)}
  const build0=window.if50BuildPlan;if(typeof build0!=='function')return;
  window.if50BuildPlan=function(){
@@ -76,6 +76,7 @@
   if(state.index>=0&&!state.paused){state.left=Math.max(0,Math.ceil((state.end-Date.now())/1000));if(!state.left){state.done[state.index]=true;state.index=-1}}
   paint(id);
  }},250);
+ window.if978PruneStretching=function(){const flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}');const completed=new Set((IF50.plan||[]).filter(ex=>!ex.mobility&&!ex.stretching&&!ex.cardio&&flow[ex.id]?.stage==='archived'&&flow[ex.id]?.status==='Completato').map(ex=>ex.group));let changed=false;(IF50.plan||[]).filter(ex=>ex.stretching&&Array.isArray(ex.targetGroups)&&ex.targetGroups.length&&!ex.targetGroups.some(g=>completed.has(g))).forEach(ex=>{if(flow[ex.id]?.stage!=='archived'){flow[ex.id]={...(flow[ex.id]||{}),stage:'archived',status:'Non necessario'};document.getElementById('if50ex_'+ex.id)?.classList.add('if949-archived');changed=true}});if(changed)localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));return changed;};
  window.if978Next=async function(id){
   const state=session(id);if(!state||state.saving||state.done.filter(Boolean).length!==(state.ex.perSide?2:1))return;
   state.saving=true;paint(id);
