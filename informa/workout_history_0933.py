@@ -10,11 +10,11 @@ def _workout_rows():
     con = root.db()
     rows = [dict(r) for r in con.execute(
         """SELECT w.id,w.ts,w.title,w.duration_min,w.notes,
-                  COUNT(s.id) AS set_count,
-                  COUNT(DISTINCT s.exercise) AS exercise_count
+                  (SELECT COUNT(*) FROM sets s WHERE s.workout_id=w.id) AS set_count,
+                  (SELECT COUNT(DISTINCT s.exercise) FROM sets s WHERE s.workout_id=w.id)
+                    + (SELECT COUNT(DISTINCT c.activity) FROM cardio c WHERE c.workout_id=w.id) AS exercise_count,
+                  (SELECT COUNT(*) FROM cardio c WHERE c.workout_id=w.id) AS cardio_count
            FROM workouts w
-           LEFT JOIN sets s ON s.workout_id=w.id
-           GROUP BY w.id
            ORDER BY w.id DESC
            LIMIT 200"""
     )]
@@ -42,8 +42,13 @@ def workout_detail_0933(workout_id):
            FROM sets WHERE workout_id=? ORDER BY id""",
         (workout_id,),
     )]
+    cardio = [dict(r) for r in con.execute(
+        """SELECT id,activity,duration_min,avg_hr,max_hr,calories,notes
+           FROM cardio WHERE workout_id=? ORDER BY id""",
+        (workout_id,),
+    )]
     con.close()
-    return root.jsonify(ok=True, workout=dict(workout), sets=sets)
+    return root.jsonify(ok=True, workout=dict(workout), sets=sets, cardio=cardio)
 
 
 @app.delete('/api/workouts-0933/<int:workout_id>')
