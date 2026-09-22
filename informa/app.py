@@ -64,6 +64,7 @@ def init_db():
     );
     CREATE TABLE IF NOT EXISTS cardio(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workout_id INTEGER,
       ts TEXT NOT NULL,
       activity TEXT,
       duration_min REAL,
@@ -94,6 +95,9 @@ def init_db():
     INSERT OR IGNORE INTO profile(id,name,height_cm,weight_kg,goal,level)
       VALUES(1,'Edoardo',187,121.4,'Dimagrimento + forza','Inizio guidato');
     """)
+    cardio_columns = {row[1] for row in con.execute("PRAGMA table_info(cardio)")}
+    if "workout_id" not in cardio_columns:
+        con.execute("ALTER TABLE cardio ADD COLUMN workout_id INTEGER")
     count = con.execute("SELECT COUNT(*) c FROM body_measurements").fetchone()["c"]
     if count == 0:
         con.execute(
@@ -311,7 +315,7 @@ def measurement():
 def cardio():
     x = request.get_json(force=True)
     con = db()
-    con.execute("INSERT INTO cardio(ts,activity,duration_min,avg_hr,max_hr,calories,notes) VALUES(?,?,?,?,?,?,?)", (datetime.now().isoformat(timespec="seconds"),x.get("activity","Tapis roulant"),x.get("duration_min"),x.get("avg_hr"),x.get("max_hr"),x.get("calories"),x.get("notes")))
+    con.execute("INSERT INTO cardio(workout_id,ts,activity,duration_min,avg_hr,max_hr,calories,notes) VALUES(?,?,?,?,?,?,?,?)", (x.get("workout_id"),datetime.now().isoformat(timespec="seconds"),x.get("activity","Tapis roulant"),x.get("duration_min"),x.get("avg_hr"),x.get("max_hr"),x.get("calories"),x.get("notes")))
     con.commit(); con.close()
     return jsonify(ok=True)
 
