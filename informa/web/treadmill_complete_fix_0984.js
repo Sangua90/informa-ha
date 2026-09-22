@@ -7,12 +7,15 @@
   try{
    await originalSave();
    if(typeof window.if50Status==='function')await window.if50Status('treadmill','Completato','Cardio',btn);
+   try{
+    const key='informha_workout_flow_0949',activeKey='informha_workout_active_0109';
+    const flow=JSON.parse(localStorage.getItem(key)||'{}')||{};
+    flow.treadmill={...(flow.treadmill||{}),stage:'archived',status:'Completato',archivedAt:new Date().toISOString()};
+    localStorage.setItem(key,JSON.stringify(flow));
+    if(localStorage.getItem(activeKey)==='treadmill')localStorage.removeItem(activeKey);
+   }catch(e){}
    if(typeof window.go==='function')window.go('workout');
-   setTimeout(()=>{
-    const cards=[...document.querySelectorAll('[data-page="workout"] .if50-ex,[data-page="workout"] #if50ex_cardio')];
-    const next=cards.find(c=>!c.classList.contains('if949-archived')&&c.id!=='if50ex_treadmill');
-    if(next){cards.forEach(c=>c.classList.toggle('if950-hidden',c!==next));next.classList.add('if950-current');next.scrollIntoView({behavior:'smooth',block:'start'});}
-   },180);
+   if(typeof window.if50RenderWorkout==='function')window.if50RenderWorkout();
   }catch(e){toast(e.message||'Errore completamento tapis roulant');if(btn){btn.disabled=false;btn.textContent='Completa tapis roulant'}}
  };
  function patch(){
@@ -24,5 +27,5 @@
  }
  const render=window.if50RenderWorkout;if(typeof render==='function')window.if50RenderWorkout=function(){const r=render.apply(this,arguments);setTimeout(patch,180);return r};
  setTimeout(patch,650);
- console.log('[INFORMHA_TREADMILL_COMPLETE_FIX] version=0.9.84 single_complete=1 save_archive_advance=1');
+ console.log('[INFORMHA_TREADMILL_COMPLETE_FIX] version=0.9.84 single_complete=1 save_archive_advance=2 canonical_state=1 no_manual_card_selection=1');
 })();
