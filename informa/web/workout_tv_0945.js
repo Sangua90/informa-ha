@@ -40,8 +40,12 @@
     if(syncing)return;syncing=true;
     try{
       const cards=exerciseCards(),stage=ensureStage();if(!stage||!cards.length)return;
-      const forced=Number.parseInt(document.body.dataset.if950ExerciseIndex||'',10);
-      if(Number.isFinite(forced))currentIndex=forced;
+      // Use the same active exercise as the controller; the legacy index can be stale.
+      let active=null,flow={};try{active=localStorage.getItem('informha_workout_active_0109');flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}')}catch(e){}
+      const selected=cards.findIndex(c=>c.id==='if50ex_'+active&&flow[active]?.stage!=='archived');
+      if(selected>=0)currentIndex=selected;
+      else if(flow[cards[currentIndex]?.id.replace('if50ex_','')]?.stage==='archived')currentIndex=firstPendingIndex(cards);
+      document.body.dataset.if950ExerciseIndex=String(currentIndex);
       currentIndex=Math.max(0,Math.min(currentIndex,cards.length-1));
       cards.forEach((card,index)=>card.classList.toggle('if945-current',index===currentIndex));
       const current=cards[currentIndex];
@@ -82,10 +86,12 @@
   window.if945TvMove=function(delta){
     const cards=exerciseCards();
     currentIndex=Math.max(0,Math.min(currentIndex+delta,cards.length-1));
+    localStorage.setItem('informha_workout_active_0109',cards[currentIndex].id.replace('if50ex_',''));
     renderStage();
     cards[currentIndex]?.scrollTo?.({top:0,behavior:'smooth'});
   };
-  window.if945TvPending=function(){currentIndex=firstPendingIndex(exerciseCards());renderStage();};
+  window.if945Refresh=syncMode;
+  window.if945TvPending=function(){const cards=exerciseCards();currentIndex=firstPendingIndex(cards);if(cards[currentIndex])localStorage.setItem('informha_workout_active_0109',cards[currentIndex].id.replace('if50ex_',''));renderStage();};
 
   const oldGo=window.go;
   if(typeof oldGo==='function')window.go=function(){const result=oldGo.apply(this,arguments);setTimeout(syncMode,30);return result;};
