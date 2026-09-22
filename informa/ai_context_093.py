@@ -113,6 +113,23 @@ def _enhanced_context_093():
     )]
     con.close()
 
+    # Dati ricevuti da Health Auto Export via Home Assistant: non sovrascrivono le misure manuali.
+    try:
+        health_sync = root.healthsync_snapshot()
+    except Exception:
+        health_sync = {'connected': False, 'found': 0, 'data': {}}
+    health_data = health_sync.get('data') or {}
+    health_weight = health_data.get('weight') or None
+    health_summary = {
+        'connected': bool(health_sync.get('connected')),
+        'sensors_found': int(health_sync.get('found') or 0),
+        'last_sync': health_data.get('last_sync'),
+        'weight': health_weight,
+        'last_workout_type': health_data.get('last_workout_type'),
+        'last_workout_duration': health_data.get('last_workout_duration'),
+        'last_workout_calories': health_data.get('last_workout_calories'),
+    }
+
     by_workout = {}
     for s in reversed(sets):
         by_workout.setdefault(s.get('workout_id'), []).append(s)
@@ -244,6 +261,13 @@ def _enhanced_context_093():
                 'measurements_count': len(measurements),
             }
 
+    if health_weight and health_weight.get('value') is not None:
+        if weight_trend is None:
+            weight_trend = {'latest_kg': health_weight.get('value'), 'source': 'Apple Salute / Health Auto Export'}
+        else:
+            weight_trend['health_auto_export_kg'] = health_weight.get('value')
+            weight_trend['health_auto_export_updated_at'] = health_weight.get('last_updated')
+
     return {
         'generated_at': now.isoformat(timespec='seconds'),
         'goal': profile.get('goal'),
@@ -267,6 +291,7 @@ def _enhanced_context_093():
             'overdue': overdue,
         },
         'body_progress': weight_trend,
+        'health_auto_export': health_summary,
     }
 
 
@@ -278,6 +303,7 @@ def _safe_context_093(ctx):
         'nutrition': ctx.get('nutrition') or {},
         'supplements': ctx.get('supplements') or {},
         'body_progress': ctx.get('body_progress'),
+        'health_auto_export': ctx.get('health_auto_export') or {},
     }
 
 
@@ -353,6 +379,8 @@ def ai_coach_context_summary_093():
         'nutrition_logged_days_7d': (ctx.get('nutrition') or {}).get('logged_days_7d', 0),
         'supplements_active': (ctx.get('supplements') or {}).get('active', 0),
         'body_progress_available': bool(ctx.get('body_progress')),
+        'health_auto_export_connected': bool((ctx.get('health_auto_export') or {}).get('connected')),
+        'health_auto_export_weight': ((ctx.get('health_auto_export') or {}).get('weight') or {}).get('value'),
     })
 
 
