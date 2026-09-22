@@ -23,9 +23,9 @@
     const st=stats(d.phases),fatigue=document.getElementById('if970Fatigue')?.value||'Giusta';
     try{
       await api('api/treadmill-0970',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration_min:d.duration_min,avg_speed_kmh:Number(st.avgSpeed.toFixed(2)),max_speed_kmh:st.maxSpeed,avg_incline_pct:Number(st.avgIncline.toFixed(2)),max_incline_pct:st.maxIncline,fatigue,phases:d.phases})});
-      await api('api/cardio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({activity:'Tapis roulant Fassi',duration_min:d.duration_min,notes:`Programma iCoach · max ${st.maxSpeed} km/h · inclinazione max ${st.maxIncline}% · fatica ${fatigue}`})});
-      toast('Tapis roulant completato e salvato')
-    }catch(e){toast(e.message||'Errore salvataggio tapis roulant')}
+      await api('api/cardio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:typeof currentWorkoutId!=='undefined'?currentWorkoutId:null,activity:'Tapis roulant Fassi',duration_min:d.duration_min,notes:`Programma iCoach · max ${st.maxSpeed} km/h · inclinazione max ${st.maxIncline}% · fatica ${fatigue}`})});
+      toast('Tapis roulant completato e salvato');return true
+    }catch(e){toast(e.message||'Errore salvataggio tapis roulant');throw e}
   };
   const render=window.if50RenderWorkout;if(typeof render==='function')window.if50RenderWorkout=function(){const r=render.apply(this,arguments);setTimeout(enhance,100);return r};
   const build=window.if50BuildPlan;if(typeof build==='function')window.if50BuildPlan=function(){const r=build.apply(this,arguments);setTimeout(enhance,120);return r};
