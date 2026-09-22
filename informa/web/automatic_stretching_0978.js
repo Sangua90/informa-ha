@@ -29,31 +29,70 @@
   let pre=stretch&&!treadmill?extras('pre',strength):[];
   let post=stretch?extras('post',strength):[];
   const total=Math.max(10,Number(IF50.time)||45),tmMin=treadmill?Math.max(1,Number(treadmill.duration||treadmill.minutes||IF50.treadmillMinutes)||20):0;
-  let extrasMin=(pre.reduce((s,x)=>s+x.seconds,0)+post.reduce((s,x)=>s+x.seconds,0))/60;
+  let extrasMin=(pre.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)+post.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0))/60;
   let strengthMin=Math.max(8,total-tmMin-extrasMin);
   strength=trimStrength(strength,strengthMin);
   pre=stretch&&!treadmill?extras('pre',strength):[];post=stretch?extras('post',strength):[];
-  extrasMin=(pre.reduce((s,x)=>s+x.seconds,0)+post.reduce((s,x)=>s+x.seconds,0))/60;
+  extrasMin=(pre.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)+post.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0))/60;
   strengthMin=Math.max(8,total-tmMin-extrasMin);strength=trimStrength(strength,strengthMin);
   IF50.plan=[...(treadmill?[treadmill]:pre),...strength,...post];
-  IF50.timeBudget={total,treadmill:tmMin,mobility:pre.reduce((s,x)=>s+x.seconds,0)/60,stretching:post.reduce((s,x)=>s+x.seconds,0)/60,strength:strengthMin};
+  IF50.timeBudget={total,treadmill:tmMin,mobility:pre.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)/60,stretching:post.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)/60,strength:strengthMin};
   return IF50.plan;
  };
+
  const card0=window.if50ExerciseCard;
+ const sessions=new Map();
+ function session(id){
+  const ex=IF50.plan.find(e=>e.id===id);
+  if(!ex||!(ex.mobility||ex.stretching))return null;
+  let state=sessions.get(id);
+  if(!state||state.ex!==ex){state={ex,done:[],index:-1,end:0,left:0,paused:false,saving:false};sessions.set(id,state)}
+  return state;
+ }
+ function paint(id){
+  const state=session(id),card=document.getElementById('if50ex_'+id);if(!state||!card)return;
+  const count=state.ex.perSide?2:1;
+  card.querySelectorAll('[data-timed-side]').forEach((b,i)=>{
+   const label=count===2?(i===0?'Lato destro':'Lato sinistro'):'Esercizio';
+   const running=state.index===i,done=!!state.done[i];
+   b.disabled=done||state.saving||(i>0&&!state.done[i-1]);
+   b.classList.toggle('if978-done',done);
+   b.textContent=label+' — '+(done?'✓ Completato':running?(state.paused?'▶ Riprendi · ':'⏸ Pausa · ')+state.left+' s':'▶ Avvia · '+state.ex.seconds+' s');
+  });
+  const next=card.querySelector('[data-timed-next]');if(next)next.disabled=state.saving||state.done.filter(Boolean).length!==count;
+ }
  window.if50ExerciseCard=function(ex){
-  if(ex?.mobility||ex?.stretching){const sec=ex.seconds||90,totalSec=ex.perSide?sec*2:sec,label=ex.mobility?'Mobilità dinamica':'Stretching finale',sideNote=ex.perSide?' · '+sec+' s per lato':'';return `<div class="card if50-ex if978-extra" id="if50ex_${ex.id}"><div class="ey">${label} · circa ${Math.round(totalSec/60*10)/10} min${sideNote}</div><h2>${ex.name}</h2><div class="sub">${ex.mobility?'Preparazione dinamica mirata alla seduta di oggi.':'Allungamento finale scelto da iCoach per i gruppi allenati.'}</div>${ex.guide?`<button class="btn secondary" onclick="openGuide('${ex.guide}')">Guida</button>`:''}<div class="if978-timer" id="if978timer_${ex.id}" role="button" tabindex="0" onclick="if978Start('${ex.id}',${sec},this.parentElement.querySelector('.if978-start'),${ex.perSide?'true':'false'})"><b>${ex.perSide?sec+' + '+sec:sec} s</b><span>${ex.perSide?'Lato 1 + lato 2':'Tempo esercizio'}</span></div><div class="choice if978-timed-controls"><button class="if978-start" onclick="if978Start('${ex.id}',${sec},this,${ex.perSide?'true':'false'})">▶ Avvia esercizio</button>${ex.stretching?`<button onclick="if50Status('${ex.id}','Saltato','Opzionale',this)">Salta</button>`:''}</div></div>`}return card0.apply(this,arguments)};
- let if978Timer=null,if978Paused=false,if978EndAt=0,if978Left=0;
- window.if978Start=function(id,sec,btn,perSide=false){
-  if(btn.dataset.running==='1'){if(!if978Paused){if978Left=Math.max(0,Math.ceil((if978EndAt-Date.now())/1000));if978Paused=true}else{if978Paused=false;if978EndAt=Date.now()+if978Left*1000}btn.textContent=if978Paused?'▶ Riprendi':'⏸ Pausa';btn.classList.toggle('if978-paused',if978Paused);const box=document.getElementById('if978timer_'+id);if(box){const span=box.querySelector('span');if(span)span.textContent=if978Paused?'Timer in pausa':'Tempo rimanente'}return}
-  if(if978Timer){clearInterval(if978Timer);if978Timer=null}
-  if978Paused=false;const sideSec=Math.max(1,Number(sec)||90),totalSec=perSide?sideSec*2:sideSec;if978Left=totalSec;if978EndAt=Date.now()+if978Left*1000;let left=if978Left,box=document.getElementById('if978timer_'+id);btn.dataset.running='1';btn.textContent='⏸ Pausa';try{window.if949Start?.(id)}catch(e){}try{localStorage.setItem('informha_workout_active_0109',id)}catch(e){}try{window.if67Refresh?.()}catch(e){}
-  const draw=()=>{if(box){const elapsed=totalSec-left,side=perSide?(elapsed<sideSec?'Lato 1':'Lato 2'):'';box.innerHTML='<b>'+left+' s</b><span>'+(if978Paused?'Timer in pausa':(side||'Tempo rimanente'))+'</span>'}};draw();
-  if978Timer=setInterval(async()=>{if(if978Paused)return;left=Math.max(0,Math.ceil((if978EndAt-Date.now())/1000));if978Left=left;draw();if(left<=0){clearInterval(if978Timer);if978Timer=null;if978EndAt=0;if978Left=0;if978Paused=false;delete btn.dataset.running;if(box)box.innerHTML='<b>✓</b><span>Esercizio completato</span>';btn.classList.remove('if978-paused');btn.textContent='✓ Completato';try{await if50Status(id,'Completato','Opzionale',btn)}catch(e){}let flow={};try{flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}')||{}}catch(e){}const st=flow[id]||(flow[id]={sets:{},fatigue:'Giusta'});st.stage='archived';st.status='Completato';st.archivedAt=new Date().toISOString();try{localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow))}catch(e){}try{window.if67Refresh?.()}catch(e){}setTimeout(()=>window.if978Advance?.(id),350)}},1000)
+  if(!(ex?.mobility||ex?.stretching))return card0.apply(this,arguments);
+  const sec=ex.seconds||90,count=ex.perSide?2:1;
+  return '<div class="card if50-ex if978-extra" id="if50ex_'+ex.id+'"><div class="ey">'+(ex.mobility?'Mobilità':'Stretching')+' · '+sec+' s'+(count===2?' per lato':'')+'</div><h2>'+ex.name+'</h2><div class="if978-timed-controls">'+Array.from({length:count},(_,i)=>'<button type="button" data-timed-side="'+i+'" onclick="if978Side(&quot;'+ex.id+'&quot;,'+i+')" '+(i?'disabled':'')+'>'+(count===2?(i?'Lato sinistro':'Lato destro'):'Esercizio')+' — ▶ Avvia · '+sec+' s</button>').join('')+'<button type="button" data-timed-next disabled onclick="if978Next(&quot;'+ex.id+'&quot;)">Prossimo esercizio</button></div></div>';
+ };
+ window.if978Side=function(id,index){
+  const state=session(id);if(!state||state.saving||state.done[index]||(index>0&&!state.done[index-1]))return;
+  if(state.index===index){state.paused=!state.paused;if(!state.paused)state.end=Date.now()+state.left*1000}
+  else{state.index=index;state.left=Math.max(1,Number(state.ex.seconds)||90);state.end=Date.now()+state.left*1000;state.paused=false;window.if949Start?.(id)}
+  paint(id);
+ };
+ setInterval(()=>{for(const [id,state] of sessions){
+  if(state.index>=0&&!state.paused){state.left=Math.max(0,Math.ceil((state.end-Date.now())/1000));if(!state.left){state.done[state.index]=true;state.index=-1}}
+  paint(id);
+ }},250);
+ window.if978Next=async function(id){
+  const state=session(id);if(!state||state.saving||state.done.filter(Boolean).length!==(state.ex.perSide?2:1))return;
+  state.saving=true;paint(id);
+  try{
+   const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:state.ex.name,priority:'Opzionale',status:'Completato'})});
+   if(out?.ok===false)throw Error(out.error||'Salvataggio non riuscito');
+   if(out?.workout_id)currentWorkoutId=out.workout_id;
+   const flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}');flow[id]={...flow[id],stage:'archived',status:'Completato'};localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));
+   document.getElementById('if50ex_'+id)?.classList.add('if949-archived');window.if978Advance(id);
+  }catch(e){toast(e.message||'Errore salvataggio. Riprova.')}finally{state.saving=false;paint(id)}
  };
  window.if978Advance=function(id){try{localStorage.removeItem('informha_workout_active_0109')}catch(e){}const cards=[...document.querySelectorAll('[data-page="workout"] .if50-ex,[data-page="workout"] #if50ex_cardio')],i=cards.findIndex(x=>x.id==='if50ex_'+id),flow=(()=>{try{return JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}')||{}}catch(e){return {}}})(),next=cards.slice(i+1).find(x=>{const xid=x.id==='if50ex_cardio'?'cardio':String(x.id||'').replace('if50ex_','');return flow[xid]?.stage!=='archived'})||cards.find(x=>{const xid=x.id==='if50ex_cardio'?'cardio':String(x.id||'').replace('if50ex_','');return flow[xid]?.stage!=='archived'});if(!next){try{window.if67Refresh?.()}catch(e){}return}const nid=next.id==='if50ex_cardio'?'cardio':String(next.id||'').replace('if50ex_','');try{window.if949Start?.(nid)}catch(e){}cards.forEach(c=>{const on=c===next;c.classList.toggle('if950-current',on);c.classList.toggle('if950-hidden',!on)});try{localStorage.setItem('informha_workout_active_0109',nid)}catch(e){}try{window.if67Refresh?.()}catch(e){}next.scrollIntoView({behavior:'smooth',block:'center'})};
+ const controlsStyle=document.createElement('style');controlsStyle.textContent='.if978-extra .if978-timed-controls{display:flex!important;flex-direction:column;gap:14px;margin-top:18px}.if978-extra .if978-timed-controls button{display:block!important;width:100%;min-height:68px;border-radius:18px;border:1px solid #ff9818;background:#24180d;color:#fff;font-size:18px}.if978-extra .if978-timed-controls button:disabled{opacity:.45}.if978-extra .if978-timed-controls button.if978-done{background:#16803d;opacity:1;border-color:#4ade80}';document.head.appendChild(controlsStyle);
  const css=document.createElement('style');css.textContent='.if978-timer{margin-top:14px;padding:16px;border:1px solid var(--ln);border-radius:16px;text-align:center}.if978-timer b{display:block;font-size:30px}.if978-timer span{font-size:13px;color:var(--m)}.if978-extra .choice{display:grid!important;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;margin-top:14px}.if978-extra .choice.if978-timed-controls:has(.if978-start:only-child){grid-template-columns:1fr}.if978-extra .choice button{min-height:58px!important;width:100%!important;font-size:17px!important;font-weight:800!important;padding:14px 16px!important;border-radius:18px!important}.if978-extra .if978-start{background:linear-gradient(135deg,#16a34a,#22c55e)!important;color:#fff!important;border:1px solid #4ade80!important;box-shadow:0 0 0 1px rgba(74,222,128,.18),0 0 24px rgba(34,197,94,.32)!important}.if978-extra .if978-start.if978-paused{background:linear-gradient(135deg,#b45309,#f59e0b)!important;border-color:#fbbf24!important;box-shadow:0 0 24px rgba(245,158,11,.28)!important}.if978-extra .if978-timer{background:linear-gradient(180deg,rgba(56,189,248,.10),rgba(34,197,94,.06))!important;border:1px solid rgba(56,189,248,.42)!important;box-shadow:inset 0 0 24px rgba(56,189,248,.05),0 0 18px rgba(56,189,248,.10)!important}.if978-extra .if978-timer b{font-size:38px!important;color:#7dd3fc!important;font-variant-numeric:tabular-nums}.if978-extra .if978-timer span{font-size:14px!important;font-weight:700!important;letter-spacing:.04em}@media(max-width:520px){.if978-extra .choice{grid-template-columns:1fr}.if978-extra .choice button{min-height:60px!important}}';document.head.appendChild(css);
  console.log('[INFORMHA_AUTO_STRETCH] version=0.9.78 automatic=1 treadmill_replaces_mobility=1 final_stretch=1 total_time_budget=1');
 })();
+
 
 
 
