@@ -23,7 +23,7 @@
   const isEnabled=id=>enabled[id]!==false;
   async function loadEnabled(){try{const d=await api('api/exercise-enabled');enabled=d.exercises||{}}catch(e){enabled={}}}
 
-  function pickExtra(group,val){IF50[group]=val;document.querySelectorAll(`[data-if931-group="${group}"]`).forEach(b=>b.classList.toggle('on',b.dataset.val===val))}
+  function pickExtra(group,val){IF50[group]=val;window.if50Estimate?.();document.querySelectorAll(`[data-if931-group="${group}"]`).forEach(b=>b.classList.toggle('on',b.dataset.val===val))}
   window.if931Pick=pickExtra;
 
   const oldCheckin=window.if50Checkin;
