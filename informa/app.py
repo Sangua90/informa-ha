@@ -315,9 +315,13 @@ def measurement():
 def cardio():
     x = request.get_json(force=True)
     con = db()
-    con.execute("INSERT INTO cardio(workout_id,ts,activity,duration_min,avg_hr,max_hr,calories,notes) VALUES(?,?,?,?,?,?,?,?)", (x.get("workout_id"),datetime.now().isoformat(timespec="seconds"),x.get("activity","Tapis roulant"),x.get("duration_min"),x.get("avg_hr"),x.get("max_hr"),x.get("calories"),x.get("notes")))
+    workout_id = x.get("workout_id")
+    if not workout_id:
+        cur = con.execute("INSERT INTO workouts(ts,title) VALUES(?,?)", (datetime.now().isoformat(timespec="seconds"), x.get("workout_title", "Allenamento completo")))
+        workout_id = cur.lastrowid
+    con.execute("INSERT INTO cardio(workout_id,ts,activity,duration_min,avg_hr,max_hr,calories,notes) VALUES(?,?,?,?,?,?,?,?)", (workout_id,datetime.now().isoformat(timespec="seconds"),x.get("activity","Tapis roulant"),x.get("duration_min"),x.get("avg_hr"),x.get("max_hr"),x.get("calories"),x.get("notes")))
     con.commit(); con.close()
-    return jsonify(ok=True)
+    return jsonify(ok=True, workout_id=workout_id)
 
 @app.post("/api/set")
 def save_set():
