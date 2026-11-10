@@ -41,3 +41,26 @@ class TimedSetsTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             with closing(sqlite3.connect(self.database)) as con:
                 self.assertEqual(con.execute('SELECT reps,rep_type FROM sets WHERE exercise=?', (name,)).fetchone(), (value, unit))
+
+    def test_exclusions_persist_across_initialization_and_preserve_history(self):
+        import importlib.util
+        from unittest.mock import patch
+        path = Path(__file__).parents[1] / 'informa/coach_library_0962.py'
+        spec = importlib.util.spec_from_file_location('availability_catalog_test', path)
+        catalog = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(catalog)
+        with patch.dict(sys.modules, {'coach_library_0962': catalog}):
+            for _ in range(2):
+                self.assertEqual(self.client.put('/api/exercise-availability-01087/chest', json={'enabled': False}).status_code, 200)
+            self.module.init_db()
+            data = self.client.get('/api/exercise-availability-01087').get_json()
+            self.assertEqual(data['disabled'], ['chest'])
+            self.assertTrue(any(e['id'] == 'chest' for e in data['items']))
+            with closing(sqlite3.connect(self.database)) as con:
+                self.assertEqual(con.execute('SELECT weight,reps FROM sets').fetchone(), (5, 10))
+            self.client.put('/api/exercise-availability-01087/chest', json={'enabled': True})
+            self.assertEqual(self.client.get('/api/exercise-availability-01087').get_json()['disabled'], [])
+
+    def test_exclusion_payload_requires_boolean(self):
+        for payload in [{}, {'enabled': 'false'}, {'enabled': 0}]:
+            self.assertEqual(self.client.put('/api/exercise-availability-01087/chest', json=payload).status_code, 400)

@@ -35,7 +35,7 @@ const IF60_FAMILIES=[
 ];
 function if60NormGroup(g){g=String(g||'').toLowerCase();if(g.includes('bicip'))return'Bicipiti';if(g.includes('tricip'))return'Tricipiti';if(g.includes('petto'))return'Petto';if(g.includes('schiena'))return'Schiena';if(g.includes('spall'))return'Spalle';if(g.includes('femoral')||g.includes('catena'))return'Femorali';if(g.includes('gamb')||g.includes('quadric'))return'Gambe';if(g.includes('glute'))return'Glutei';if(g.includes('polp'))return'Polpacci';if(g.includes('core'))return'Core';if(g.includes('cardio'))return'Cardio';return g}
 function if60Family(id){return IF60_FAMILIES.find(a=>a.includes(id))||[]}
-function if60AllIds(){const supported=Object.keys(window.IF72_LIBRARY||{});return supported.length?supported:[...new Set([...Object.keys(IF51_LIBRARY||{}),...Object.keys(IF50_EX||{})])]}
+function if60AllIds(){const supported=Object.keys(window.IF72_LIBRARY||{});return (supported.length?supported:[...new Set([...Object.keys(IF51_LIBRARY||{}),...Object.keys(IF50_EX||{})])]).filter(id=>window.if1087Available?.(id)!==false)}
 function if60AlternativeList(id){
  const src=if60Library(id);if(!src)return[];
  const group=if60NormGroup(src.group),family=if60Family(id),used=new Set((IF50.plan||[]).map(x=>x.id));
@@ -48,7 +48,7 @@ function if60AlternativeList(id){
    return {id:x,score,name:e.name||x};
  }).filter(x=>x.score>=100).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name)).slice(0,6).map(x=>x.id)
 }
-function if60ToPlan(id){const x=if60Library(id);if(!x)return null;const reps=x.reps??(x.repType==='seconds'?30:10);return {id,name:x.name,priority:x.priority||'Utile',sets:x.sets||3,reps,rest:x.rest||90,repType:x.repType||'reps',perSide:!!x.perSide,loadType:x.loadType||'bodyweight',guide:x.guide||null,cardio:!!x.cardio,mobility:!!x.mobility,stretching:!!x.stretching,seconds:x.seconds||((x.mobility||x.stretching)&&x.repType==='seconds'?reps:null),duration:x.duration||null,equipment:x.equipment||'',group:x.group||''}}
+function if60ToPlan(id){if(window.if1087Available?.(id)===false)return null;const x=if60Library(id);if(!x)return null;const reps=x.reps??(x.repType==='seconds'?30:10);return {id,name:x.name,priority:x.priority||'Utile',sets:x.sets||3,reps,rest:x.rest||90,repType:x.repType||'reps',perSide:!!x.perSide,loadType:x.loadType||'bodyweight',guide:x.guide||null,cardio:!!x.cardio,mobility:!!x.mobility,stretching:!!x.stretching,seconds:x.seconds||((x.mobility||x.stretching)&&x.repType==='seconds'?reps:null),duration:x.duration||null,equipment:x.equipment||'',group:x.group||''}}
 function if60AddExerciseControls(){
  document.querySelectorAll('[data-page="workout"] .if50-ex').forEach(card=>{
    if(card.querySelector('.if60-actions'))return;

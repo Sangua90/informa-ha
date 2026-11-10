@@ -18,7 +18,7 @@
  };
  const MAP={Petto:{pre:['mobility_upper'],post:['stretch_chest']},Schiena:{pre:['mobility_back'],post:['stretch_back_lats']},Spalle:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Tricipiti:{pre:['mobility_upper'],post:['stretch_shoulders_triceps']},Bicipiti:{pre:['mobility_upper'],post:['stretch_biceps_forearms']},Gambe:{pre:['mobility_hips','mobility_ankles'],post:['stretch_quads']},Femorali:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Glutei:{pre:['mobility_hips'],post:['stretch_hamstrings_glutes']},Polpacci:{pre:['mobility_ankles'],post:['stretch_calves']},Core:{pre:['mobility_trunk'],post:['stretch_trunk']}};
  const uniq=a=>[...new Set(a)];
- function extras(kind,strength){const groups=uniq(strength.map(x=>x.group));return uniq(strength.flatMap(x=>MAP[x.group]?.[kind]||[])).slice(0,3).map(id=>({...EXTRA[id],priority:'Opzionale',sets:1,reps:null,rest:0,repType:'seconds',loadType:'bodyweight',targetGroups:(kind==='post'?groups.filter(g=>(MAP[g]?.post||[]).includes(id)):[])}))}
+ function extras(kind,strength){const groups=uniq(strength.map(x=>x.group));return uniq(strength.flatMap(x=>MAP[x.group]?.[kind]||[])).filter(id=>window.if1087Available?.(id)!==false).slice(0,3).map(id=>({...EXTRA[id],priority:'Opzionale',sets:1,reps:null,rest:0,repType:'seconds',loadType:'bodyweight',targetGroups:(kind==='post'?groups.filter(g=>(MAP[g]?.post||[]).includes(id)):[])}))}
  function trimStrength(strength,minutes){const selected=Math.max(2,Math.min(5,Number(IF50.exerciseCount)||4));return strength.slice(0,selected)}
  const build0=window.if50BuildPlan;if(typeof build0!=='function')return;
  window.if50BuildPlan=function(){

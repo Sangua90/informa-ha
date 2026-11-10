@@ -51,6 +51,7 @@
   }
 
   function libraryHtml(){
+    const managed=typeof window!=='undefined'?window.if1087LibraryHtml?.():null;if(managed)return managed;
     if(typeof IF51_LIBRARY==='undefined')return '';
     const groups={};
     Object.entries(IF51_LIBRARY).forEach(([id,x])=>{const group=x.group||'Altro';(groups[group]||(groups[group]=[])).push([id,x])});
@@ -63,6 +64,7 @@
     ['exercises','exercise-library-063'].forEach(name=>{const page=ensurePage(name);if(page)page.innerHTML=html});
   }
 
+  if(typeof window!=='undefined')window.if1087RenderLibraries=renderLibraries;
   function routeExercisesButton(){
     const legacy=document.getElementById('if63ExercisesButton');
     if(legacy)legacy.onclick=openExerciseLibrary;

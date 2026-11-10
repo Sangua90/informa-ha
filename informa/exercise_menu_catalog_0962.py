@@ -29,7 +29,7 @@ def _exercise_row(exercise):
         'onerror="this.style.display=\'none\'">'
     )
     return (
-        '<div class="exercise-library-row" style="padding:8px 0 12px">'
+        '<div class="exercise-library-row" data-exercise-id="'+html.escape(guide_id)+'" style="padding:8px 0 12px">'
         '<div class="measure"><span>{}</span></div>{}</div>'
     ).format(html.escape(name), image)
 
@@ -60,7 +60,7 @@ def _standalone_library_0962():
         f'<div class="sub" style="margin-bottom:14px">Libreria completa InFormha · {total} esercizi</div>'
         + "".join(cards)
         + '<a class="btn secondary" href="./?v=0962">Indietro</a>'
-        '</section></main></body></html>'
+        '</section></main><script src="exercise_availability_01087.js?v=01087"></script></body></html>'
     )
 
 

@@ -95,6 +95,7 @@ def init_db():
     INSERT OR IGNORE INTO profile(id,name,height_cm,weight_kg,goal,level)
       VALUES(1,'Edoardo',187,121.4,'Dimagrimento + forza','Inizio guidato');
     """)
+    con.execute("CREATE TABLE IF NOT EXISTS exercise_exclusions(exercise_id TEXT PRIMARY KEY)")
     set_columns = {row[1] for row in con.execute("PRAGMA table_info(sets)")}
     if "rep_type" not in set_columns:
         con.execute("ALTER TABLE sets ADD COLUMN rep_type TEXT NOT NULL DEFAULT 'reps'")
@@ -355,3 +356,38 @@ def health_import():
 @app.get("/health")
 def health():
     return jsonify(status="ok", app="InFormha", version=VERSION)
+
+
+@app.get("/api/exercise-availability-01087")
+def exercise_availability_01087():
+    import coach_library_0962 as catalog
+    con = db()
+    disabled = [r[0] for r in con.execute("SELECT exercise_id FROM exercise_exclusions ORDER BY exercise_id")]
+    con.close()
+    items = [{"id": e["guide_id"], "name": e["name"], "group": group}
+             for group, exercises in catalog.GROUPS for e in exercises]
+    items.append({"id": "stretch_quads", "name": "Stretching quadricipiti", "group": "Stretching"})
+    return jsonify(ok=True, disabled=disabled, items=items)
+
+
+@app.put("/api/exercise-availability-01087/<exercise_id>")
+def set_exercise_availability_01087(exercise_id):
+    import re
+    if not re.fullmatch(r"[a-z0-9_]{1,80}", exercise_id):
+        return jsonify(ok=False, error="Esercizio non valido"), 400
+    payload = request.get_json(silent=True) or {}
+    if type(payload.get("enabled")) is not bool:
+        return jsonify(ok=False, error="Indica se l'esercizio è disponibile"), 400
+    con = db()
+    if payload["enabled"]:
+        con.execute("DELETE FROM exercise_exclusions WHERE exercise_id=?", (exercise_id,))
+    else:
+        con.execute("INSERT OR IGNORE INTO exercise_exclusions(exercise_id) VALUES(?)", (exercise_id,))
+    con.commit()
+    con.close()
+    return jsonify(ok=True, enabled=payload["enabled"])
+
+
+@app.get("/exercise_availability_01087.js")
+def exercise_availability_script_01087():
+    return send_from_directory("/app/web", "exercise_availability_01087.js")

@@ -62,3 +62,14 @@ test('final stretching wrapper preserves counts, pain exclusions, units and expl
  }
  const plank=c.IF72_LIBRARY.plank;assert.equal(plank.repType,'seconds');assert.equal(plank.reps,30);
 });
+
+test('excluded exercises, cardio and stretching never enter new plans; shortages stay valid',()=>{
+ const c=fixture();const excluded=new Set(['chest','pec_fly','push_up','treadmill','stretch_shoulders_triceps']);
+ c.if1087Available=id=>!excluded.has(id);
+ Object.assign(c.IF50,{adaptiveGroups:groups,stretch_mode:'Sì',treadmill_choice:'Sì',treadmillMinutes:15});
+ for(let n=0;n<20;n++)assert.ok(c.if50BuildPlan().every(x=>!excluded.has(x.id)));
+ for(const e of Object.values(c.IF72_LIBRARY))if(!['plank','heel_taps'].includes(e.id))excluded.add(e.id);
+ const p=c.if50BuildPlan().filter(x=>!x.mobility&&!x.stretching&&!x.cardio);
+ assert.equal(p.length,2);assert.ok(p.every(x=>['plank','heel_taps'].includes(x.id)));
+ excluded.add('plank');excluded.add('heel_taps');assert.equal(c.if50BuildPlan().length,0);
+});
