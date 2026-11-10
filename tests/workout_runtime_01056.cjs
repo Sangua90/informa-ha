@@ -89,7 +89,7 @@ test('Plank countdown pauses, survives rendering and saves once before recovery'
  f.w.if1041Primary('plank');await f.advance(10000);assert.equal(f.requests.filter(x=>x.url==='api/set').length,0);
  f.w.if1041Primary('plank');const label=f.w.document.querySelector('#if50ex_plank .if1046-series').textContent;await f.advance(5000);assert.equal(f.w.document.querySelector('#if50ex_plank .if1046-series').textContent,label);
  f.w.if50RenderWorkout();await f.advance();f.w.if1041Primary('plank');await f.advance(21000);
- assert.equal(f.requests.filter(x=>x.url==='api/set').length,1);assert.equal(f.requests.find(x=>x.url==='api/set').body.reps,30);assert.equal(f.w.page,'recovery');
+ assert.equal(f.requests.filter(x=>x.url==='api/set').length,1);assert.equal(f.requests.find(x=>x.url==='api/set').body.reps,30);assert.equal(f.requests.find(x=>x.url==='api/set').body.rep_type,'seconds');assert.equal(f.w.page,'recovery');
  await f.recover();assert.equal(f.w.document.querySelectorAll('#if50ex_plank .check.done').length,1);
  }finally{f.dom.window.close()}
 });
@@ -113,5 +113,12 @@ test('legacy catalog refresh preserves supported dumbbell reverse curl in the pl
  f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web/exercise_catalog_0954.js'),'utf8'));await f.advance();
  assert.ok(f.w.IF50.plan.some(x=>x.id==='reverse_curl'));
  assert.equal(Object.values(f.w.IF72_LIBRARY).filter(x=>x.loadType==='kg').length,12);
+ }finally{f.dom.window.close()}
+});
+
+test('history displays timed sets in seconds and dynamic exercises in repetitions',async()=>{
+ const f=fixture();try{f.w.api=async()=>({workout:{title:'Seduta'},sets:[{exercise:'Plank',set_no:1,reps:30},{exercise:'Hold',set_no:1,reps:45,rep_type:'seconds'},{exercise:'Curl',set_no:1,reps:10,rep_type:'reps'}]});
+ f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web/workout_history_0933.js'),'utf8'));await f.w.if933OpenDetail(1);
+ const text=f.w.document.getElementById('if933DetailHost').textContent;assert.match(text,/30 s/);assert.match(text,/45 s/);assert.match(text,/10 rep/);
  }finally{f.dom.window.close()}
 });

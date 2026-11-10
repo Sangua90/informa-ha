@@ -95,6 +95,9 @@ def init_db():
     INSERT OR IGNORE INTO profile(id,name,height_cm,weight_kg,goal,level)
       VALUES(1,'Edoardo',187,121.4,'Dimagrimento + forza','Inizio guidato');
     """)
+    set_columns = {row[1] for row in con.execute("PRAGMA table_info(sets)")}
+    if "rep_type" not in set_columns:
+        con.execute("ALTER TABLE sets ADD COLUMN rep_type TEXT NOT NULL DEFAULT 'reps'")
     cardio_columns = {row[1] for row in con.execute("PRAGMA table_info(cardio)")}
     if "workout_id" not in cardio_columns:
         con.execute("ALTER TABLE cardio ADD COLUMN workout_id INTEGER")
@@ -330,7 +333,7 @@ def save_set():
     if not wid:
         cur = con.execute("INSERT INTO workouts(ts,title) VALUES(?,?)", (datetime.now().isoformat(timespec="seconds"), x.get("workout_title", "Allenamento")))
         wid = cur.lastrowid
-    con.execute("INSERT INTO sets(workout_id,exercise,set_no,weight,reps,fatigue,rest_sec) VALUES(?,?,?,?,?,?,?)", (wid,x.get("exercise"),x.get("set_no"),x.get("weight"),x.get("reps"),x.get("fatigue"),x.get("rest_sec",90)))
+    con.execute("INSERT INTO sets(workout_id,exercise,set_no,weight,reps,fatigue,rest_sec,rep_type) VALUES(?,?,?,?,?,?,?,?)", (wid,x.get("exercise"),x.get("set_no"),x.get("weight"),x.get("reps"),x.get("fatigue"),x.get("rest_sec",90),"seconds" if x.get("rep_type") == "seconds" else "reps"))
     con.commit(); con.close()
     return jsonify(ok=True, workout_id=wid)
 

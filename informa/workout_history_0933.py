@@ -38,7 +38,7 @@ def workout_detail_0933(workout_id):
         con.close()
         return root.jsonify(ok=False, error="Allenamento non trovato"), 404
     sets = [dict(r) for r in con.execute(
-        """SELECT id,exercise,set_no,weight,reps,fatigue,rest_sec
+        """SELECT id,exercise,set_no,weight,reps,fatigue,rest_sec,rep_type
            FROM sets WHERE workout_id=? ORDER BY id""",
         (workout_id,),
     )]
