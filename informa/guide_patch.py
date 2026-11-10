@@ -28,10 +28,13 @@ def _safe_guide(name):
 
 
 def _user_guide_path(name):
+    aliases = {"dumbbell_shoulder_press": "shoulder_press", "dumbbell_lateral_raise": "lateral_raise"}
     for ext in (".jpg", ".jpeg", ".png", ".webp"):
         p = USER_GUIDE_DIR / f"{name}{ext}"
         if p.exists():
             return p
+    if name in aliases:
+        return _user_guide_path(aliases[name])
     return None
 
 

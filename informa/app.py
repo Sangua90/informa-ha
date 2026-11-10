@@ -96,6 +96,9 @@ def init_db():
       VALUES(1,'Edoardo',187,121.4,'Dimagrimento + forza','Inizio guidato');
     """)
     con.execute("CREATE TABLE IF NOT EXISTS exercise_exclusions(exercise_id TEXT PRIMARY KEY)")
+    measurement_columns = {row[1] for row in con.execute("PRAGMA table_info(body_measurements)")}
+    if "height_cm" not in measurement_columns:
+        con.execute("ALTER TABLE body_measurements ADD COLUMN height_cm REAL")
     set_columns = {row[1] for row in con.execute("PRAGMA table_info(sets)")}
     if "rep_type" not in set_columns:
         con.execute("ALTER TABLE sets ADD COLUMN rep_type TEXT NOT NULL DEFAULT 'reps'")
@@ -391,3 +394,8 @@ def set_exercise_availability_01087(exercise_id):
 @app.get("/exercise_availability_01087.js")
 def exercise_availability_script_01087():
     return send_from_directory("/app/web", "exercise_availability_01087.js")
+
+
+@app.get("/other_navigation_01088.js")
+def other_navigation_script_01088():
+    return send_from_directory("/app/web", "other_navigation_01088.js")

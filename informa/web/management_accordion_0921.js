@@ -17,6 +17,7 @@
   }
 
   function install(){
+    if(window.IF1088_ORGANIZED)return;
     removeOldManagers();
     const conn=document.querySelector('[data-page="connections"]');
     if(!conn||document.getElementById('if921Accordion'))return;

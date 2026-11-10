@@ -11,7 +11,7 @@
   const ACCESSORIES=['Barra lat larga','Corda tricipiti','Triangolo presa stretta','Barra corta angolata','Cavigliera / cuffia','Maniglia singola / presa morbida'];
   const esc=v=>{const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML};
   function equipmentCard(){
-    const page=document.querySelector('[data-page="connections"]');if(!page)return null;
+    const page=document.querySelector('[data-page="equipment"]');if(!page)return null;
     return [...page.querySelectorAll(':scope > .card')].find(c=>{const t=(c.textContent||'').toLowerCase();return t.includes('attrezzatura')&&t.includes('la tua macchina')})||null;
   }
   function bodyHtml(){
@@ -19,15 +19,11 @@
   }
   function install(){
     const card=equipmentCard();if(!card||card.dataset.if936Ready==='1')return;
-    card.dataset.if936Ready='1';card.style.cursor='pointer';
+    card.dataset.if936Ready='1';
     const oldSub=[...card.querySelectorAll('.sub')].find(x=>(x.textContent||'').includes('stand-by'));
-    if(oldSub)oldSub.textContent='Tocca per vedere i macchinari e gli accessori disponibili nella tua palestra.';
-    const body=document.createElement('div');body.id='if936EquipmentHost';body.className='hide';body.innerHTML=bodyHtml();card.appendChild(body);
-    const hint=document.createElement('div');hint.id='if936Hint';hint.className='sub';hint.style.marginTop='10px';hint.textContent='Tocca per aprire il dettaglio attrezzatura.';card.appendChild(hint);
-    card.addEventListener('click',e=>{
-      if(e.target.closest('button'))return;
-      const open=body.classList.contains('hide');body.classList.toggle('hide',!open);hint.textContent=open?'Tocca di nuovo per chiudere.':'Tocca per aprire il dettaglio attrezzatura.';
-    });
+    if(oldSub)oldSub.textContent='Macchinari e accessori disponibili nella tua palestra.';
+    const body=document.createElement('div');body.id='if936EquipmentHost';body.className='';body.innerHTML=bodyHtml();card.appendChild(body);
+
   }
   const css=document.createElement('style');css.textContent='#if936EquipmentHost{border-top:1px solid var(--ln);padding-top:14px;margin-top:14px}.if936-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}.if936-item{border:1px solid var(--ln);border-radius:16px;padding:13px;background:rgba(255,255,255,.02)}.if936-item h3{margin:3px 0 7px}.if936-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.if936-tags span{font-size:11px;padding:5px 8px;border-radius:999px;background:rgba(90,112,255,.14);border:1px solid rgba(90,112,255,.25)}.if936-accessories{margin-top:14px}@media(max-width:700px){.if936-list{grid-template-columns:1fr}}';document.head.appendChild(css);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,300));else setTimeout(install,300);

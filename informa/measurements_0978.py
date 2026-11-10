@@ -45,13 +45,16 @@ def check_measurement_reminder():
 def measurements_history_0978():
     rows = _measurement_rows(50)
     reminder = check_measurement_reminder()
-    return root.jsonify(ok=True, items=rows, reminder=reminder)
+    con = root.db()
+    profile = con.execute("SELECT height_cm FROM profile WHERE id=1").fetchone()
+    con.close()
+    return root.jsonify(ok=True, items=rows, reminder=reminder, height_cm=profile["height_cm"] if profile else None)
 
 
 @app.post('/api/measurements-0978')
 def measurements_save_0978():
     x = root.request.get_json(force=True)
-    fields = ('weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm')
+    fields = ('weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm','height_cm')
     values = []
     for key in fields:
         v = x.get(key)
@@ -67,12 +70,14 @@ def measurements_save_0978():
         return root.jsonify(ok=False, error='Inserisci almeno una misura'), 400
     con = root.db()
     con.execute(
-        "INSERT INTO body_measurements (ts,weight_kg,waist_cm,chest_cm,arm_r_cm,arm_l_cm,thigh_r_cm,thigh_l_cm) VALUES(?,?,?,?,?,?,?,?)",
+        "INSERT INTO body_measurements (ts,weight_kg,waist_cm,chest_cm,arm_r_cm,arm_l_cm,thigh_r_cm,thigh_l_cm,height_cm) VALUES(?,?,?,?,?,?,?,?,?)",
         (datetime.now().isoformat(timespec='seconds'), *values)
     )
     # Keep profile weight aligned when a weight was entered.
     if values[0] is not None:
         con.execute("UPDATE profile SET weight_kg=? WHERE id=1", (values[0],))
+    if values[7] is not None:
+        con.execute("UPDATE profile SET height_cm=? WHERE id=1", (values[7],))
     con.commit(); con.close()
     return root.jsonify(ok=True, items=_measurement_rows(50), reminder=check_measurement_reminder())
 

@@ -60,7 +60,7 @@ def _standalone_library_0962():
         f'<div class="sub" style="margin-bottom:14px">Libreria completa InFormha · {total} esercizi</div>'
         + "".join(cards)
         + '<a class="btn secondary" href="./?v=0962">Indietro</a>'
-        '</section></main><script src="exercise_availability_01087.js?v=01087"></script></body></html>'
+        '</section></main><script src="exercise_availability_01087.js?v=01087"></script><script src="other_navigation_01088.js?v=01088"></script></body></html>'
     )
 
 

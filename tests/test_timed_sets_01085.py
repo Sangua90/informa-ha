@@ -64,3 +64,34 @@ class TimedSetsTest(unittest.TestCase):
     def test_exclusion_payload_requires_boolean(self):
         for payload in [{}, {'enabled': 'false'}, {'enabled': 0}]:
             self.assertEqual(self.client.put('/api/exercise-availability-01087/chest', json=payload).status_code, 400)
+
+    def test_height_measurement_updates_profile_and_keeps_dated_history(self):
+        import importlib.util
+        from unittest.mock import patch
+        path = Path(__file__).parents[1] / 'informa/measurements_0978.py'
+        spec = importlib.util.spec_from_file_location('measurement_height_test', path)
+        module = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {'app': self.module, 'treadmill_progression_0970': types.SimpleNamespace(app=self.module.app)}):
+            spec.loader.exec_module(module)
+            response = self.client.post('/api/measurements-0978', json={'height_cm': 190})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_json()['items'][0]['height_cm'], 190)
+            self.client.post('/api/measurements-0978', json={'weight_kg': 80})
+            data = self.client.get('/api/measurements-0978').get_json()
+            self.assertEqual(data['height_cm'], 190)
+            self.assertEqual(data['items'][1]['height_cm'], 190)
+            self.assertIsNone(data['items'][0]['height_cm'])
+
+    def test_canonical_guide_alias_preserves_custom_images(self):
+        import ast
+        source = (Path(__file__).parents[1] / 'informa/guide_patch.py').read_text(encoding='utf-8')
+        node = next(n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef) and n.name == '_user_guide_path')
+        folder = Path(self.temp.name)
+        namespace = {'USER_GUIDE_DIR': folder}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), 'guide_patch.py', 'exec'), namespace)
+        old = folder / 'shoulder_press.webp'
+        old.write_bytes(b'approved legacy image')
+        self.assertEqual(namespace['_user_guide_path']('dumbbell_shoulder_press'), old)
+        custom = folder / 'dumbbell_shoulder_press.png'
+        custom.write_bytes(b'custom image')
+        self.assertEqual(namespace['_user_guide_path']('dumbbell_shoulder_press'), custom)

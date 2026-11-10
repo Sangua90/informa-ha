@@ -20,6 +20,7 @@
   async function status(){try{return await api('api/guides')}catch(e){return {guides:{}}}}
 
   function ensureManagerShell(){
+    if(window.IF1088_ORGANIZED)return null;
     const conn=document.querySelector('[data-page="connections"]');if(!conn)return null;
     document.getElementById('if74Manager')?.remove();
     let box=document.getElementById('if914Manager');

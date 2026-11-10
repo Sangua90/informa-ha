@@ -16,7 +16,7 @@
    if(!items.length)return '';
    const active=items.filter(e=>window.if1087Available(e.id)),removed=items.filter(e=>!window.if1087Available(e.id)),groups={};
    active.forEach(e=>(groups[e.group]||(groups[e.group]=[])).push(e));
-   return '<div class="ey">La mia attrezzatura</div><h1>Esercizi</h1><div class="sub">Elimina dalla tua lista gli esercizi non adatti alla tua attrezzatura: il Coach non li proporrà nelle nuove sedute. Lo storico resta salvato. Nella seduta già aperta puoi saltarli o sostituirli.</div><p>'+active.length+' disponibili · '+removed.length+' esclusi</p>'+
+   return '<div class="ey">Libreria</div><h1>Esercizi</h1><a class="btn secondary" data-photo-library href="./#exercise-photos">Foto e guide esercizi</a><div class="sub">Elimina dalla tua lista gli esercizi non adatti alla tua attrezzatura: il Coach non li proporrà nelle nuove sedute. Lo storico resta salvato. Nella seduta già aperta puoi saltarli o sostituirli.</div><p>'+active.length+' disponibili · '+removed.length+' esclusi</p>'+
      Object.entries(groups).map(([group,rows])=>'<div class="card"><div class="ey">'+esc(group)+'</div>'+rows.map(e=>row(e,false)).join('')+'</div>').join('')+
      '<details class="card"'+(!active.length?' open':'')+'><summary>Esercizi esclusi ('+removed.length+')</summary>'+removed.map(e=>row(e,true)).join('')+'</details><a class="btn secondary" href="./">Indietro</a>';
  };

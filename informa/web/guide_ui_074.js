@@ -23,6 +23,7 @@
   });
  }
  async function installManager(){
+  if(window.IF1088_ORGANIZED)return;
   const conn=document.querySelector('[data-page="connections"]');if(!conn||document.getElementById('if74Manager'))return;const d=await status();
   const box=document.createElement('div');box.id='if74Manager';box.className='card';box.innerHTML=`<div class="ey">Guide esercizi</div><h2>Libreria immagini</h2><div class="sub">Supporto immagini esteso a tutti gli esercizi. Le immagini caricate restano persistenti dopo gli aggiornamenti.</div>${Object.entries(labels).map(([id,name])=>{const g=d.guides?.[id];return `<div class="if74-manager-row"><div><b>${name}</b><div class="mini">${g?.installed?'✓ immagine presente':'immagine non ancora disponibile'}</div></div>${g?.installed?`<button class="btn secondary" onclick="if74OpenImage('${id}')">Apri</button>`:''}</div>`}).join('')}`;
   conn.appendChild(box);
