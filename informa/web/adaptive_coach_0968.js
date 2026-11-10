@@ -19,9 +19,29 @@
   async function history(){try{return await api('api/workouts-0933')}catch(e){return {items:[]}}}
   function ageHours(ts){const d=new Date(ts);return Number.isNaN(d.getTime())?9999:(Date.now()-d.getTime())/3600000}
   function groupFor(name){const n=String(name||'').toLowerCase();if(n.includes('chest')||n.includes('pec')||n.includes('piegament'))return'Petto';if(n.includes('lat machine')||n.includes('pull-down')||n.includes('rematore'))return'Schiena';if(n.includes('shoulder')||n.includes('alzate laterali')||n.includes('face pull')||n.includes('reverse fly'))return'Spalle';if(n.includes('tricip'))return'Tricipiti';if(n.includes('curl'))return'Bicipiti';if(n.includes('squat')||n.includes('leg extension')||n.includes('step-up'))return'Gambe';if(n.includes('stacco')||n.includes('hamstring'))return'Femorali';if(n.includes('glute')||n.includes('ponte')||n.includes('hip thrust'))return'Glutei';if(n.includes('calf'))return'Polpacci';if(n.includes('plank')||n.includes('crunch')||n.includes('dead bug'))return'Core';return null}
+  const exerciseKey=name=>String(name||'').trim().toLowerCase().replace(/\s+/g,' ');
+  window.if68ExerciseKey=exerciseKey;
   async function recentGroups(){
-    const h=await history(),items=(h.items||[]).slice(0,8),last={};
-    for(const w of items){if(ageHours(w.ts)>168)continue;try{const d=await api(`api/workouts-0933/${w.id}`);(d.sets||[]).forEach(s=>{const g=groupFor(s.exercise);if(g&&!last[g])last[g]={hours:ageHours(w.ts),sets:0};if(g)last[g].sets++})}catch(e){}}
+    const h=await history(),items=(h.items||[]).slice(0,8),last={},exercises={};
+    for(const w of items){
+      const timestamp=Date.parse(w.ts);if(!Number.isFinite(timestamp))continue;
+      const hours=Math.max(0,ageHours(w.ts));
+      try{
+        const d=await api(`api/workouts-0933/${w.id}`),seen=new Set();
+        for(const s of d.sets||[]){
+          const key=exerciseKey(s.exercise);if(!key)continue;
+          const known=Object.values(window.IF72_LIBRARY||{}).find(x=>exerciseKey(x.name)===key);
+          const g=known?.group||groupFor(s.exercise);
+          if(g&&hours<=168){if(!last[g])last[g]={hours,sets:0};last[g].hours=Math.min(last[g].hours,hours);last[g].sets++}
+          if(!seen.has(key)){
+            seen.add(key);const x=exercises[key]||(exercises[key]={lastAt:0,sessions:0});
+            x.lastAt=Math.max(x.lastAt,timestamp);x.sessions++;
+          }
+        }
+      }catch(e){}
+    }
+    // Replace on every preparation: unavailable/deleted history must not leave stale rankings.
+    IF50.adaptiveExercises=exercises;
     return last;
   }
   function score(g,last){const x=last[g];if(!x)return 100;if(x.hours<24)return 5;if(x.hours<36)return 25;if(x.hours<48)return 45;if(x.hours<72)return 70;return Math.min(95,75+x.hours/12)}
@@ -35,7 +55,7 @@
 
   window.if68Prepare=async function(){
     const last=await recentGroups();
-    const ranked=['Petto','Schiena','Gambe','Femorali','Spalle','Glutei','Core','Tricipiti','Bicipiti','Polpacci'].sort((a,b)=>score(b,last)-score(a,last));
+    const ranked=['Petto','Schiena','Gambe','Femorali','Spalle','Glutei','Core','Tricipiti','Bicipiti','Polpacci'].map(group=>({group,tie:Math.random()})).sort((a,b)=>score(b.group,last)-score(a.group,last)||a.tie-b.tie).map(x=>x.group);
     IF50.adaptiveGroups=ranked;
     IF50.adaptiveRecovery=last;
     IF50.intent='Coach automatico';IF50.focus='Automatico';
