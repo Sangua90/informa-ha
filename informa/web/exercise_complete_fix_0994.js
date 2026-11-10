@@ -20,7 +20,7 @@
   const r=await baseComplete.apply(this,arguments);
   const b=document.getElementById(`if50c_${id}_${n}`);
   if(b?.classList.contains('done')){
-   put(id,s=>{s.stage='started';s.sets=s.sets||{};s.sets[String(n)]={...(s.sets[String(n)]||{}),done:true};s.fatigue=document.getElementById(`if50f_${id}`)?.value||s.fatigue||'Giusta'});
+   put(id,s=>{if(s.stage==='archived')return;s.stage='started';s.sets=s.sets||{};s.sets[String(n)]={...(s.sets[String(n)]||{}),done:true};s.fatigue=document.getElementById(`if50f_${id}`)?.value||s.fatigue||'Giusta'});
    setTimeout(()=>showComplete(id),50);
   }
   return r

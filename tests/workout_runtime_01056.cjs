@@ -3,7 +3,10 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {JSDOM}=require('../.test-runtime/node_modules/jsdom');
-const scripts=['workout_flow_0949.js','workout_focus_0950.js','adaptive_library_0972.js','exercise_complete_fix_0994.js','workout_controller_0108.js','workout_runner_01041.js'];
+// Keep the rendering/state wrappers in their actual Docker bundle order.
+const wrapperNames=new Set(['workout_ui_067.js','workout_flow_0949.js','workout_focus_0950.js','adaptive_library_0972.js','treadmill_focus_fix_0974.js','treadmill_render_fix_0975.js','automatic_stretching_0978.js','temporary_equipment_0979.js','treadmill_flow_fix_0983.js','treadmill_complete_fix_0984.js','treadmill_advance_fix_0990.js','exercise_complete_fix_0994.js','treadmill_final_fix_0995.js','workout_controller_0108.js','workout_runner_01041.js']);
+const docker=fs.readFileSync(path.join(__dirname,'../informa/Dockerfile'),'utf8');
+const scripts=docker.match(/RUN for f in (.*?); do cat/)[1].split(' ').filter(x=>wrapperNames.has(x));
 function fixture(){
  const dom=new JSDOM('<div class="app"><section data-page="workout"></section><section data-page="recovery"><div class="card"><span id="timer"></span><div id="timerbar"></div><button>Torna all’allenamento</button></div></section><section data-page="profile"></section></div><nav class="nav"></nav>',{url:'https://informa.test/',runScripts:'dangerously'});
  const w=dom.window;const jobs=new Map(),requests=[];let now=0,seq=0;
@@ -15,8 +18,10 @@ function fixture(){
  w.api=async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});if(w.failArchive&&url.includes('/archive'))throw Error('offline');return {workout_id:42}};
  w.if50RenderWorkout=function(){w.document.querySelector('[data-page="workout"]').innerHTML=w.IF50.plan.map(e=>`<div class="if50-ex" id="if50ex_${e.id}"><div class="row"></div>${Array.from({length:e.sets},(_,i)=>w.if50SetRow(e,i+1)).join('')}<select id="if50f_${e.id}"><option>Giusta</option></select></div>`).join('')};
  w.if60Swap=function(oldId,newId){w.IF50.plan=w.IF50.plan.map(e=>e.id===oldId?{...w.IF72_LIBRARY[newId],rest:2}:e);w.if50RenderWorkout()};
+ w.if50ExerciseCard=()=>'';w.if970SaveTreadmill=async()=>{};
  w.if50CompleteSet=async()=>{};w.if50Status=async()=>{};
  for(const file of scripts)w.eval(fs.readFileSync(path.join(__dirname,'../informa/web',file),'utf8'));
+ w.if108AskEffort=async()=>3;w.Date.now=()=>now;
  w.if50RenderWorkout();
  async function advance(ms=500){const end=now+ms;for(let turns=0;turns<500;turns++){const next=[...jobs].filter(([,j])=>j.time<=end).sort((a,b)=>a[1].time-b[1].time)[0];if(!next)break;const [id,j]=next;now=j.time;jobs.delete(id);if(j.interval)jobs.set(id,{...j,time:now+j.interval});await j.fn();for(let n=0;n<12;n++)await Promise.resolve()}now=end;for(let n=0;n<12;n++)await Promise.resolve()}
  const state=id=>JSON.parse(w.localStorage.getItem('informha_workout_flow_0949')||'{}')[id];
@@ -56,5 +61,57 @@ test('catalog and detail pages mount when navigation is outside app',async()=>{
  const f=fixture();try{f.w.IF51_LIBRARY={chest:{name:'Chest',group:'Petto'}};
  for(const file of ['interface_061.js','exercise_catalog_0954.js'])f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web',file),'utf8'));
  await f.advance(600);f.w.if62OpenExercise('chest');assert.ok(f.w.document.querySelector('.app [data-page="exercise-detail"]'));assert.ok(f.w.document.querySelector('.app [data-page="exercise-library-063"]'));
+ }finally{f.dom.window.close()}
+});
+
+
+test('canonical segments retain plan order after DOM reorder, removal and stale focus',async()=>{
+ const f=fixture();try{await f.advance();f.w.if949Start('chest');await f.w.if108Skip('chest');await f.advance();
+ await f.w.if50Status('plank','Parziale');await f.advance();
+ const before=f.w.if108Progress().map(x=>[x.id,x.kind]);
+ const page=f.w.document.querySelector('[data-page="workout"]');page.prepend(f.w.document.getElementById('if50ex_lat'));f.w.document.getElementById('if50ex_chest').remove();
+ f.w.localStorage.setItem('informha_workout_active_0109','chest');f.w.if1041Refresh();
+ assert.deepEqual(f.w.if108Progress().map(x=>[x.id,x.kind]),before);
+ assert.deepEqual(Array.from(f.w.document.querySelectorAll('.if1041-dots i'),x=>x.dataset.exercise),['chest','plank','lat']);
+ assert.ok(f.w.document.querySelector('.if1041-dots i.skip'));assert.ok(f.w.document.querySelector('.if1041-dots i.partial'));
+ }finally{f.dom.window.close()}
+});
+test('replacement retains partial history and does not rewrite earlier segments',async()=>{
+ const f=fixture();try{await f.advance();await f.w.if108Skip('chest');await f.advance();await f.set('plank',1);await f.recover();
+ await f.w.if60Swap('plank','reverse_crunch');await f.advance();
+ assert.deepEqual(Array.from(f.w.if108Progress(),x=>[x.id,x.kind]),[['chest','skip'],['plank','partial'],['reverse_crunch',''],['lat','']]);
+ f.w.if50RenderWorkout();await f.advance();assert.equal(f.w.if108Progress()[0].kind,'skip');assert.equal(f.w.if108Progress()[1].kind,'partial');
+ }finally{f.dom.window.close()}
+});
+test('Plank countdown pauses, survives rendering and saves once before recovery',async()=>{
+ const f=fixture();try{await f.advance();await f.w.if108Skip('chest');await f.advance();f.w.if949Start('plank');f.w.if1041Refresh();
+ assert.match(f.w.document.querySelector('#if50ex_plank .if1041-line').textContent,/30 s/);
+ f.w.if1041Primary('plank');await f.advance(10000);assert.equal(f.requests.filter(x=>x.url==='api/set').length,0);
+ f.w.if1041Primary('plank');const label=f.w.document.querySelector('#if50ex_plank .if1046-series').textContent;await f.advance(5000);assert.equal(f.w.document.querySelector('#if50ex_plank .if1046-series').textContent,label);
+ f.w.if50RenderWorkout();await f.advance();f.w.if1041Primary('plank');await f.advance(21000);
+ assert.equal(f.requests.filter(x=>x.url==='api/set').length,1);assert.equal(f.requests.find(x=>x.url==='api/set').body.reps,30);assert.equal(f.w.page,'recovery');
+ await f.recover();assert.equal(f.w.document.querySelectorAll('#if50ex_plank .check.done').length,1);
+ }finally{f.dom.window.close()}
+});
+test('skip cancels a running hold without saving; timed aliases normalize, dynamic core remains reps',async()=>{
+ const f=fixture();try{await f.advance();await f.w.if108Skip('chest');await f.advance();f.w.if949Start('plank');f.w.if1041Primary('plank');await f.advance(1000);await f.w.if108Skip('plank');await f.advance(35000);assert.equal(f.requests.filter(x=>x.url==='api/set').length,0);
+ for(const e of [{id:'plank',reps:10},{id:'side_plank',reps:20},{id:'wall_sit'},{id:'hold',repType:'sec',reps:45}]){f.w.if108Normalize(e);assert.equal(e.repType,'seconds');assert.equal(e.reps,e.id==='hold'?45:30)}
+ for(const id of ['reverse_crunch','heel_taps','glute_bridge'])assert.equal(f.w.if108Timed(f.w.IF72_LIBRARY[id]),false);
+ for(const e of Object.values(f.w.IF72_LIBRARY).filter(x=>x.mobility||x.stretching))assert.equal(f.w.if108Timed(e),true);
+ }finally{f.dom.window.close()}
+});
+test('weights plus/minus and treadmill skip keep canonical previous segment',async()=>{
+ const f=fixture();try{f.w.IF50.plan.unshift({id:'treadmill',name:'Tapis',cardio:true,sets:0});f.w.if108ResetOrder();f.w.if50RenderWorkout();await f.advance();
+ await f.w.if1049SkipTreadmill();await f.advance();assert.equal(f.state('treadmill').status,'Saltato');assert.equal(f.active(),'chest');
+ f.w.if1041Weight('chest',1);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'1');f.w.if1041Weight('chest',-1);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'0');
+ f.w.if50RenderWorkout();await f.advance();assert.equal(f.w.if108Progress()[0].kind,'skip');
+ }finally{f.dom.window.close()}
+});
+
+test('legacy catalog refresh preserves supported dumbbell reverse curl in the plan',async()=>{
+ const f=fixture();try{f.w.IF51_LIBRARY={};f.w.IF50.plan.push({...f.w.IF72_LIBRARY.reverse_curl});
+ f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web/exercise_catalog_0954.js'),'utf8'));await f.advance();
+ assert.ok(f.w.IF50.plan.some(x=>x.id==='reverse_curl'));
+ assert.equal(Object.values(f.w.IF72_LIBRARY).filter(x=>x.loadType==='kg').length,12);
  }finally{f.dom.window.close()}
 });

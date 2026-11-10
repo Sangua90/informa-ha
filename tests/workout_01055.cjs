@@ -27,6 +27,7 @@ function fixture(){
  for(const file of ['workout_focus_0950.js','workout_controller_0108.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../informa/web',file),'utf8'),c);
  async function flush(){for(let loops=0;jobs.length&&loops<30;loops++){const batch=jobs.splice(0);for(const f of batch)await f();await Promise.resolve()}await Promise.resolve()}
  async function recover(skip=false){if(skip)c.if950SkipRecovery();else{for(let n=0;n<2;n++)for(const f of [...intervals.values()])f()}await flush()}
+ c.if108AskEffort=async()=>3;
  stage('a','started');
  return {c,states,flush,recover,active:()=>disk.get(active),stage};
 }

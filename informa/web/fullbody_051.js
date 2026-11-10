@@ -13,7 +13,7 @@ const IF51_LIBRARY={
  glute_bridge:{name:'Ponte glutei su panca',group:'Glutei',equipment:'Panca',priority:'Utile',sets:3,reps:12,rest:90},
  calf_raise:{name:'Calf raise in piedi',group:'Polpacci',equipment:'Corpo libero / manubri',priority:'Utile',sets:3,reps:15,rest:60},
  face_pull:{name:'Face pull con corda',group:'Spalle posteriori',equipment:'Fassi + corda',priority:'Utile',sets:3,reps:12,rest:75,painAvoid:['Spalla']},
- plank:{name:'Plank',group:'Core',equipment:'Corpo libero',priority:'Utile',sets:3,reps:30,rest:60},
+ plank:{repType:'seconds',seconds:30,name:'Plank',group:'Core',equipment:'Corpo libero',priority:'Utile',sets:3,reps:30,rest:60},
  treadmill:{name:'Tapis roulant Fassi',group:'Cardio',equipment:'Fassi F 7.9 HRC',priority:'Opzionale',sets:1,reps:null,rest:0,cardio:true,duration:20},
  stepper:{name:'Mini stepper',group:'Cardio',equipment:'Mini stepper',priority:'Opzionale',sets:1,reps:null,rest:0,cardio:true,duration:10}
 };

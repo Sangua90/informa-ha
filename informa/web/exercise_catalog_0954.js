@@ -35,7 +35,7 @@
       Object.keys(IF60_ALTERNATIVES).forEach(id=>{IF60_ALTERNATIVES[id]=cleanIds(IF60_ALTERNATIVES[id])});
     }
     if(typeof IF60_GROUPS!=='undefined')Object.keys(IF60_GROUPS).forEach(group=>{IF60_GROUPS[group]=cleanIds(IF60_GROUPS[group])});
-    if(typeof IF50!=='undefined'&&Array.isArray(IF50.plan))IF50.plan=IF50.plan.filter(ex=>!REMOVED_LOW_CABLE_IDS.has(ex.id));
+    if(typeof IF50!=='undefined'&&Array.isArray(IF50.plan))IF50.plan=IF50.plan.filter(ex=>!REMOVED_LOW_CABLE_IDS.has(ex.id)||(typeof IF72_LIBRARY!=='undefined'&&!!IF72_LIBRARY[ex.id]));
   }
 
   function ensurePage(name){

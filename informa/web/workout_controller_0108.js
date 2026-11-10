@@ -6,6 +6,25 @@
   function saveStates(x){try{localStorage.setItem(FLOW_KEY,JSON.stringify(x))}catch(e){}}
   function getActive(){try{return localStorage.getItem(ACTIVE_KEY)||null}catch(e){return null}}
   function setActive(id){try{id?localStorage.setItem(ACTIVE_KEY,id):localStorage.removeItem(ACTIVE_KEY)}catch(e){}}
+  // Session order survives DOM filtering/removal and records replacements at their plan slot.
+  const ORDER_KEY='informha_workout_order_01085';
+  function order(){
+    let ids=[];try{ids=JSON.parse(localStorage.getItem(ORDER_KEY)||'[]')}catch(e){}
+    if(!Array.isArray(ids))ids=[];
+    const plan=typeof IF50!=='undefined'?(IF50.plan||[]):[];
+    for(const e of plan)if(!ids.includes(e.id))ids.push(e.id);
+    localStorage.setItem(ORDER_KEY,JSON.stringify(ids));return ids;
+  }
+  window.if108ResetOrder=()=>localStorage.removeItem(ORDER_KEY);
+  window.if108Progress=function(){
+    const all=states(),ids=order();
+    const current=ids.find(id=>all[id]?.stage==='started')||ids.find(id=>all[id]?.stage!=='archived');
+    return ids.map(id=>{const s=all[id]||{},status=s.status;return {
+      id,status,closed:s.stage==='archived',current:id===current,
+      kind:s.stage==='archived'?(status==='Completato'?'done':status==='Saltato'?'skip':status==='Parziale'?'partial':'replaced'):
+        Object.values(s.sets||{}).some(x=>x.done)?'partial':''
+    }});
+  };
   function cards(){return [...document.querySelectorAll('[data-page="workout"] .if50-ex,[data-page="workout"] #if50ex_cardio')]}
   function idOf(c){return c?.id==='if50ex_cardio'?'cardio':String(c?.id||'').replace('if50ex_','')}
   function card(id){return cards().find(c=>idOf(c)===id)||null}
@@ -49,10 +68,10 @@
   };
 
   const render=window.if50RenderWorkout;
-  if(typeof render==='function')window.if50RenderWorkout=function(){const locked=getActive();const out=render.apply(this,arguments);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},0);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},80);return out};
+  if(typeof render==='function')window.if50RenderWorkout=function(){order();const locked=getActive();const out=render.apply(this,arguments);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},0);setTimeout(()=>{if(locked&&showOnly(locked))return;restoreActive()},80);return out};
 
   const swap=window.if60Swap;
-  if(typeof swap==='function')window.if60Swap=async function(oldId,newId){setActive(newId);const out=await swap.apply(this,arguments);if(!(typeof IF50!=='undefined'&&IF50.plan?.some(x=>x.id===newId)&&!IF50.plan?.some(x=>x.id===oldId))){setActive(oldId);restoreActive();return out}window.if950CancelRecovery?.(oldId);const all=states();if(all[oldId]?.stage!=='archived'){all[oldId]=all[oldId]||{};all[oldId].stage='archived';all[oldId].status=all[oldId].status||'Sostituito'}all[newId]={stage:'planned',sets:{},fatigue:'Giusta',status:null};saveStates(all);setTimeout(()=>ensureStarted(newId),180);return out};
+  if(typeof swap==='function')window.if60Swap=async function(oldId,newId){const ids=order();setActive(newId);const out=await swap.apply(this,arguments);if(!(typeof IF50!=='undefined'&&IF50.plan?.some(x=>x.id===newId)&&!IF50.plan?.some(x=>x.id===oldId))){setActive(oldId);restoreActive();return out}const index=ids.indexOf(oldId);if(index>=0&&!ids.includes(newId)){const previous=states()[oldId];if(previous?.status==='Parziale')ids.splice(index+1,0,newId);else ids[index]=newId;localStorage.setItem(ORDER_KEY,JSON.stringify(ids))}window.if950CancelRecovery?.(oldId);const all=states();if(all[oldId]?.stage!=='archived'){all[oldId]=all[oldId]||{};all[oldId].stage='archived';all[oldId].status=all[oldId].status||'Sostituito'}all[newId]={stage:'planned',sets:{},fatigue:'Giusta',status:null};saveStates(all);setTimeout(()=>ensureStarted(newId),180);return out};
 
   // Solo il completamento dell'esercizio può liberare il focus e passare al successivo.
   const legacyStatus=window.if50Status;
