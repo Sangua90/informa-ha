@@ -37,7 +37,7 @@ test('equipment and photo manager stay outside connections, including delayed le
 });
 test('X closes an expanded subsection; root tab navigation does not acquire a back button',async()=>{
  const f=fixture();try{f.w.go('profile');f.w.go('connections');const p=f.w.document.querySelector('[data-page="connections"]');p.insertAdjacentHTML('beforeend','<details open><summary>Dati</summary></details>');
- f.w.if1088Back();assert.equal(f.active(),'connections');assert.equal(p.querySelector('details').open,false);
+ f.w.if1088Back();assert.equal(f.active(),'connections');assert.equal(p.querySelector('details').open,false);p.insertAdjacentHTML('beforeend','<div id="if944HealthHost">Dati</div>');f.w.if1088Back();assert.equal(f.active(),'connections');assert.ok(p.querySelector('#if944HealthHost').classList.contains('hide'));
  f.w.document.querySelector('[data-nav="home"]').click();f.w.go('home');await flush();assert.equal(f.w.document.querySelector('[data-page="home"] > .if1088-close'),null);
  }finally{f.dom.window.close()}
 });

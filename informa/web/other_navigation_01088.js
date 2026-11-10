@@ -39,6 +39,8 @@
    const id=active(),p=document.querySelector('[data-page="'+id+'"]');
    const expanded=[...(p?.querySelectorAll('details[open]')||[])].pop();
    if(expanded){expanded.open=false;return}
+   const health=[...(p?.querySelectorAll('#if935HealthHost:not(.hide),#if941HealthHost:not(.hide),#if944HealthHost:not(.hide)')||[])];
+   if(health.length){health.forEach(x=>x.classList.add('hide'));return}
    if(typeof go!=='function'){location.href='./#profile';return}
    const target=trail.pop()||parents[id]||'profile';backTarget=target;
    go(target);observePage();
