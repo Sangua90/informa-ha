@@ -8,7 +8,7 @@ const wrapperNames=new Set(['workout_ui_067.js','workout_flow_0949.js','workout_
 const docker=fs.readFileSync(path.join(__dirname,'../informa/Dockerfile'),'utf8');
 const scripts=docker.match(/RUN for f in (.*?); do cat/)[1].split(' ').filter(x=>wrapperNames.has(x));
 function fixture(){
- const dom=new JSDOM('<div class="app"><section data-page="workout"></section><section data-page="recovery"><div class="card"><span id="timer"></span><div id="timerbar"></div><button>Torna all’allenamento</button></div></section><section data-page="profile"></section></div><nav class="nav"></nav>',{url:'https://informa.test/',runScripts:'dangerously'});
+ const dom=new JSDOM('<div class="app"><section data-page="checkin"><button onclick="if50Generate()">Genera</button></section><section data-page="workout"></section><section data-page="recovery"><div class="card"><span id="timer"></span><div id="timerbar"></div><button>Torna all’allenamento</button></div></section><section data-page="profile"></section></div><nav class="nav"></nav>',{url:'https://informa.test/',runScripts:'dangerously'});
  const w=dom.window;const jobs=new Map(),requests=[];let now=0,seq=0;
  w.setTimeout=(fn,delay=0)=>{jobs.set(++seq,{fn,time:now+delay});return seq};w.clearTimeout=id=>jobs.delete(id);
  w.setInterval=(fn,delay)=>{jobs.set(++seq,{fn,time:now+delay,interval:delay});return seq};w.clearInterval=id=>jobs.delete(id);
@@ -19,6 +19,7 @@ function fixture(){
  w.if50RenderWorkout=function(){w.document.querySelector('[data-page="workout"]').innerHTML=w.IF50.plan.map(e=>`<div class="if50-ex" id="if50ex_${e.id}"><div class="row"></div>${Array.from({length:e.sets},(_,i)=>w.if50SetRow(e,i+1)).join('')}<select id="if50f_${e.id}"><option>Giusta</option></select></div>`).join('')};
  w.if60Swap=function(oldId,newId){w.IF50.plan=w.IF50.plan.map(e=>e.id===oldId?{...w.IF72_LIBRARY[newId],rest:2}:e);w.if50RenderWorkout()};
  w.if50ExerciseCard=()=>'';w.if970SaveTreadmill=async()=>{};
+ w.if50Generate=async()=>{w.if50BuildPlan();w.if50RenderWorkout()};
  w.if50CompleteSet=async()=>{};w.if50Status=async()=>{};
  for(const file of scripts)w.eval(fs.readFileSync(path.join(__dirname,'../informa/web',file),'utf8'));
  w.if108AskEffort=async()=>3;w.Date.now=()=>now;
@@ -120,5 +121,31 @@ test('history displays timed sets in seconds and dynamic exercises in repetition
  const f=fixture();try{f.w.api=async()=>({workout:{title:'Seduta'},sets:[{exercise:'Plank',set_no:1,reps:30},{exercise:'Hold',set_no:1,reps:45,rep_type:'seconds'},{exercise:'Curl',set_no:1,reps:10,rep_type:'reps'}]});
  f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web/workout_history_0933.js'),'utf8'));await f.w.if933OpenDetail(1);
  const text=f.w.document.getElementById('if933DetailHost').textContent;assert.match(text,/30 s/);assert.match(text,/45 s/);assert.match(text,/10 rep/);
+ }finally{f.dom.window.close()}
+});
+
+test('AI-selected prescriptions survive final builder wrappers without a chat question',async()=>{
+ const f=fixture();try{await f.advance();f.w.IF50.exerciseCount=2;f.w.IF50.stretch_mode='No';
+ const base=f.w.api;let requests=0;
+ f.w.api=async(url,options)=>{if(url==='api/ai-workout-01089'){requests++;return {mode:'gemini',decision:'train',reason:'Obiettivo forza e recupero storico',plan:[{id:'dumbbell_curl',sets:2,reps:8,rest:60,repType:'reps'},{id:'plank',sets:2,reps:25,rest:45,repType:'seconds'}]}}return base(url,options)};
+ f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web/ai_workout_01089.js'),'utf8'));
+ await Promise.all([f.w.if50Generate(),f.w.if50Generate()]);await f.advance();
+ assert.equal(requests,1);assert.deepEqual(Array.from(f.w.IF50.plan,x=>x.id),['dumbbell_curl','plank']);assert.equal(f.w.IF50.plan[0].reps,8);assert.equal(f.w.IF50.plan[1].reps,25);
+ assert.equal(f.w.IF50.aiPreparedPlan,undefined);assert.match(f.w.document.querySelector('.if109-source summary').textContent,/generata da AI/);
+ f.w.if50RenderWorkout();await f.advance();assert.equal(f.w.IF50.plan[0].reps,8);assert.equal(f.active(),'dumbbell_curl');
+ }finally{f.dom.window.close()}
+});
+test('AI recovery does not start an empty workout; fallback stays visibly local',async()=>{
+ const f=fixture();try{await f.advance();const old=f.w.IF50.plan;
+ f.w.api=async()=>({mode:'gemini',decision:'recovery',reason:'Recupero dopo fatica elevata',plan:[]});
+ f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web/ai_workout_01089.js'),'utf8'));
+ await f.w.if50Generate();assert.equal(f.w.IF50.plan,old);assert.match(f.w.document.getElementById('if109PlanStatus').textContent,/consiglia recupero/);assert.equal(f.w.document.querySelector('[data-page="checkin"] button').disabled,false);
+ f.w.api=async()=>({mode:'local_fallback',reason:'Gemini non configurato',plan:null});f.w.IF50.exerciseCount=2;
+ await f.w.if50Generate();await f.advance();assert.equal(f.w.IF50.aiGeneration.mode,'local_fallback');assert.match(f.w.document.querySelector('.if109-source summary').textContent,/AI non utilizzata/);
+ }finally{f.dom.window.close()}
+});
+test('numeric effort is synchronized for future AI decisions',async()=>{
+ const f=fixture();try{f.w.eval(fs.readFileSync(path.join(__dirname,'../informa/web/ai_workout_01089.js'),'utf8'));await f.w.if109RecordEffort('plank',4);
+ const r=f.requests.find(x=>x.url==='api/exercise-effort-01089');assert.equal(r.body.effort,4);assert.equal(r.body.exercise_id,'plank');
  }finally{f.dom.window.close()}
 });

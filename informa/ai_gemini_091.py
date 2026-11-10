@@ -40,7 +40,7 @@ def _public_settings():
             {"id": "none", "name": "Coach locale"},
             {"id": "gemini", "name": "Google Gemini"},
         ],
-        "privacy_note": "Con Gemini attivo, InFormha invia a Google solo il contesto riassunto necessario a rispondere alla domanda. La chiave API non viene inviata al browser.",
+        "privacy_note": "Con Gemini attivo, InFormha invia a Google il contesto di coaching: misure e relativi storici, allenamenti, carichi, sforzo, dati salute disponibili, alimentazione, integratori, attrezzatura ed esclusioni. La chiave API non viene inviata al browser.",
     }
 
 

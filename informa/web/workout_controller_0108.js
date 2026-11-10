@@ -46,7 +46,7 @@
     const c=card(id),rows=[...(c?.querySelectorAll('.setrow')||[])];
     if(!c||isArchived(id,c)||finishing.has(id)||!rows.length||!rows.every(r=>r.querySelector('.check')?.classList.contains('done')))return;
     finishing.add(id);
-    try{const ex=(typeof IF50!=='undefined'&&Array.isArray(IF50.plan))?IF50.plan.find(x=>x.id===id):null;if(ex&&!ex.mobility&&!ex.stretching&&!ex.cardio){const effort=await window.if108AskEffort?.(id);if(effort==null)return;try{localStorage.setItem('informha_effort_'+id,JSON.stringify({value:Number(effort),at:new Date().toISOString()}))}catch(e){}}await window.if949CompleteExercise?.(id,null);window.if978PruneStretching?.()}finally{finishing.delete(id)}
+    try{const ex=(typeof IF50!=='undefined'&&Array.isArray(IF50.plan))?IF50.plan.find(x=>x.id===id):null;if(ex&&!ex.mobility&&!ex.stretching&&!ex.cardio){const effort=await window.if108AskEffort?.(id);if(effort==null)return;try{localStorage.setItem('informha_effort_'+id,JSON.stringify({value:Number(effort),at:new Date().toISOString()}))}catch(e){}await window.if109RecordEffort?.(id,effort);}await window.if949CompleteExercise?.(id,null);window.if978PruneStretching?.()}finally{finishing.delete(id)}
   };
   const completeSet=window.if50CompleteSet;
   if(typeof completeSet==='function')window.if50CompleteSet=async function(id,n){

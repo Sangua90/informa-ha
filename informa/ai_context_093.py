@@ -53,7 +53,7 @@ def _enhanced_context_093():
     if workout_ids:
         ph = ','.join('?' for _ in workout_ids)
         sets = [dict(r) for r in con.execute(
-            f"SELECT id,workout_id,exercise,set_no,weight,reps,fatigue,rest_sec FROM sets WHERE workout_id IN ({ph}) ORDER BY id DESC",
+            f"SELECT id,workout_id,exercise,set_no,weight,reps,rep_type,fatigue,rest_sec FROM sets WHERE workout_id IN ({ph}) ORDER BY id DESC",
             tuple(workout_ids)
         )]
 
@@ -154,7 +154,7 @@ def _enhanced_context_093():
             name = str(s.get('exercise') or '').strip()
             if not name:
                 continue
-            ex = exercises.setdefault(name, {'sets': 0, 'reps': [], 'levels': [], 'fatigue': []})
+            ex = exercises.setdefault(name, {'sets': 0, 'reps': [], 'levels': [], 'fatigue': [], 'rep_type':'seconds' if 'plank' in name.lower() else s.get('rep_type','reps')})
             if int(s.get('reps') or 0) > 0:
                 ex['sets'] += 1
                 ex['reps'].append(int(s.get('reps') or 0))
@@ -167,6 +167,7 @@ def _enhanced_context_093():
             ex_summary.append({
                 'exercise': name,
                 'completed_sets': ex['sets'],
+                'rep_type': ex['rep_type'],
                 'reps': ex['reps'][-5:],
                 'level_or_load': ex['levels'][-1] if ex['levels'] else None,
                 'fatigue': ex['fatigue'][-3:],

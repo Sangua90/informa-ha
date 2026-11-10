@@ -96,6 +96,8 @@ def init_db():
       VALUES(1,'Edoardo',187,121.4,'Dimagrimento + forza','Inizio guidato');
     """)
     con.execute("CREATE TABLE IF NOT EXISTS exercise_exclusions(exercise_id TEXT PRIMARY KEY)")
+    con.execute("CREATE TABLE IF NOT EXISTS exercise_effort(id INTEGER PRIMARY KEY, exercise_id TEXT NOT NULL,workout_id INTEGER,effort INTEGER NOT NULL CHECK(effort BETWEEN 1 AND 5),recorded_at TEXT NOT NULL,UNIQUE(exercise_id,recorded_at))")
+    con.execute("CREATE TABLE IF NOT EXISTS ai_workout_decisions(id INTEGER PRIMARY KEY,ts TEXT NOT NULL,mode TEXT NOT NULL,decision TEXT,reason TEXT,request_json TEXT,plan_json TEXT)")
     measurement_columns = {row[1] for row in con.execute("PRAGMA table_info(body_measurements)")}
     if "height_cm" not in measurement_columns:
         con.execute("ALTER TABLE body_measurements ADD COLUMN height_cm REAL")
