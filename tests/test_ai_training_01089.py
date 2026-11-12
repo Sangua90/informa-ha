@@ -123,10 +123,49 @@ class AITrainingTest(unittest.TestCase):
         class Response:
             def __enter__(self):return self
             def __exit__(self,*args):pass
-            def read(self):return b'{"steps":[{"content":[{"text":"OK provider"}]}]}'
+            def read(self):return b'{"candidates":[{"finishReason":"STOP","content":{"parts":[{"text":"OK provider"}]}}]}'
         failure=urllib.error.HTTPError('test',503,'busy',{},None)
         with patch.object(self.module.urllib.request,'urlopen',side_effect=[failure,failure,Response()]) as send,patch.object(self.module.time,'sleep') as sleep:
             self.assertEqual(self.module.request_ai('Test',{}),'OK provider');self.assertEqual(send.call_count,3);self.assertEqual(sleep.call_count,2)
+
+    def test_long_primary_retry_after_uses_supported_alternate_with_same_model_context_and_schema(self):
+        import io,urllib.error
+        calls=[];schema={'type':'object','properties':{'decision':{'type':'string'}},'required':['decision']}
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return b'{"candidates":[{"finishReason":"STOP","content":{"parts":[{"text":"{\\"decision\\":\\"train\\"}"}]}}]}'
+        def send(req,timeout):
+            calls.append((req.full_url,json.loads(req.data),timeout))
+            if len(calls)==1:raise urllib.error.HTTPError('private-url',503,'private error',{'Retry-After':'120'},io.BytesIO(b'{"error":{"code":"service_unavailable","message":"test-only-secret"}}'))
+            return Response()
+        with patch.object(self.module.urllib.request,'urlopen',send),patch.object(self.module.time,'sleep') as sleep:
+            self.assertEqual(json.loads(self.module.request_ai('Prova',{'checkin':{'energy':'Normale'},'name':'private person'},schema=schema)),{'decision':'train'})
+        self.assertEqual(len(calls),2);self.assertIn('/models/gemini-3.6-flash:generateContent',calls[1][0])
+        first,second=calls[0][1],calls[1][1]
+        self.assertEqual(first['input'],second['contents'][0]['parts'][0]['text']);self.assertEqual(first['system_instruction'],second['systemInstruction']['parts'][0]['text'])
+        self.assertEqual(second['generationConfig']['responseFormat']['text'],{'mimeType':'APPLICATION_JSON','schema':schema})
+        self.assertNotIn('private person',first['input']);self.assertLess(sleep.call_args.args[0],2)
+        info=self.module.request_info();self.assertEqual(info['api'],'generateContent');self.assertEqual(info['attempts'][0]['provider_code'],'service_unavailable');self.assertEqual(info['attempts'][0]['retry_after_seconds'],120);self.assertNotIn('secret',json.dumps(info));self.assertNotIn('private-url',json.dumps(info))
+
+    def test_alternate_honors_its_own_retry_after_and_never_exceeds_three_calls(self):
+        import urllib.error
+        with patch.object(self.module.urllib.request,'urlopen',side_effect=[urllib.error.HTTPError('test',503,'busy',{},None),urllib.error.HTTPError('test',503,'busy',{'Retry-After':'120'},None)]) as send,patch.object(self.module.time,'sleep') as sleep,self.assertRaises(RuntimeError):
+            self.module.request_ai('Prova',{},timeout=20)
+        self.assertEqual(send.call_count,2);self.assertEqual(sleep.call_count,1)
+
+    def test_alternate_does_not_expose_thoughts_or_accept_truncated_generation(self):
+        import urllib.error
+        class Response:
+            def __init__(self,finish):self.finish=finish
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return json.dumps({'candidates':[{'finishReason':self.finish,'content':{'parts':[{'thought':True,'text':'private reasoning'},{'text':'Risposta finale'}]}}]}).encode()
+        for finish in ('STOP','MAX_TOKENS'):
+            with patch.object(self.module.urllib.request,'urlopen',side_effect=[urllib.error.HTTPError('test',503,'busy',{},None),Response(finish)]),patch.object(self.module.time,'sleep'):
+                if finish=='STOP':self.assertEqual(self.module.request_ai('Prova',{}),'Risposta finale')
+                else:
+                    with self.assertRaises(RuntimeError):self.module.request_ai('Prova',{})
 
     def test_provider_failures_are_bounded_and_permanent_errors_are_not_retried(self):
         import urllib.error

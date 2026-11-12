@@ -10,6 +10,8 @@
       <div class="ey">Impostazioni AI</div>
       <div id="if91AiStatus" class="sub">Controllo configurazione…</div>
       <button class="btn secondary" id="if91AiTest" onclick="if91TestAI()">Testa connessione AI</button>
+      <div class="sub" id="if91AiTestResult" role="status" style="margin-top:10px"></div>
+      <details><summary>Dettagli della connessione</summary><pre id="if91AiTestDetails" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
       <div class="sub" style="margin-top:10px">Provider, modello e chiave API si configurano nelle impostazioni dell'add-on InFormha in Home Assistant. La chiave non viene mostrata in questa pagina.</div>`;
     if(how)page.insertBefore(card,how);else page.appendChild(card);
   }
@@ -26,14 +28,19 @@
   };
 
   window.if91TestAI=async function(){
-    const b=document.getElementById('if91AiTest'),out=document.getElementById('if91AiStatus');
+    const b=document.getElementById('if91AiTest'),out=document.getElementById('if91AiTestResult'),details=document.getElementById('if91AiTestDetails');
+    if(b?.disabled)return;
     if(b)b.disabled=true;
+    if(out)out.textContent='Verifica della connessione a Gemini…';
+    if(details)details.textContent='';
     try{
-      const d=await api('api/ai/test',{method:'POST'});
+      const response=await fetch('api/ai/test',{method:'POST'}),d=await response.json();
+      if(details&&d.connection)details.textContent=JSON.stringify(d.connection,null,2);
+      if(!response.ok||!d.connected)throw Error(d.error||'Connessione non disponibile');
       toast(d.connected?'Connessione AI attiva':'Connessione non disponibile');
       await if91LoadAISettings();
-      if(out&&d.message)out.insertAdjacentHTML('beforeend',`<div class="sub" style="margin-top:8px">Test: ${esc(d.message)}</div>`);
-    }catch(e){toast(e.message||'Test AI non riuscito');await if91LoadAISettings()}
+      if(out)out.textContent='Verifica riuscita: '+(d.model||'Coach locale')+'. '+(d.message||'Connessione attiva');
+    }catch(e){if(out)out.textContent='Verifica non riuscita: '+(e.message||'Connessione non disponibile');toast(e.message||'Test AI non riuscito');await if91LoadAISettings()}
     finally{if(b)b.disabled=false}
   };
 

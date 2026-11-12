@@ -25,6 +25,10 @@ async function fixture(options={}){
   if(w.deferArchive&&url==='api/workout-flow-0949/archive')await new Promise(resolve=>(w.archiveResolvers??=[]).push(resolve));
   if(w.deferLoad&&url.startsWith('api/load-progression-0969/'))await new Promise(resolve=>(w.loadResolvers??=[]).push(resolve));
   if(w.failFinish&&url==='api/coach/finish')throw Error('offline');
+  if(url==='api/ai/test'){
+   if(w.deferAiTest)await new Promise(resolve=>w.resolveAiTest=resolve);
+   const data=w.aiTestResult||{ok:true,connected:true,model:'gemini-3.6-flash',message:'Connessione Gemini attiva.'};return {ok:data.ok,json:async()=>data};
+  }
   if(url.startsWith('api/workout-session')){
    let data={ok:true};let status=200;
    const sid=url.match(/workout-session\/([^/]+)\/close/)?.[1],query=new URL(url,'https://informa.test/').searchParams.get('session_id');
@@ -362,5 +366,13 @@ test('durable session: running recovery counts time away after a cold restart',a
 test('durable session: removing all exercises still retains a session that can be closed',async()=>{
  let f=await fixture();try{await f.generate();await f.w.if108Remove('chest');await f.advance();await f.w.if108Remove('lat');await f.advance();assert.equal(f.plan.plan.length,0);
  const storage=f.storage(),server=f.server;assert.ok(storage.informha_session_01096);f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'endworkout');assert.equal(f.w.testWorkId(),101);
+ }finally{f.close()}
+});
+test('Gemini connection: actual result remains visible after settings reload and double-click sends once',async()=>{
+ const f=await fixture();try{f.w.go('aicoach');await f.advance();f.w.deferAiTest=true;
+ const first=f.w.if91TestAI();await f.flush();await f.w.if91TestAI();assert.equal(f.calls.filter(c=>c.url==='api/ai/test').length,1);
+ f.w.resolveAiTest();await first;await f.w.if91LoadAISettings();await f.advance(6000);assert.match(f.w.document.getElementById('if91AiTestResult').textContent,/Verifica riuscita.*gemini-3.6-flash/);
+ f.w.deferAiTest=false;f.w.aiTestResult={ok:false,connected:false,error:'Gemini non disponibile (HTTP 503) <img src=x>'};await f.w.if91TestAI();await f.advance(6000);
+ assert.match(f.w.document.getElementById('if91AiTestResult').textContent,/Verifica non riuscita.*503/);assert.equal(f.w.document.querySelector('#if91AiTestResult img'),null);
  }finally{f.close()}
 });

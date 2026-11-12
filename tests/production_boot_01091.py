@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory() as directory:
     script='''
 import os,json
 from unittest.mock import patch
-os.environ['INFORMA_VERSION']='0.10.97'
+os.environ['INFORMA_VERSION']='0.10.98'
 os.environ.pop('SUPERVISOR_TOKEN',None)
 import workout_sessions_01096 as server
 client=server.app.test_client()
@@ -22,7 +22,7 @@ for path in ['/', '/api/state','/api/ai-coach/context','/api/ai-coach/today','/a
     response=client.get(path);checks[path]=response.status_code
     assert response.status_code==200,(path,response.get_data(as_text=True)[:500])
 assert client.post('/api/measurements-0978/reminder-check').status_code==200
-assert 'app.js?v=01097' in client.get('/').get_data(as_text=True)
+assert 'app.js?v=01098' in client.get('/').get_data(as_text=True)
 measurement={'hip_cm':105,'calf_cm':40,'arm_l_cm':37,'thigh_l_cm':55,'measurement_side':'left'}
 assert client.post('/api/measurements-0978',json=measurement).status_code==200
 row=client.get('/api/measurements-0978').get_json()['items'][0]
@@ -63,7 +63,34 @@ with patch.object(server.root,'hass_request',return_value={}) as notify:
     assert client.post('/api/coach-questions/'+str(question['id'])+'/answer',json=answer).status_code==200
 ctx=client.get('/api/ai-coach/context').get_json()['context']
 assert ctx['coach_dialogue']['answers'][0]['answer']==answer['answer']
-print('SMOKE_RESULT',json.dumps({'GET':checks,'set_retry':'one set, original values','archive_retry':'canonical status preserved','finish':'duration/effort saved','closed_session':'rejected','treadmill_retry':'one atomic session','context_effort':True,'coach_questions':'one notification, answer retry, fresh AI context'}))
+# Both the public connection handler and real workout validation use the second
+# official API when Interactions returns a long Retry-After.
+import urllib.error,io
+class GeminiResponse:
+    def __init__(self,text):self.text=text
+    def __enter__(self):return self
+    def __exit__(self,*args):pass
+    def read(self):return json.dumps({'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':self.text}]}}]}).encode()
+provider_calls=[]
+def provider(req,timeout):
+    provider_calls.append(req.full_url)
+    if req.full_url.endswith('/interactions'):
+        raise urllib.error.HTTPError('test',503,'busy',{'Retry-After':'120'},io.BytesIO(b'{"error":{"code":"service_unavailable"}}'))
+    payload=json.loads(req.data)
+    assert '/models/gemini-3.6-flash:generateContent' in req.full_url
+    if 'Rispondi soltanto con:' in payload['contents'][0]['parts'][0]['text']:return GeminiResponse('Connessione Gemini attiva.')
+    context=server.training.unified_context();sources=context['coverage']['sources']+['checkin']
+    assert payload['generationConfig']['responseFormat']['text']['schema']['required']==['decision','reason','data_used','items']
+    return GeminiResponse(json.dumps({'decision':'train','reason':'Dati recenti considerati','data_used':sources,'items':[{'id':'chest','sets':2,'reps':10,'rest':60,'load_policy':'maintain'},{'id':'plank','sets':2,'reps':30,'rest':60,'load_policy':'maintain'}]}))
+with patch.object(server.training.config,'_ai_config_092',return_value={'provider':'gemini','model':'gemini-3.6-flash','api_key':'smoke-not-secret'}),patch.object(server.training.urllib.request,'urlopen',provider),patch.object(server.training.time,'sleep'):
+    connection=client.post('/api/ai/test')
+    assert connection.status_code==200,connection.get_json()
+    assert connection.get_json()['connected'] and connection.get_json()['connection']['api']=='generateContent'
+    proposal=client.post('/api/ai-workout-01089',json={'exercise_count':2,'minutes':45,'energy':'Normale','pain':'Nessuno'}).get_json()
+    assert proposal['mode']=='gemini',proposal
+    assert proposal['plan'][1]['repType']=='seconds' and proposal['plan'][1]['reps']==30
+assert len(provider_calls)==4
+print('SMOKE_RESULT',json.dumps({'GET':checks,'set_retry':'one set, original values','archive_retry':'canonical status preserved','finish':'duration/effort saved','closed_session':'rejected','treadmill_retry':'one atomic session','context_effort':True,'gemini_failover':'connection and validated timed workout through generateContent','coach_questions':'one notification, answer retry, fresh AI context'}))
 '''
     result=subprocess.run([sys.executable,'-X','utf8','-c',script],cwd=folder,text=True,capture_output=True)
     print(result.stdout)

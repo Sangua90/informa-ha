@@ -4,7 +4,9 @@ import math
 import os
 import random
 import time
+import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta
 
@@ -117,7 +119,30 @@ def safe_context(ctx):
     return {k:ctx.get(k) for k in ('generated_at','goal','profile','measurements','latest_measurements','training','nutrition','supplements','body_progress','health','health_auto_export','equipment','exercise_catalog','coverage','checkin')}
 
 
+_transport_state=threading.local()
+
+
+def request_info():
+    return dict(getattr(_transport_state,'info',{'attempts':[]}))
+
+
+def provider_failure(exc):
+    """Only allowlisted provider codes and numeric timing; never echo the body/key."""
+    known={'invalid_request','failed_precondition','authentication','permission_denied','payment_required','not_found','model_not_found','rate_limit_exceeded','quota_exceeded','too_many_requests','api_error','service_unavailable','deadline_exceeded','unimplemented','UNAVAILABLE','INTERNAL','RESOURCE_EXHAUSTED','INVALID_ARGUMENT','PERMISSION_DENIED','UNAUTHENTICATED','NOT_FOUND','DEADLINE_EXCEEDED'}
+    code=None
+    try:
+        error=json.loads(exc.read(16384).decode('utf-8')).get('error',{})
+        code=next((error.get(k) for k in ('code','status') if error.get(k) in known),None)
+    except (ValueError,TypeError,AttributeError,UnicodeError):pass
+    finally:exc.close()
+    try:delay=float(exc.headers.get('Retry-After','0'))
+    except (ValueError,TypeError,AttributeError):delay=0
+    if not math.isfinite(delay) or delay<0:delay=0
+    return code,delay
+
+
 def request_ai(question, ctx, timeout=40, schema=None):
+    _transport_state.info={'attempts':[]}
     cfg = config._ai_config_092()
     if cfg['provider'] != 'gemini' or not cfg['api_key']:
         raise RuntimeError('Gemini non configurato: seleziona Gemini e inserisci la chiave API nelle opzioni dell’add-on')
@@ -127,31 +152,52 @@ def request_ai(question, ctx, timeout=40, schema=None):
         'generation_config':{'max_output_tokens':2400}}
     if schema:
         payload['response_format'] = {'type':'text','mime_type':'application/json','schema':schema}
-    req = urllib.request.Request('https://generativelanguage.googleapis.com/v1beta/interactions', data=json.dumps(payload).encode(), method='POST', headers={'Content-Type':'application/json','x-goog-api-key':cfg['api_key'],'Api-Revision':'2026-05-20'})
+    generation={'maxOutputTokens':2400}
+    if schema:generation['responseFormat']={'text':{'mimeType':'APPLICATION_JSON','schema':schema}}
+    alternate={'systemInstruction':{'parts':[{'text':payload['system_instruction']}]},'contents':[{'role':'user','parts':[{'text':payload['input']}]}],'generationConfig':generation}
+    requests={
+        'interactions':urllib.request.Request('https://generativelanguage.googleapis.com/v1beta/interactions',data=json.dumps(payload).encode(),method='POST',headers={'Content-Type':'application/json','x-goog-api-key':cfg['api_key'],'Api-Revision':'2026-05-20'}),
+        'generateContent':urllib.request.Request('https://generativelanguage.googleapis.com/v1beta/models/'+urllib.parse.quote(cfg['model'],safe='-._')+':generateContent',data=json.dumps(alternate).encode(),method='POST',headers={'Content-Type':'application/json','x-goog-api-key':cfg['api_key']})}
     deadline=time.monotonic()+timeout
+    api='interactions'
     for attempt in range(3):
+        trace={'api':api};_transport_state.info['attempts'].append(trace)
         try:
             remaining=deadline-time.monotonic()
             if remaining<=0:raise TimeoutError()
-            with urllib.request.urlopen(req, timeout=min(25,remaining)) as response:
+            # Reserve time for the independent stateless interface if the first stalls.
+            budget=min(18,timeout*.45) if api=='interactions' else min(25,remaining)
+            with urllib.request.urlopen(requests[api],timeout=min(budget,remaining)) as response:
                 data = json.loads(response.read().decode())
+            trace['status']=200;_transport_state.info['api']=api
             break
         except (urllib.error.URLError,TimeoutError) as e:
             code=e.code if isinstance(e,urllib.error.HTTPError) else None
+            trace['status']=code
             retry=code in (500,502,503,504) or code is None
             delay=(2**attempt)+random.uniform(0,.3)
             if isinstance(e,urllib.error.HTTPError):
-                try:retry_after=float(e.headers.get('Retry-After','0'))
-                except (ValueError,AttributeError):retry_after=0
+                provider_code,retry_after=provider_failure(e)
+                trace.update(provider_code=provider_code,retry_after_seconds=retry_after)
                 if code==429 and 0<retry_after<=4:retry=True
-                delay=max(delay,retry_after)
+            else:retry_after=0
+            if retry and code!=429 and api=='interactions':
+                # Retry-After applies to this URI: do not call it again early.
+                # generateContent is a separate supported API, with the same model/context.
+                api='generateContent'
+            else:delay=max(delay,retry_after)
             if not retry or attempt==2 or time.monotonic()+delay+2>=deadline:
                 message=f'Gemini non disponibile (HTTP {code})' if code else 'Gemini non raggiungibile o tempo di risposta esaurito'
                 raise RuntimeError(message+f' · {attempt+1} tentativ'+('o' if attempt==0 else 'i')) from e
             time.sleep(delay)
+    if not isinstance(data,dict):raise RuntimeError('Risposta Gemini non valida')
     if data.get('status') == 'failed':
         raise RuntimeError('Generazione Gemini non riuscita')
-    text = config._extract_interaction_text(data)
+    if api=='generateContent':
+        candidate=next(iter(data.get('candidates') or []),{})
+        if candidate.get('finishReason','STOP')!='STOP':raise RuntimeError('Gemini non ha completato una risposta utilizzabile')
+        text='\n'.join(str(p['text']) for p in candidate.get('content',{}).get('parts',[]) if p.get('text') and not p.get('thought')).strip()
+    else:text = config._extract_interaction_text(data)
     if not text:
         raise RuntimeError('Gemini non ha restituito una risposta utilizzabile')
     return text

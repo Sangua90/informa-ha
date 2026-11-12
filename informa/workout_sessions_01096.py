@@ -182,3 +182,15 @@ app.view_functions['workout_delete_0933']=delete_workout_session
 # Chat, connection test and workout generation share the same bounded retry transport.
 training.config._gemini_request_092=training.request_ai
 training.context93._gemini_request_093=training.request_ai
+
+
+def ai_connection_test_01098():
+    cfg=training.config._ai_config_092()
+    if cfg['provider']=='none':return root.jsonify(ok=True,provider='none',connected=True,message='Coach locale attivo')
+    try:
+        answer=training.request_ai('Rispondi soltanto con: Connessione Gemini attiva.',{'training':{},'nutrition':{},'supplements':{}},timeout=20)
+        return root.jsonify(ok=True,provider='gemini',model=cfg['model'],connected=True,message=answer[:180],connection=training.request_info())
+    except Exception as error:
+        message=str(error) if isinstance(error,RuntimeError) else 'Risposta Gemini non utilizzabile'
+        return root.jsonify(ok=False,provider='gemini',model=cfg['model'],connected=False,error=message,connection=training.request_info()),502
+app.view_functions['ai_test_091']=ai_connection_test_01098

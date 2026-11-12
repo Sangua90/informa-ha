@@ -1,3 +1,8 @@
+## 0.10.98
+
+- Se Interactions non risponde o restituisce un errore temporaneo come HTTP 503, il Coach prova anche generateContent, la seconda interfaccia ufficiale di Google, con lo stesso modello, contesto e schema della seduta. Restano un massimo di tre chiamate e una scadenza complessiva; errori di autenticazione e quota non causano un cambio di canale.
+- Il test Gemini mostra un esito persistente, impedisce invii doppi e offre dettagli sicuri dei tentativi senza chiavi API, messaggi privati o corpo delle risposte di errore.
+
 ## 0.10.97
 
 - Sagoma delle misure ingrandita e modulo mantenuto sotto il titolo e il comando di ritorno anche dopo gli aggiornamenti automatici della pagina. Conservate tutte le correzioni di ripristino, timer e Gemini della 0.10.96.
