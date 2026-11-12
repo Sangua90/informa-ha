@@ -45,13 +45,14 @@ def validate(snapshot):
 
 def bound_workout(con,sid,wid=None):
     # A set/cardio/archive may have committed even when its acknowledgement was lost.
-    row=con.execute("SELECT workout_id FROM mutation_requests WHERE id LIKE ? AND workout_id IS NOT NULL ORDER BY rowid DESC LIMIT 1",(sid+':%',)).fetchone()
+    row=con.execute("SELECT workout_id FROM mutation_requests WHERE id GLOB ? AND workout_id IS NOT NULL ORDER BY rowid DESC LIMIT 1",(sid+':*',)).fetchone()
     return row['workout_id'] if row else wid
 
 
 def close(con,sid,state):
     at=datetime.now().isoformat(timespec='seconds')
-    con.execute('INSERT OR REPLACE INTO workout_session_closed(session_id,state,closed_at) VALUES(?,?,?)',(sid,state,at))
+    con.execute('INSERT OR IGNORE INTO workout_session_closed(session_id,state,closed_at) VALUES(?,?,?)',(sid,state,at))
+    state=con.execute('SELECT state FROM workout_session_closed WHERE session_id=?',(sid,)).fetchone()['state']
     con.execute('UPDATE workout_drafts SET state=?,updated_at=? WHERE session_id=?',(state,at,sid))
 
 
@@ -133,8 +134,9 @@ def workout_session_close(sid):
         # The last set may have committed while its response was lost on close.
         with closing(root.db()) as con:exists=con.execute('SELECT 1 FROM workouts WHERE id=?',(wid,)).fetchone()
         if exists:
-            result=delete_workout_session(wid)
+            result=delete_workout_session(wid,session_to_discard=sid)
             if isinstance(result,tuple) or result.status_code>=300:return result
+            if result.get_json().get('state')=='saved':return result
     with closing(root.db()) as con:close(con,sid,x['state']);con.commit()
     return root.jsonify(ok=True)
 
@@ -152,9 +154,17 @@ def finish_session():
 app.view_functions['coach_finish']=finish_session
 
 
-def delete_workout_session(workout_id):
+def delete_workout_session(workout_id,session_to_discard=None):
+    if session_to_discard is None:session_to_discard=root.request.args.get('session_id')
+    if session_to_discard:
+        try:session_id(session_to_discard)
+        except ValueError as e:return root.jsonify(ok=False,error=str(e)),400
     with closing(root.db()) as con:
         con.execute('BEGIN IMMEDIATE')
+        if session_to_discard:
+            marker=con.execute('SELECT state FROM workout_session_closed WHERE session_id=?',(session_to_discard,)).fetchone()
+            if marker and marker['state']=='saved' or con.execute('SELECT 1 FROM workout_finish WHERE workout_id=?',(workout_id,)).fetchone():
+                close(con,session_to_discard,'saved');con.commit();return root.jsonify(ok=True,state='saved')
         if not con.execute('SELECT 1 FROM workouts WHERE id=?',(workout_id,)).fetchone():return root.jsonify(ok=False,error='Allenamento non trovato'),404
         for row in con.execute("SELECT session_id,workout_id FROM workout_drafts WHERE state='active'").fetchall():
             if bound_workout(con,row['session_id'],row['workout_id'])==workout_id:close(con,row['session_id'],'discarded')

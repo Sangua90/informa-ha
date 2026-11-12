@@ -79,3 +79,11 @@ class WorkoutSessionsTest(unittest.TestCase):
         self.save();self.set(request_id='session-test-123:chest:1')
         self.assertEqual(self.client.post('/api/workout-session/session-test-123/close',json={'state':'discarded'}).status_code,200)
         self.assertEqual(self.count('workouts'),0);self.assertEqual(self.count('sets'),0);self.assertEqual(self.save().status_code,410)
+
+    def test_stale_offline_discard_cannot_erase_a_session_already_finished_elsewhere(self):
+        self.save();wid=self.set(request_id='session-test-123:chest:1').get_json()['workout_id']
+        self.client.post('/api/coach/finish',json={'workout_id':wid,'session_id':self.snapshot['session_id'],'duration_min':10})
+        response=self.client.post('/api/workout-session/session-test-123/close',json={'state':'discarded'})
+        self.assertEqual(response.status_code,200);self.assertEqual(response.get_json()['state'],'saved');self.assertEqual(self.count('workouts'),1);self.assertEqual(self.count('sets'),1)
+        self.assertEqual(self.client.get('/api/workout-session?session_id=session-test-123').get_json()['state'],'saved')
+        self.assertEqual(self.client.delete('/api/workouts-0933/'+str(wid)+'?session_id=session-test-123').get_json()['state'],'saved');self.assertEqual(self.count('workouts'),1)

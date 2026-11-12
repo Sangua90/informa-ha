@@ -13,7 +13,7 @@ Measurements now use a single inline SVG with eight adjacent inputs and in-place
 ## Executed local checks
 
 - `python verify_build.py`: 98 JavaScript files, the exact 72-fragment Docker bundle, Python syntax and the 49-exercise catalog passed.
-- Full Python discovery: **112 passed**. Includes provider 503 → success, bounded failure/deadline, no retry of permanent errors, fresh hip/calf context, draft revisions, lost acknowledgements, finish/discard tombstones, canonical reconciliation and discarded-work cleanup.
+- Full Python discovery: **113 passed**. Includes provider 503 → success, bounded failure/deadline, no retry of permanent errors, fresh hip/calf context, draft revisions, lost acknowledgements, finish/discard tombstones, canonical reconciliation and discarded-work cleanup.
 - All seven JavaScript suites: **81 passed**. Includes full-production-bundle cold webview restart for treadmill, weights, partial series, replacement order, Plank completion in seconds, recovery, stretching, explicit pause, removal of all exercises, final closure and stale-cache rejection. Existing treadmill skip, series recovery, substitutions, canonical progress and weight +/- regressions remain in the suites.
 - Full production import chain on disposable data: 10 GET endpoints plus real measurement writes/validation/context, draft save/restore/closure, idempotent sets/archive/treadmill, finish, questions and answers. No real HA records or Gemini keys are used by these automated checks.
 
