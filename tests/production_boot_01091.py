@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory() as directory:
         (folder/source.name).write_text(text,encoding='utf-8')
     script='''
 import os,json
-os.environ['INFORMA_VERSION']='0.10.91'
+os.environ['INFORMA_VERSION']='0.10.92'
 os.environ.pop('SUPERVISOR_TOKEN',None)
 import logic_audit_01091 as server
 client=server.app.test_client()
@@ -24,6 +24,11 @@ assert client.post('/api/measurements-0978/reminder-check').status_code==200
 body={'exercise':'Chest press alla macchina','set_no':1,'reps':10,'weight':5,'request_id':'smoke:chest:1'}
 wid=client.post('/api/set',json=body).get_json()['workout_id']
 assert client.post('/api/set',json=body).get_json()['workout_id']==wid
+assert client.post('/api/set',json={**body,'weight':7}).get_json()['saved_set']['weight']==5
+archive={'request_id':'smoke:archive:chest','workout_id':wid,'exercise':body['exercise'],'status':'Parziale'}
+assert client.post('/api/workout-flow-0949/archive',json=archive).get_json()['status']=='Parziale'
+assert client.post('/api/workout-flow-0949/archive',json={**archive,'status':'Saltato'}).get_json()['status']=='Parziale'
+assert client.post('/api/workout-flow-0949/archive',json={**archive,'request_id':'smoke:other','status':'Saltato'}).status_code==409
 assert client.post('/api/coach/finish',json={'workout_id':wid,'duration_min':22,'effort':3,'reason':'Tempo finito'}).status_code==200
 assert client.post('/api/set',json={**body,'set_no':2,'request_id':'smoke:chest:2','workout_id':wid}).status_code==409
 detail=client.get('/api/workouts-0933/'+str(wid)).get_json()
@@ -35,7 +40,7 @@ week=client.get('/api/coach/week').get_json()
 assert week['summary']['sets']==1 and week['summary']['cardio_sessions']==1
 ctx=client.get('/api/ai-coach/context').get_json()['context']
 assert ctx['training']['session_effort'][0]['effort']==3
-print('SMOKE_RESULT',json.dumps({'GET':checks,'set_retry':'one set','finish':'duration/effort saved','closed_session':'rejected','treadmill_retry':'one atomic session','context_effort':True}))
+print('SMOKE_RESULT',json.dumps({'GET':checks,'set_retry':'one set, original values','archive_retry':'canonical status preserved','finish':'duration/effort saved','closed_session':'rejected','treadmill_retry':'one atomic session','context_effort':True}))
 '''
     result=subprocess.run([sys.executable,'-X','utf8','-c',script],cwd=folder,text=True,capture_output=True)
     print(result.stdout)

@@ -22,7 +22,7 @@ class LogicAuditTest(unittest.TestCase):
         con=self.core.db();con.executescript('''CREATE TABLE workout_finish(id INTEGER PRIMARY KEY,ts TEXT,workout_id INTEGER,reason TEXT,duration_min REAL,useful_work TEXT);
         CREATE TABLE exercise_status(id INTEGER PRIMARY KEY,ts TEXT,workout_id INTEGER,exercise TEXT,priority TEXT,status TEXT,notes TEXT);
         CREATE TABLE treadmill_sessions(id INTEGER PRIMARY KEY,ts TEXT,duration_min REAL,avg_speed_kmh REAL,max_speed_kmh REAL,avg_incline_pct REAL,max_incline_pct REAL,fatigue TEXT,phases_json TEXT);''');con.commit();con.close()
-        for path,endpoint in [('/api/coach/finish','coach_finish'),('/api/treadmill-0970','treadmill_save_0970')]:
+        for path,endpoint in [('/api/coach/finish','coach_finish'),('/api/treadmill-0970','treadmill_save_0970'),('/api/workout-flow-0949/archive','workout_flow_archive_0949')]:
             self.core.app.add_url_rule(path,endpoint,lambda:None,methods=['POST'])
         # Real legacy partial-update handler, rather than a test copy of its SQL.
         tree=ast.parse((ROOT/'nutrition_ai_0102.py').read_text(encoding='utf-8'))
@@ -45,6 +45,27 @@ class LogicAuditTest(unittest.TestCase):
     def test_idempotent_sets_create_one_workout_and_one_performed_set(self):
         bodies=[self.set(request_id='session:chest:1').get_json() for _ in range(2)]
         self.assertEqual(bodies[0],bodies[1]);self.assertEqual(self.count('sets'),1);self.assertEqual(self.count('workouts'),1)
+
+    def test_retry_reports_original_saved_values_even_if_input_changed(self):
+        first=self.set(request_id='retry:chest:1',weight=5).get_json()
+        retry=self.set(request_id='retry:chest:1',weight=7).get_json()
+        self.assertEqual(first,retry);self.assertEqual(retry['saved_set']['weight'],5);self.assertEqual(self.count('sets'),1)
+
+    def test_archive_retry_creates_one_session_and_preserves_the_original_decision(self):
+        body={'request_id':'session:archive:chest','exercise':'Chest','status':'Parziale'}
+        first=self.client.post('/api/workout-flow-0949/archive',json=body).get_json()
+        self.assertIsNotNone(first)
+        retry=self.client.post('/api/workout-flow-0949/archive',json={**body,'status':'Saltato'}).get_json()
+        self.assertEqual(first,retry);self.assertEqual(first['status'],'Parziale')
+        self.assertEqual(self.count('workouts'),1);self.assertEqual(self.count('exercise_status'),1)
+        changed=self.client.post('/api/workout-flow-0949/archive',json={**body,'request_id':'other','workout_id':first['workout_id'],'status':'Saltato'})
+        self.assertEqual(changed.status_code,409)
+
+    def test_retry_of_a_01091_request_recovers_the_original_series_values(self):
+        first=self.set(request_id='legacy:set',weight=5).get_json()
+        con=self.core.db();con.execute('UPDATE mutation_requests SET result_json=? WHERE id=?',(json.dumps({'ok':True,'workout_id':first['workout_id']}),'legacy:set'));con.commit();con.close()
+        retry=self.set(request_id='legacy:set',weight=7).get_json()
+        self.assertEqual(retry['saved_set']['weight'],5);self.assertEqual(self.count('sets'),1)
 
     def test_numeric_corruption_and_missing_workouts_never_write(self):
         for key,bad in [('reps',-1),('reps',True),('reps',float('inf')),('reps',10.5),('weight',float('nan')),('weight',-3),('set_no',0)]:

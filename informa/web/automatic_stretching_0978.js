@@ -85,14 +85,16 @@
   if(changed){localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));const active=localStorage.getItem('informha_workout_active_0109');if(active&&flow[active]?.stage==='archived')window.if978Advance?.(active)}
   return changed;
  };
+ window.if978IsSaving=()=>[...sessions.values()].some(s=>s.saving);
  window.if978Next=async function(id){
+  if(IF50.finishing||IF50.closed||window.if108IsSaving?.()){toast('Attendi il salvataggio in corso');return}
   const state=session(id);if(!state||state.saving||state.done.filter(Boolean).length!==(state.ex.perSide?2:1))return;
   state.saving=true;paint(id);const epoch=IF50.sessionId;
   try{
-   const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:state.ex.name,priority:'Opzionale',status:'Completato'})});
+   const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request_id:IF50.sessionId?IF50.sessionId+':archive:'+id:undefined,workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:state.ex.name,priority:'Opzionale',status:'Completato'})});
    if(epoch!==IF50.sessionId)return;if(out?.ok===false)throw Error(out.error||'Salvataggio non riuscito');
    if(out?.workout_id)currentWorkoutId=out.workout_id;
-   const flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}');flow[id]={...flow[id],stage:'archived',status:'Completato'};localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));
+   const flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}');flow[id]={...flow[id],stage:'archived',status:out.status||'Completato'};localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));
    document.getElementById('if50ex_'+id)?.classList.add('if949-archived');window.if978Advance(id);
   }catch(e){toast(e.message||'Errore salvataggio. Riprova.')}finally{state.saving=false;paint(id)}
  };

@@ -3,8 +3,9 @@
  const swap=window.if60Swap;
  if(typeof swap!=='function')return;
  window.if60Swap=async function(oldId,newId){
-  const result=await swap.apply(this,arguments);
+  const epoch=IF50.sessionId,result=await swap.apply(this,arguments);
   setTimeout(()=>{
+   if(epoch!==IF50.sessionId||IF50.plan?.some(x=>x.id===oldId)||!IF50.plan?.some(x=>x.id===newId))return;
    const card=document.getElementById('if50ex_'+newId);
    if(!card)return;
    // Scegliere il sostituto equivale a passare a quell'esercizio: lo avviamo subito.

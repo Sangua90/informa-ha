@@ -121,7 +121,34 @@ def save_set_01091():
         if not out:
             wid=workout(con,x)
             con.execute('INSERT INTO sets(workout_id,exercise,set_no,weight,reps,fatigue,rest_sec,rep_type) VALUES(?,?,?,?,?,?,?,?)',(wid,x['exercise'],x['set_no'],x.get('weight'),x['reps'],x.get('fatigue'),x.get('rest_sec') if x.get('rest_sec') is not None else 90,x.get('rep_type','reps')))
-            out={'ok':True,'workout_id':wid};remember(con,x,'set',out)
+            out={'ok':True,'workout_id':wid,'saved_set':{k:x.get(k) for k in ('weight','reps','set_no')}}
+            out['saved_set']['rep_type']=x.get('rep_type','reps');remember(con,x,'set',out)
+        elif 'saved_set' not in out:
+            # Requests saved by 0.10.91 did not include the persisted series values.
+            row=con.execute('SELECT weight,reps,set_no,rep_type FROM sets WHERE workout_id=? AND exercise=? AND set_no=? ORDER BY id DESC LIMIT 1',(out['workout_id'],x['exercise'],x['set_no'])).fetchone()
+            if row:out['saved_set']=dict(row)
+        con.commit();return root.jsonify(out)
+    except ValueError as e:
+        con.rollback();return root.jsonify(ok=False,error=str(e)),409
+    finally:con.close()
+
+
+def archive_01092():
+    x=root.request.get_json();name=x.get('exercise');status=x.get('status')
+    if not isinstance(name,str) or not name.strip() or status not in ('Completato','Parziale','Saltato'):
+        return root.jsonify(ok=False,error='Esercizio o stato non valido'),400
+    name=name.strip();con=root.db()
+    try:
+        con.execute('BEGIN IMMEDIATE');out=cached(con,x,'archive')
+        if not out:
+            wid=workout(con,x)
+            previous=con.execute('SELECT status FROM exercise_status WHERE workout_id=? AND exercise=? ORDER BY id DESC LIMIT 1',(wid,name)).fetchone()
+            if previous and previous['status']!=status:
+                raise ValueError('Esercizio già archiviato: lo stato salvato resta invariato')
+            if not previous:
+                con.execute('INSERT INTO exercise_status(ts,workout_id,exercise,priority,status,notes) VALUES(?,?,?,?,?,?)',(datetime.now().isoformat(timespec='seconds'),wid,name,x.get('priority'),status,x.get('notes')))
+            out={'ok':True,'workout_id':wid,'exercise':name,'status':status,'mode':'existing' if previous else 'inserted'}
+            remember(con,x,'archive',out)
         con.commit();return root.jsonify(out)
     except ValueError as e:
         con.rollback();return root.jsonify(ok=False,error=str(e)),409
@@ -189,3 +216,4 @@ app.view_functions['save_set']=save_set_01091
 app.view_functions['treadmill_save_0970']=treadmill_save_01091
 app.view_functions['coach_finish']=finish_01091
 app.view_functions['nutrition_add_entry']=nutrition_save_01091
+app.view_functions['workout_flow_archive_0949']=archive_01092

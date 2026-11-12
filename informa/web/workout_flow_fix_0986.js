@@ -48,7 +48,8 @@
  };
  const swap=window.if60Swap;
  if(typeof swap==='function')window.if60Swap=async function(){
-  const result=await swap.apply(this,arguments);
+  const epoch=IF50.sessionId,result=await swap.apply(this,arguments);
+  if(epoch!==IF50.sessionId)return result;
   if(treadmillArchived())setTimeout(focusFirstPending,180);
   return result;
  };
