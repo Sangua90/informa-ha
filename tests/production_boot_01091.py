@@ -12,12 +12,13 @@ with tempfile.TemporaryDirectory() as directory:
         (folder/source.name).write_text(text,encoding='utf-8')
     script='''
 import os,json
-os.environ['INFORMA_VERSION']='0.10.92'
+from unittest.mock import patch
+os.environ['INFORMA_VERSION']='0.10.93'
 os.environ.pop('SUPERVISOR_TOKEN',None)
-import logic_audit_01091 as server
+import coach_questions_01093 as server
 client=server.app.test_client()
 checks={}
-for path in ['/', '/api/state','/api/ai-coach/context','/api/ai-coach/today','/api/coach/week','/api/measurements-0978','/api/nutrition/today','/api/treadmill-0970/plan?minutes=5']:
+for path in ['/', '/api/state','/api/ai-coach/context','/api/ai-coach/today','/api/coach/week','/api/measurements-0978','/api/nutrition/today','/api/treadmill-0970/plan?minutes=5','/api/coach-questions']:
     response=client.get(path);checks[path]=response.status_code
     assert response.status_code==200,(path,response.get_data(as_text=True)[:500])
 assert client.post('/api/measurements-0978/reminder-check').status_code==200
@@ -40,7 +41,16 @@ week=client.get('/api/coach/week').get_json()
 assert week['summary']['sets']==1 and week['summary']['cardio_sessions']==1
 ctx=client.get('/api/ai-coach/context').get_json()['context']
 assert ctx['training']['session_effort'][0]['effort']==3
-print('SMOKE_RESULT',json.dumps({'GET':checks,'set_retry':'one set, original values','archive_retry':'canonical status preserved','finish':'duration/effort saved','closed_session':'rejected','treadmill_retry':'one atomic session','context_effort':True}))
+with patch.object(server.root,'hass_request',return_value={}) as notify:
+    question=client.post('/api/coach-questions/check').get_json()['items'][0]
+    client.post('/api/coach-questions/check')
+    assert sum(c.args[0].endswith('/create') for c in notify.call_args_list)==1
+    answer={'answer':'Due sedute con giorni variabili','revision':0}
+    assert client.post('/api/coach-questions/'+str(question['id'])+'/answer',json=answer).status_code==200
+    assert client.post('/api/coach-questions/'+str(question['id'])+'/answer',json=answer).status_code==200
+ctx=client.get('/api/ai-coach/context').get_json()['context']
+assert ctx['coach_dialogue']['answers'][0]['answer']==answer['answer']
+print('SMOKE_RESULT',json.dumps({'GET':checks,'set_retry':'one set, original values','archive_retry':'canonical status preserved','finish':'duration/effort saved','closed_session':'rejected','treadmill_retry':'one atomic session','context_effort':True,'coach_questions':'one notification, answer retry, fresh AI context'}))
 '''
     result=subprocess.run([sys.executable,'-X','utf8','-c',script],cwd=folder,text=True,capture_output=True)
     print(result.stdout)

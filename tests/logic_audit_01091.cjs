@@ -3,8 +3,9 @@ const {JSDOM}=require('../.test-runtime/node_modules/jsdom');
 const web=path.join(__dirname,'../informa/web');
 const names=fs.readFileSync(path.join(web,'../Dockerfile'),'utf8').match(/RUN for f in (.*?); do cat/)[1].split(' ');
 const bundle=fs.readFileSync(path.join(web,'app.js'),'utf8')+names.map(n=>fs.readFileSync(path.join(web,n),'utf8')).join('');
-async function fixture(){
- const dom=new JSDOM(fs.readFileSync(path.join(web,'index.html'),'utf8'),{url:'https://informa.test/',runScripts:'dangerously'}),w=dom.window;
+async function fixture(options={}){
+ const dom=new JSDOM(fs.readFileSync(path.join(web,'index.html'),'utf8'),{url:options.url||'https://informa.test/',runScripts:'dangerously'}),w=dom.window;
+ w.questionItems=options.questions||[];
  const jobs=new Map(),calls=[],observers=[],Observer=w.MutationObserver;let now=Date.now(),seq=0;
  w.MutationObserver=class extends Observer{constructor(fn){super(fn);observers.push(this)}};
  w.setTimeout=(fn,ms=0)=>{jobs.set(++seq,{fn,time:now+ms});return seq};w.clearTimeout=id=>jobs.delete(id);
@@ -13,6 +14,10 @@ async function fixture(){
  w.fetch=async(url,opts={})=>{
   const body=typeof opts.body==='string'?JSON.parse(opts.body):{};calls.push({url,body,method:opts.method||'GET'});
   if(w.deferSet&&url==='api/set')await new Promise(resolve=>w.resolveSet=resolve);
+  if(url.match(/^api\/coach-questions\/\d+\/answer$/)){
+   if(w.deferQuestion)await new Promise(resolve=>w.resolveQuestion=resolve);
+   if(w.failQuestion)throw Error('Risposta non inviata: collegamento assente');
+  }
   if(w.deferFinish&&url==='api/coach/finish'||w.deferDiscard&&opts.method==='DELETE')await new Promise(resolve=>w.resolveClosure=resolve);
   if(w.deferTreadmill&&url==='api/treadmill-0970')await new Promise(resolve=>(w.treadmillResolvers??=[]).push(resolve));
   if(w.deferArchive&&url==='api/workout-flow-0949/archive')await new Promise(resolve=>(w.archiveResolvers??=[]).push(resolve));
@@ -26,6 +31,10 @@ async function fixture(){
   if(url==='api/workout-flow-0949/archive'&&w.archiveStatus)data={...data,status:w.archiveStatus};
   if(url==='api/nutrition/analyze-photo')data={ok:true,understood:'Mela',calories:80,protein_g:0,carbs_g:20,fat_g:0,fiber_g:3};
   if(url==='api/ai-workout-01089')data={mode:'gemini',decision:'train',reason:'Fixture',plan:w.aiPlan||[{id:'chest',sets:2,reps:10,rest:2},{id:'lat',sets:2,reps:10,rest:2}]};
+  if(url==='api/ai-workout-01089'&&w.clarifyQuestion){w.questionItems=[w.clarifyQuestion];data={mode:'gemini',decision:'clarify',reason:'Serve un chiarimento',question:w.clarifyQuestion,plan:null}}
+  if(url==='api/coach-questions'||url==='api/coach-questions/check')data={ok:true,items:w.questionItems};
+  const questionId=Number(url.match(/^api\/coach-questions\/(\d+)\//)?.[1]);
+  if(questionId){const q=w.questionItems.find(x=>x.id===questionId);if(url.endsWith('/answer'))Object.assign(q,{answer:body.answer,state:'answered',revision:q.revision+1});if(url.endsWith('/postpone'))q.deferred_until='2099-01-01T00:00:00';data={ok:true,question:q}}
   if(url.startsWith('api/treadmill-0970/plan'))data={ok:true,duration_min:2,phases:[{name:'Fase uno',minutes:1,speed_kmh:4,incline_pct:0},{name:'Fase due',minutes:1,speed_kmh:5,incline_pct:0}]};
   return {ok:true,json:async()=>data};
  };
@@ -190,5 +199,41 @@ test('second pass: treadmill completion remains locked until the save response',
  const first=f.w.if1048Complete();await f.flush();assert.ok(f.w.treadmillResolvers?.length);
  const second=f.w.if1048Complete();await f.flush();const count=f.calls.filter(x=>x.url==='api/treadmill-0970'&&x.method==='POST').length;
  f.w.treadmillResolvers.forEach(resolve=>resolve());await Promise.all([first,second]);assert.equal(count,1);
+ }finally{f.close()}
+});
+
+const coachQuestion=(extra={})=>({id:7,topic:'frequency',body:'Quante volte pensi di allenarti questa settimana?',state:'open',answer:null,revision:0,notification_pending:false,...extra});
+test('coach questions: notification deep link opens the actual question form with a working X',async()=>{
+ const f=await fixture({url:'https://informa.test/?coach_question=7',questions:[coachQuestion()]});try{
+ assert.equal(f.w.document.querySelector('.page.active').dataset.page,'coachquestions');
+ assert.match(f.w.document.querySelector('.if1093-question h2').textContent,/Quante volte/);assert.equal(f.w.document.getElementById('if1093Answer').value,'');
+ f.w.document.querySelector('[data-page=coachquestions] .if1088-close').click();await f.advance();assert.notEqual(f.w.document.querySelector('.page.active').dataset.page,'coachquestions');
+ }finally{f.close()}
+});
+
+test('coach questions: save is single-flight, persists the answer, and can be edited',async()=>{
+ const f=await fixture({questions:[coachQuestion()]});try{f.w.go('coachquestions');await f.flush();
+ let field=f.w.document.getElementById('if1093Answer');field.value='Due volte, martedì e sabato';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));f.w.deferQuestion=true;
+ f.w.document.getElementById('if1093Send').click();await f.flush();f.w.document.getElementById('if1093Send').click();
+ assert.equal(f.calls.filter(x=>x.url==='api/coach-questions/7/answer').length,1);f.w.resolveQuestion();await f.flush();
+ assert.equal(f.w.document.getElementById('if1093Answer').value,'Due volte, martedì e sabato');assert.match(f.w.document.querySelector('.if1093-question').textContent,/Risposta salvata/);
+ f.w.deferQuestion=false;field=f.w.document.getElementById('if1093Answer');field.value='Tre volte';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));f.w.document.getElementById('if1093Send').click();await f.flush();
+ const saves=f.calls.filter(x=>x.url==='api/coach-questions/7/answer');assert.equal(saves[1].body.revision,1);assert.equal(saves[1].body.answer,'Tre volte');
+ }finally{f.close()}
+});
+
+test('coach questions: failed save keeps the draft and question text cannot inject HTML',async()=>{
+ const f=await fixture({questions:[coachQuestion({body:'<img src=x onerror=alert(1)> Quante sedute?'})]});try{f.w.go('coachquestions');await f.flush();
+ const field=f.w.document.getElementById('if1093Answer');field.value='La mia risposta da conservare';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));f.w.failQuestion=true;
+ f.w.document.getElementById('if1093Send').click();await f.flush();assert.equal(f.w.document.getElementById('if1093Answer').value,'La mia risposta da conservare');
+ assert.equal(f.w.document.querySelector('.if1093-question img'),null);assert.match(f.w.document.querySelector('[data-page=coachquestions] [role=alert]').textContent,/non inviata/);
+ }finally{f.close()}
+});
+
+test('coach questions: AI clarification opens the question page and does not create a workout',async()=>{
+ const f=await fixture();try{f.w.clarifyQuestion=coachQuestion();await f.generate();
+ assert.equal(f.w.document.querySelector('.page.active').dataset.page,'coachquestions');assert.equal(f.plan.started,null);assert.equal(f.w.if928WorkoutPrepared(),false);
+ const later=[...f.w.document.querySelectorAll('[data-page=coachquestions] button')].find(b=>b.textContent.startsWith('Rispondi più tardi'));later.click();await f.flush();
+ assert.equal(f.w.document.querySelector('.page.active').dataset.page,'checkin');assert.equal(f.calls.filter(x=>x.url==='api/coach-questions/7/postpone').length,1);
  }finally{f.close()}
 });

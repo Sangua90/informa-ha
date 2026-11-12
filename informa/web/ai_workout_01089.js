@@ -22,6 +22,7 @@
      try{data=await api('api/ai-workout-01089',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({exercise_count:Number(IF50.exerciseCount)||4,minutes:Number(IF50.time)||45,energy:IF50.energy||'Normale',pain:IF50.pain||'Nessuno',pain_detail:IF50.pain==='Altro'?(document.getElementById('if929PainDetail')?.value||IF50.pain_detail||'').trim():'',treadmill_minutes:IF50.treadmill_choice==='Sì'&&window.if1087Available?.('treadmill')!==false?Number(IF50.treadmillMinutes)||0:0,stretching:IF50.stretch_mode==='Sì'})})}
      catch(e){data={mode:'local_fallback',reason:'AI non raggiungibile: '+(e.message||'errore di connessione')}}
      IF50.aiGeneration={mode:data.mode,reason:data.reason};
+     if(data.decision==='clarify'&&data.question){status(data.reason||'Il Coach ha una domanda per te');window.if1093OpenQuestion?.(data.question);return}
      if(data.mode==='gemini'&&data.decision==='recovery'){status('AI Coach consiglia recupero oggi: '+data.reason);return}
      if(data.mode==='gemini'){
        const seen=new Set();

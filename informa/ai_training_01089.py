@@ -179,12 +179,17 @@ def known_load(exercise, ctx, policy):
 
 
 def validate_plan(value, candidates, count, energy, budget, sources=()):
-    if not isinstance(value, dict) or value.get('decision') not in ('train','recovery') or not isinstance(value.get('reason'),str) or not value['reason'].strip():
+    if not isinstance(value, dict) or value.get('decision') not in ('train','recovery','clarify') or not isinstance(value.get('reason'),str) or not value['reason'].strip():
         raise ValueError('Decisione AI non valida')
     used=value.get('data_used')
     if not isinstance(used,list) or any(not isinstance(x,str) or x not in sources for x in used) or not set(sources).issubset(set(used)):
         raise ValueError('La proposta AI non indica tutti i dati disponibili considerati')
     if not isinstance(value.get('items'),list): raise ValueError('Lista AI non valida')
+    if value['decision']=='clarify':
+        q=value.get('question')
+        if value['items'] or not isinstance(q,dict) or q.get('topic') not in ('frequency','equipment','recovery','preferences','exercise_feedback') or not isinstance(q.get('text'),str) or not 15<=len(q['text'].strip())<=600:
+            raise ValueError('Domanda AI non valida')
+        return []
     if value['decision'] == 'recovery':
         if value['items']: raise ValueError('Il recupero non può contenere serie')
         return []
@@ -224,15 +229,26 @@ def ai_workout():
     body.setdefault('energy','Normale');body.setdefault('pain','Nessuno');body.setdefault('stretching',False)
     ctx=unified_context();ctx['checkin']={k:body.get(k) for k in ('energy','pain','pain_detail','exercise_count','minutes','treadmill_minutes','stretching')}
     ctx['coverage']['sources'].append('checkin')
+    gate=app.config.get('COACH_QUESTION_GATE')
+    pending=gate() if gate else None
+    if pending:
+        return root.jsonify(ok=True,mode='clarification',decision='clarify',question=pending,reason='Il Coach ha bisogno di un chiarimento. Puoi rispondere oppure rimandare di 24 ore.',plan=None)
     candidates=allowed_candidates(ctx,str(body.get('pain','Nessuno'))+' '+str(body.get('pain_detail','')))
     ctx['exercise_catalog']=list(candidates.values())
     budget=minutes-treadmill-((4.5 if treadmill else 10.5) if body.get('stretching') is True else 0)
-    schema={'type':'object','properties':{'decision':{'type':'string','enum':['train','recovery']},'reason':{'type':'string'},'data_used':{'type':'array','items':{'type':'string','enum':ctx['coverage']['sources']}},'items':{'type':'array','items':{'type':'object','properties':{'id':{'type':'string','enum':list(candidates)},'sets':{'type':'integer'},'reps':{'type':'integer'},'rest':{'type':'integer'},'load_policy':{'type':'string','enum':['maintain','reduce','progress']}},'required':['id','sets','reps','rest','load_policy']}}},'required':['decision','reason','data_used','items']}
+    schema={'type':'object','properties':{'decision':{'type':'string','enum':['train','recovery','clarify']},'reason':{'type':'string'},'data_used':{'type':'array','items':{'type':'string','enum':ctx['coverage']['sources']}},'question':{'type':'object','properties':{'topic':{'type':'string','enum':['frequency','equipment','recovery','preferences','exercise_feedback']},'text':{'type':'string'}},'required':['topic','text']},'items':{'type':'array','items':{'type':'object','properties':{'id':{'type':'string','enum':list(candidates)},'sets':{'type':'integer'},'reps':{'type':'integer'},'rest':{'type':'integer'},'load_policy':{'type':'string','enum':['maintain','reduce','progress']}},'required':['id','sets','reps','rest','load_policy']}}},'required':['decision','reason','data_used','items']}
     try:
         if not candidates or budget<=0: raise ValueError('Nessun esercizio compatibile o tempo insufficiente')
-        prompt=f'Genera la seduta di oggi: decidi train o recovery e spiega perché. Per train scegli esattamente {min(count,len(candidates))} ID disponibili, senza duplicati, considerando tutta la rosa. Budget forza {budget} minuti inclusi recuperi e 45 secondi di cambio per esercizio. 1–4 serie (massimo 2 con energia Bassa), 5–20 ripetizioni oppure 10–60 secondi per plank, 30–180 secondi recupero tra serie. Tempo esecuzione stimato 3 secondi/ripetizione. Cardio e stretching restano nelle fasi richieste dall’utente e non vanno aggiunti agli items. Scegli anche load_policy maintain, reduce o progress per ciascun esercizio in base a prestazioni, recupero e sforzo. Non inventare kg: i carichi effettivi sono derivati soltanto da quelli registrati e restano confermabili dall’utente. Puoi scegliere recovery se i dati lo giustificano; non interpretare dati mancanti come dati negativi. Restituisci JSON decision,reason,data_used,items (id,sets,reps,rest,load_policy). data_used deve elencare tutte le fonti disponibili di coverage.sources; reason deve collegare obiettivo, andamenti storici e recupero alle scelte, senza limitarsi a elencarli. Non richiedere domande in chat: la tua decisione è automatica. CHECK-IN: '+json.dumps(ctx['checkin'],ensure_ascii=False)
+        prompt=f'Genera la seduta di oggi: decidi train o recovery e spiega perché. Per train scegli esattamente {min(count,len(candidates))} ID disponibili, senza duplicati, considerando tutta la rosa. Budget forza {budget} minuti inclusi recuperi e 45 secondi di cambio per esercizio. 1–4 serie (massimo 2 con energia Bassa), 5–20 ripetizioni oppure 10–60 secondi per plank, 30–180 secondi recupero tra serie. Tempo esecuzione stimato 3 secondi/ripetizione. Cardio e stretching restano nelle fasi richieste dall’utente e non vanno aggiunti agli items. Scegli anche load_policy maintain, reduce o progress per ciascun esercizio in base a prestazioni, recupero e sforzo. Non inventare kg: i carichi effettivi sono derivati soltanto da quelli registrati e restano confermabili dall’utente. Puoi scegliere recovery se i dati lo giustificano; non interpretare dati mancanti come dati negativi. Restituisci JSON decision,reason,data_used,items (id,sets,reps,rest,load_policy). data_used deve elencare tutte le fonti disponibili di coverage.sources; reason deve collegare obiettivo, andamenti storici e recupero alle scelte, senza limitarsi a elencarli. La seduta non richiede una domanda scritta dall’utente. CHECK-IN: '+json.dumps(ctx['checkin'],ensure_ascii=False)
+        prompt += ' Leggi coach_dialogue e usa le risposte salvate per personalizzare la seduta. La frequenza dichiarata è una disponibilità prevista, non una seduta eseguita. Se manca un’informazione essenziale, puoi restituire decision clarify, items vuoto e question {topic,text}: una domanda breve, specifica e in italiano, leggibile dall’utente nella pagina Domande del Coach. Non chiedere di nuovo ciò che ha già risposto. Se una domanda è già aperta o rimandata, non generarne altre: usa prudentemente i dati disponibili. Le domande non devono chiedere diagnosi o dati identificativi. Negli altri casi decidi train o recovery senza richiedere una chat.'
         value=json.loads(request_ai(prompt,ctx,schema=schema))
         plan=validate_plan(value,candidates,count,body.get('energy'),budget,ctx['coverage']['sources'])
+        if value['decision']=='clarify':
+            handler=app.config.get('COACH_QUESTION_HANDLER')
+            question=handler(value['question']) if handler else None
+            if not question:raise ValueError('Chiarimento già risposto o rimandato: preparo una proposta locale con i dati disponibili')
+            save_decision('gemini','clarify',value['reason'][:1600],body,[])
+            return root.jsonify(ok=True,mode='gemini',decision='clarify',question=question,reason=value['reason'][:1600],plan=None)
         for exercise,raw in zip(plan,value['items']):
             exercise['load_policy']=raw.get('load_policy','maintain')
             exercise['suggested_load']=known_load(exercise,ctx,exercise['load_policy'])

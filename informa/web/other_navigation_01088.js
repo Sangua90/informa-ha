@@ -1,7 +1,7 @@
 // Final organization and close navigation for Altro, including direct-render subpages.
 (function(){
  window.IF1088_ORGANIZED=true;
- const parents={profile:'home',profiledata:'profile',connections:'profile',equipment:'profile',progress:'profile',coach:'profile',exercises:'profile','exercise-library-063':'profile','exercises-server':'profile','exercise-photos':'exercise-library-063','exercise-detail':'exercises','exercise-detail-063':'exercise-library-063','workout-history-0933':'profile','workout-history-detail-0933':'workout-history-0933','supplement-settings-0923':'profile'};
+ const parents={profile:'home',profiledata:'profile',connections:'profile',equipment:'profile',progress:'profile',coach:'profile',coachquestions:'aicoach',exercises:'profile','exercise-library-063':'profile','exercises-server':'profile','exercise-photos':'exercise-library-063','exercise-detail':'exercises','exercise-detail-063':'exercise-library-063','workout-history-0933':'profile','workout-history-detail-0933':'workout-history-0933','supplement-settings-0923':'profile'};
  let current=null,trail=[],backTarget=null;
  const active=()=>document.querySelector('.page.active')?.dataset.page;
  const app=document.querySelector('.app');
