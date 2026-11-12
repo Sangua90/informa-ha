@@ -18,3 +18,7 @@ Measurements now use a single inline SVG with eight adjacent inputs and in-place
 - Full production import chain on disposable data: 10 GET endpoints plus real measurement writes/validation/context, draft save/restore/closure, idempotent sets/archive/treadmill, finish, questions and answers. No real HA records or Gemini keys are used by these automated checks.
 
 Actual amd64/aarch64 image builds must pass in GitHub Actions before promotion. Browser installation, actual provider connection and physical iPhone behavior are separate checks; automated cold-restart tests do not establish a physical iPhone/HA runtime workout test. Sessions already lost before this version cannot be reconstructed exactly from a plan that was never stored.
+
+## 0.10.97 visual follow-up
+
+Browser inspection caught the late form mounting ahead of the page header/back control. Mounting now explicitly targets the bottom back button, and the SVG view box fits the body more closely for a larger figure. The full-bundle inline measurement check verifies the header and close control precede the form. The same 113 Python and 81 JavaScript checks and both architecture builds are required again before promotion.

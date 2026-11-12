@@ -1,3 +1,7 @@
+## 0.10.97
+
+- Sagoma delle misure ingrandita e modulo mantenuto sotto il titolo e il comando di ritorno anche dopo gli aggiornamenti automatici della pagina. Conservate tutte le correzioni di ripristino, timer e Gemini della 0.10.96.
+
 ## 0.10.96
 
 - Seduta conservata sul dispositivo e su Home Assistant: piano, ordine, serie, pesi, sostituzioni e timer si ripristinano dopo la chiusura. La Home offre “Riprendi allenamento”. Una nuova generazione non sostituisce una seduta aperta; salvataggio ed eliminazione la chiudono senza riaprirla da copie obsolete.

@@ -292,6 +292,7 @@ test('answered questions: an old notification shows completion, with the questio
 
 test('inline measurements: eight unique fields stay on the page and the landmark follows focus',async()=>{
  const f=await fixture();try{f.w.go('progress');await f.advance();
+ const page=f.w.document.querySelector('[data-page=progress]'),form=f.w.document.getElementById('if978Measures');assert.ok(page.querySelector('h1').compareDocumentPosition(form)&f.w.Node.DOCUMENT_POSITION_FOLLOWING);assert.ok(page.querySelector('.if1088-close').compareDocumentPosition(form)&f.w.Node.DOCUMENT_POSITION_FOLLOWING);
  for(const [id,zone] of [['mHeight',null],['mWeight',null],['mChest','chest'],['mArm','armR'],['mWaist','waist'],['mHip','hips'],['mThigh','thighR'],['mCalf','calfR']]){
   assert.equal(f.w.document.querySelectorAll('#'+id).length,1);f.w.document.getElementById(id).focus();await f.flush();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'progress');
   if(zone)assert.equal(f.w.document.querySelector('[data-zone='+zone+']').getAttribute('stroke'),'#ff9418');assert.ok(f.w.document.querySelector('#if1096MeasureHelp ol').children.length>=2);
