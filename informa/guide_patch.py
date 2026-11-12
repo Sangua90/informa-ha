@@ -28,13 +28,13 @@ def _safe_guide(name):
 
 
 def _user_guide_path(name):
-    aliases = {"dumbbell_shoulder_press": "shoulder_press", "dumbbell_lateral_raise": "lateral_raise"}
-    for ext in (".jpg", ".jpeg", ".png", ".webp"):
-        p = USER_GUIDE_DIR / f"{name}{ext}"
-        if p.exists():
-            return p
-    if name in aliases:
-        return _user_guide_path(aliases[name])
+    pairs = {"dumbbell_shoulder_press": "shoulder_press", "dumbbell_lateral_raise": "lateral_raise", "mobility_back_lats": "mobility_back", "stretch_trunk_core": "stretch_trunk"}
+    canonical = next((key for key,old in pairs.items() if name==old), name)
+    for candidate in (canonical,pairs.get(canonical)):
+        if not candidate:continue
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            p = USER_GUIDE_DIR / f"{candidate}{ext}"
+            if p.exists():return p
     return None
 
 

@@ -41,7 +41,7 @@
  };
 
  const card0=window.if50ExerciseCard;
- const sessions=new Map();
+ const sessions=new Map();window.if978ResetTimers=()=>sessions.clear();
  function session(id){
   const ex=IF50.plan.find(e=>e.id===id);
   if(!ex||!(ex.mobility||ex.stretching))return null;
@@ -73,16 +73,24 @@
   paint(id);
  };
  setInterval(()=>{for(const [id,state] of sessions){
-  if(state.index>=0&&!state.paused){state.left=Math.max(0,Math.ceil((state.end-Date.now())/1000));if(!state.left){state.done[state.index]=true;state.index=-1}}
+  if(!(IF50.plan||[]).includes(state.ex)||JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}')[id]?.stage==='archived'){sessions.delete(id);continue}if(state.index>=0&&!state.paused){state.left=Math.max(0,Math.ceil((state.end-Date.now())/1000));if(!state.left){state.done[state.index]=true;state.index=-1}}
   paint(id);
  }},250);
- window.if978PruneStretching=function(){const flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}');const completed=new Set((IF50.plan||[]).filter(ex=>!ex.mobility&&!ex.stretching&&!ex.cardio&&flow[ex.id]?.stage==='archived'&&flow[ex.id]?.status==='Completato').map(ex=>ex.group));let changed=false;(IF50.plan||[]).filter(ex=>ex.stretching&&Array.isArray(ex.targetGroups)&&ex.targetGroups.length&&!ex.targetGroups.some(g=>completed.has(g))).forEach(ex=>{if(flow[ex.id]?.stage!=='archived'){flow[ex.id]={...(flow[ex.id]||{}),stage:'archived',status:'Non necessario'};document.getElementById('if50ex_'+ex.id)?.classList.add('if949-archived');changed=true}});if(changed)localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));return changed;};
+ window.if978PruneStretching=function(){
+  const flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}'),strength=(IF50.plan||[]).filter(ex=>!ex.mobility&&!ex.stretching&&!ex.cardio);
+  if(strength.some(ex=>flow[ex.id]?.stage!=='archived'))return false;
+  const used=new Set(strength.filter(ex=>flow[ex.id]?.status==='Completato'||Object.values(flow[ex.id]?.sets||{}).some(s=>s.done)).map(ex=>ex.group));
+  let changed=false;
+  (IF50.plan||[]).filter(ex=>ex.stretching&&ex.targetGroups?.length&&!ex.targetGroups.some(g=>used.has(g))).forEach(ex=>{if(flow[ex.id]?.stage!=='archived'){flow[ex.id]={...(flow[ex.id]||{}),stage:'archived',status:'Non necessario'};document.getElementById('if50ex_'+ex.id)?.classList.add('if949-archived');changed=true}});
+  if(changed){localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));const active=localStorage.getItem('informha_workout_active_0109');if(active&&flow[active]?.stage==='archived')window.if978Advance?.(active)}
+  return changed;
+ };
  window.if978Next=async function(id){
   const state=session(id);if(!state||state.saving||state.done.filter(Boolean).length!==(state.ex.perSide?2:1))return;
-  state.saving=true;paint(id);
+  state.saving=true;paint(id);const epoch=IF50.sessionId;
   try{
    const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:state.ex.name,priority:'Opzionale',status:'Completato'})});
-   if(out?.ok===false)throw Error(out.error||'Salvataggio non riuscito');
+   if(epoch!==IF50.sessionId)return;if(out?.ok===false)throw Error(out.error||'Salvataggio non riuscito');
    if(out?.workout_id)currentWorkoutId=out.workout_id;
    const flow=JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}');flow[id]={...flow[id],stage:'archived',status:'Completato'};localStorage.setItem('informha_workout_flow_0949',JSON.stringify(flow));
    document.getElementById('if50ex_'+id)?.classList.add('if949-archived');window.if978Advance(id);

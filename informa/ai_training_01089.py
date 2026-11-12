@@ -87,6 +87,8 @@ def unified_context():
             for key in ('request_json','plan_json'):
                 try:proposal[key.removesuffix('_json')] = json.loads(proposal.pop(key) or 'null')
                 except ValueError:proposal[key.removesuffix('_json')] = None
+        if 'effort' in {r[1] for r in con.execute('PRAGMA table_info(workout_finish)')}:
+            training['session_effort'] = rows(con, 'SELECT ts,workout_id,reason,duration_min,effort FROM workout_finish ORDER BY id DESC LIMIT 20')
         training['cardio_history'] = rows(con, 'SELECT ts,activity,duration_min,avg_hr,max_hr,calories FROM cardio ORDER BY id DESC LIMIT 30')
         training['imported_workouts'] = optional_rows(con, 'health_rest_workouts', 'SELECT name,start_ts,end_ts,duration_sec FROM health_rest_workouts ORDER BY start_ts DESC LIMIT 30')
         health = ctx.get('health') or {}

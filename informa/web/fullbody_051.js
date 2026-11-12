@@ -40,7 +40,7 @@ function if51AdaptPlan(key,time,energy,pain){
 function if51CalibrationNote(){const s=if51State();return s.calibrated?'<span class="green">Progressione attiva</span>':'<span class="blue">Calibrazione iniziale</span>'}
 function if51Home(){
  const home=document.querySelector('[data-page="home"]');if(!home||document.getElementById('if51HomeCard'))return;
- const card=document.createElement('div');card.id='if51HomeCard';card.className='card coach';const next=if51NextPlan();card.innerHTML=`<div class="ey">Programmazione flessibile</div><h2>Prossima rotazione: ${next} · ${IF51_PLANS[next].title}</h2><div class="sub">Nessun giorno obbligatorio: InFormha riparte dalla prossima seduta utile in base a ciò che hai realmente completato.</div><div class="measure"><span>Stato coach</span><b>${if51CalibrationNote()}</b></div>`;home.appendChild(card);
+ const card=document.createElement('div');card.id='if51HomeCard';card.className='card coach';card.innerHTML='<div class="ey">Coach automatico</div><h2>La prossima seduta segue i tuoi dati</h2><div class="sub">Scegli quanti esercizi vuoi fare e come ti senti. Il Coach considera storico, recupero e attrezzatura prima di proporre la seduta.</div>';home.appendChild(card);
 }
 function if51PatchGenerate(){
  const old=window.if50BuildPlan;
@@ -56,4 +56,4 @@ function if51PatchGenerate(){
  window.if50RenderWorkout=function(){oldRender();const h=document.querySelector('[data-page="workout"] h1');if(h&&IF50.planTitle)h.textContent=IF50.planTitle;const st=document.querySelector('[data-page="workout"] .status');if(st)st.textContent+=` · ${if51State().calibrated?'progressione':'calibrazione'}`}
 }
 function if51MarkPlanComplete(){const s=if51State();const key=(IF50.planTitle||'A').charAt(0);if(['A','B','C'].includes(key))s.lastPlan=key;const setCount=document.querySelectorAll('.check.done').length;if(setCount>=6)s.calibrated=true;s.lastWorkoutAt=new Date().toISOString();if51Save(s)}
-(function(){if51Home();if51PatchGenerate();const oldFinish=window.if50Finish;window.if50Finish=async function(){if51MarkPlanComplete();return oldFinish()}})();
+(function(){if51Home();if51PatchGenerate();const oldFinish=window.if50Finish;window.if50Finish=async function(){const result=await oldFinish();if(result===true)if51MarkPlanComplete();return result}})();

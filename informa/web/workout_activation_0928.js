@@ -32,8 +32,7 @@
   const originalFinish=window.if50Finish;
   if(typeof originalFinish==='function'){
     window.if50Finish=async function(){
-      try{return await originalFinish.apply(this,arguments)}
-      finally{setTimeout(lockWorkout,80)}
+      const result=await originalFinish.apply(this,arguments);if(result===true)setTimeout(lockWorkout,80);return result
     };
   }
 

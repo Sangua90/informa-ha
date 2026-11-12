@@ -6,16 +6,16 @@ const path=require('node:path');
 
 // Execute the real focus/controller code with a deterministic clock and API boundary.
 function fixture(){
- const disk=new Map(), jobs=[];let intervals=new Map(), tickId=0;
+ const disk=new Map(), jobs=[];let intervals=new Map(), tickId=0,now=Date.now();
  const classes=()=>{const s=new Set();return {contains:x=>s.has(x),add:(...xs)=>xs.forEach(x=>s.add(x)),remove:(...xs)=>xs.forEach(x=>s.delete(x)),toggle:(x,on)=>on?s.add(x):s.delete(x)}};
  function card(id){const rows=Array.from({length:3},()=>{const check={classList:classes()};const row={classList:classes(),scrollIntoView(){},querySelector:s=>s==='.check'?check:null};check.closest=()=>row;return row});return {id:'if50ex_'+id,classList:classes(),rows,querySelectorAll:()=>rows,querySelector:s=>s==='.check:not(.done)'?rows.map(r=>r.querySelector('.check')).find(c=>!c.classList.contains('done')):null}}
  let cards=[card('a'),card('b')];
  const key='informha_workout_flow_0949',active='informha_workout_active_0109';
  const states=()=>JSON.parse(disk.get(key)||'{}');
  const stage=(id,value)=>{const s=states();s[id]={stage:value,sets:{}};disk.set(key,JSON.stringify(s))};
- const c={console:{log(){}},Set,Date,JSON,Promise,timerInt:null,currentWorkoutId:null,IF50:{plan:[{id:'a'},{id:'b'}]},page:'workout',calls:0,fail:false,cancelSwap:false,
+ const c={console:{log(){}},Set,Date:class extends Date{static now(){return now}},JSON,Promise,timerInt:null,currentWorkoutId:null,IF50:{plan:[{id:'a'},{id:'b'}]},page:'workout',calls:0,fail:false,cancelSwap:false,
  localStorage:{getItem:k=>disk.get(k)||null,setItem:(k,v)=>disk.set(k,v),removeItem:k=>disk.delete(k)},
- setTimeout:f=>{jobs.push(f);return jobs.length},clearInterval:id=>intervals.delete(id),setInterval:f=>{intervals.set(++tickId,f);return tickId},toast(){},
+ setTimeout:f=>{jobs.push(f);return jobs.length},clearTimeout(){},clearInterval:id=>intervals.delete(id),setInterval:f=>{intervals.set(++tickId,f);return tickId},toast(){},
  document:{querySelectorAll:()=>cards,querySelector:()=>null,getElementById:()=>null,addEventListener(){},createElement:()=>({}),head:{appendChild(){}},body:{classList:classes()}},
  go(page){c.page=page},if50RenderWorkout(){},if949Start:id=>stage(id,'started'),
  async if50CompleteSet(id,n){c.calls++;await Promise.resolve();if(c.fail)return;cards.find(x=>x.id==='if50ex_'+id).rows[n-1].querySelector('.check').classList.add('done');c.startTimer(2);c.go('recovery')},
@@ -26,7 +26,7 @@ function fixture(){
  };c.window=c;vm.createContext(c);
  for(const file of ['workout_focus_0950.js','workout_controller_0108.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../informa/web',file),'utf8'),c);
  async function flush(){for(let loops=0;jobs.length&&loops<30;loops++){const batch=jobs.splice(0);for(const f of batch)await f();await Promise.resolve()}await Promise.resolve()}
- async function recover(skip=false){if(skip)c.if950SkipRecovery();else{for(let n=0;n<2;n++)for(const f of [...intervals.values()])f()}await flush()}
+ async function recover(skip=false){if(skip)c.if950SkipRecovery();else{for(let n=0;n<2;n++){now+=1000;for(const f of [...intervals.values()])f()}}await flush()}
  c.if108AskEffort=async()=>3;
  stage('a','started');
  return {c,states,flush,recover,active:()=>disk.get(active),stage};

@@ -11,7 +11,7 @@
     const card=document.getElementById('if50ex_treadmill');if(!card)return;
     let box=card.querySelector('#if970Treadmill');if(box)box.remove();
     const minutes=num('if931TreadmillMin')||num('if50CardioMin')||Number((IF50.plan||[]).find(x=>x.id==='treadmill')?.minutes)||20;
-    const d=await plan(minutes);if(!d.ok)return;
+    const session=IF50.sessionId;const d=await plan(minutes);if(!d.ok||session!==IF50.sessionId||card!==document.getElementById('if50ex_treadmill'))return;
     window.IF970_TREADMILL_PLAN=d;
     box=document.createElement('div');box.id='if970Treadmill';box.className='card coach';
     const rows=(d.phases||[]).map((p,i)=>`<div class="choice" style="margin-top:7px"><b>${i+1}. ${p.name}</b><div class="sub">${p.minutes} min · ${p.speed_kmh} km/h · inclinazione ${p.incline_pct}%</div></div>`).join('');
@@ -22,8 +22,10 @@
     const d=window.IF970_TREADMILL_PLAN;if(!d?.phases?.length){toast('Programma tapis roulant non disponibile');return}
     const st=stats(d.phases),fatigue=document.getElementById('if970Fatigue')?.value||'Giusta';
     try{
-      await api('api/treadmill-0970',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration_min:d.duration_min,avg_speed_kmh:Number(st.avgSpeed.toFixed(2)),max_speed_kmh:st.maxSpeed,avg_incline_pct:Number(st.avgIncline.toFixed(2)),max_incline_pct:st.maxIncline,fatigue,phases:d.phases})});
-      const cardioOut=await api('api/cardio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:typeof currentWorkoutId!=='undefined'?currentWorkoutId:null,workout_title:(typeof IF50!=='undefined'&&IF50.planTitle)||'Allenamento completo',activity:'Tapis roulant Fassi',duration_min:d.duration_min,notes:`Programma iCoach · max ${st.maxSpeed} km/h · inclinazione max ${st.maxIncline}% · fatica ${fatigue}`})});
+      const session=IF50.sessionId;
+      const cardioOut=await api('api/treadmill-0970',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:typeof currentWorkoutId!=='undefined'?currentWorkoutId:null,workout_title:IF50.planTitle||'Allenamento completo',request_id:session?session+':treadmill':undefined,save_cardio:true,duration_min:d.duration_min,avg_speed_kmh:Number(st.avgSpeed.toFixed(2)),max_speed_kmh:st.maxSpeed,avg_incline_pct:Number(st.avgIncline.toFixed(2)),max_incline_pct:st.maxIncline,fatigue,phases:d.phases})});
+      if(session!==IF50.sessionId)return false;
+      if(cardioOut?.ok===false)throw Error(cardioOut.error||'Salvataggio non riuscito');
       if(cardioOut?.workout_id&&typeof currentWorkoutId!=='undefined')currentWorkoutId=cardioOut.workout_id;
       toast('Tapis roulant completato e salvato');return true
     }catch(e){toast(e.message||'Errore salvataggio tapis roulant');throw e}

@@ -1,4 +1,4 @@
-import base64, json, urllib.parse, urllib.request, urllib.error
+import base64, json, math, urllib.parse, urllib.request, urllib.error
 from datetime import date
 import measurements_0978 as base
 import app as root
@@ -15,7 +15,7 @@ def _gemini_parts(parts, prompt, timeout=55):
     if cfg['provider']!='gemini' or not cfg['api_key']: raise RuntimeError('Gemini non configurato')
     model=urllib.parse.quote(cfg['model'],safe='-._')
     url=f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    payload={'contents':[{'role':'user','parts':parts+[{'text':prompt}]}],'generationConfig':{'temperature':0.2,'maxOutputTokens':900,'responseMimeType':'application/json'}}
+    payload={'contents':[{'role':'user','parts':parts+[{'text':prompt}]}],'generationConfig':{'maxOutputTokens':900,'responseMimeType':'application/json'}}
     req=urllib.request.Request(url,data=json.dumps(payload).encode(),method='POST',headers={'Content-Type':'application/json','x-goog-api-key':cfg['api_key']})
     try:
         with urllib.request.urlopen(req,timeout=timeout) as r:data=json.loads(r.read().decode())
@@ -23,7 +23,15 @@ def _gemini_parts(parts, prompt, timeout=55):
         body=e.read().decode(errors='replace');raise RuntimeError(body[:500])
     text=''.join(str(p.get('text','')) for c in data.get('candidates',[]) for p in (c.get('content') or {}).get('parts',[])).strip()
     if text.startswith('```'): text=text.strip('`').replace('json\n','',1)
-    return json.loads(text)
+    out=json.loads(text)
+    if not isinstance(out,dict) or not isinstance(out.get('understood'),str) or not out['understood'].strip():
+        raise ValueError('Analisi del pasto non utilizzabile: riprova con una descrizione più chiara')
+    for key in ('calories','protein_g','carbs_g','fat_g','fiber_g'):
+        value=out.get(key,0)
+        if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or value<0:
+            raise ValueError('Valori nutrizionali AI non validi: riprova')
+        out[key]=value
+    return out
 
 def _prompt():
     cat=_catalog(); raw=json.dumps(cat,ensure_ascii=False)[:10000]

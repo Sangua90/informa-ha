@@ -18,8 +18,9 @@
  window.if984CompleteTreadmill=async function(btn){
   if(btn){btn.disabled=true;btn.textContent='Salvataggio…'}
   try{
-   if(typeof saveTreadmill==='function')await saveTreadmill();
-   if(state('treadmill')?.stage!=='archived'&&typeof window.if50Status==='function')await window.if50Status('treadmill','Completato','Cardio',btn);
+   if(typeof saveTreadmill!=='function')throw Error('Salvataggio tapis roulant non disponibile');
+   if(await saveTreadmill()!==true)return false;
+   const all=JSON.parse(localStorage.getItem(FLOW_KEY)||'{}');all.treadmill={...(all.treadmill||{}),stage:'archived',status:'Completato',archivedAt:new Date().toISOString()};localStorage.setItem(FLOW_KEY,JSON.stringify(all));
    advance();
   }catch(e){toast(e.message||'Errore completamento tapis roulant');if(btn){btn.disabled=false;btn.textContent='Completa tapis roulant'}}
  };

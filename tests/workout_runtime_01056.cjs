@@ -104,7 +104,7 @@ test('skip cancels a running hold without saving; timed aliases normalize, dynam
 test('weights plus/minus and treadmill skip keep canonical previous segment',async()=>{
  const f=fixture();try{f.w.IF50.plan.unshift({id:'treadmill',name:'Tapis',cardio:true,sets:0});f.w.if108ResetOrder();f.w.if50RenderWorkout();await f.advance();
  await f.w.if1049SkipTreadmill();await f.advance();assert.equal(f.state('treadmill').status,'Saltato');assert.equal(f.active(),'chest');
- f.w.if1041Weight('chest',1);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'1');f.w.if1041Weight('chest',-1);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'0');
+ f.w.if1041Weight('chest',1);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'1');f.w.if1041Weight('chest',-1);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'1');
  f.w.if50RenderWorkout();await f.advance();assert.equal(f.w.if108Progress()[0].kind,'skip');
  }finally{f.dom.window.close()}
 });

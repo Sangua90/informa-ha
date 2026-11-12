@@ -100,7 +100,7 @@ def coach_week_069():
             latest_finish[key] = row
     finishes = list(latest_finish.values())
 
-    strength_days = {str(w.get('ts') or '')[:10] for w in workouts if w.get('ts')}
+    strength_days = {str(s.get('ts') or '')[:10] for s in sets if s.get('ts')}
     cardio_days = {str(c.get('ts') or '')[:10] for c in cardio if c.get('ts')}
     training_days = strength_days | cardio_days
     cardio_only_days = cardio_days - strength_days

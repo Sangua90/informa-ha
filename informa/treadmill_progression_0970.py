@@ -1,6 +1,7 @@
 import load_progression_0969 as base
 import app as root
 import json
+import math
 from datetime import datetime
 from flask import request
 
@@ -59,7 +60,7 @@ def build_plan(duration, last=None):
       {'name':'Progressione','minutes':second,'speed_kmh':round(peak_speed,1),'incline_pct':round(incline,1)},
       {'name':'Defaticamento','minutes':cool,'speed_kmh':round(max(3.5,base_speed-0.8),1),'incline_pct':0},
     ]
-    return phases,reason
+    return [phase for phase in phases if phase['minutes']>0],reason
 
 
 @app.get('/api/treadmill-0970/history')
@@ -75,7 +76,7 @@ def treadmill_history_0970():
 def treadmill_plan_0970():
     try:duration=float(request.args.get('minutes') or 0)
     except Exception:duration=0
-    if duration<=0:return root.jsonify(ok=False,error='Durata non valida'),400
+    if not math.isfinite(duration) or duration<5:return root.jsonify(ok=False,error='Inserisci almeno 5 minuti'),400
     phases,reason=build_plan(duration,last_session())
     return root.jsonify(ok=True,duration_min=int(round(duration)),phases=phases,reason=reason)
 

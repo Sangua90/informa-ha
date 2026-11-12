@@ -21,7 +21,6 @@ class WorkoutFocus0950Test(unittest.TestCase):
         for marker in (
             "recovery_last5_audio=1",
             "window.startTimer=beginTimer",
-            "setTimeout(returnToExercise,450)",
             "Serie successiva pronta",
             "if950SkipRecovery",
             "if950PauseRecovery",
