@@ -1,5 +1,6 @@
 from container_contract import assert_container
 import importlib.util
+import re
 import subprocess
 import sys
 import types
@@ -14,7 +15,9 @@ class ExerciseMenuFix0959Test(unittest.TestCase):
     def test_router_is_loaded_before_the_application_script(self):
         index = (self.project / "informa" / "web" / "index.html").read_text()
         capture = index.index("document.addEventListener('click'")
-        application = index.index('<script src="app.js?v=0960"></script>')
+        application_script = re.search(r'<script src="app\.js\?v=\d+"></script>', index)
+        self.assertIsNotNone(application_script)
+        application = application_script.start()
         self.assertLess(capture, application)
         self.assertIn("event.stopImmediatePropagation()", index)
         self.assertIn("label!=='Esercizi'", index)
