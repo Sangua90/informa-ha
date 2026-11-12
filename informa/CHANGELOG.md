@@ -1,3 +1,11 @@
+## 0.10.94
+
+- Corretto il collegamento delle domande: ora usa il percorso nativo delle app di Home Assistant.
+- Aggiunto il pulsante **Leggi e rispondi** alla notifica mobile, con apertura in primo piano.
+- Gestite apertura con app già caricata, ritorno dalla sospensione e riapertura della stessa notifica.
+- La notifica pendente precedente viene sostituita una sola volta con il collegamento aggiornato.
+- Gli errori di invio al servizio iPhone vengono conservati e mostrati nella pagina della domanda.
+
 ## 0.10.93
 
 - Nuova pagina **Domande del Coach**, accessibile da Altro e AI Coach.

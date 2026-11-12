@@ -35,10 +35,30 @@ class CoachQuestionsTest(unittest.TestCase):
         q=self.first();self.first();self.assertEqual(len(self.q.listing()),1)
         calls=[c for c in self.ha.call_args_list if c.args[0].endswith('/create')]
         self.assertEqual(len(calls),1);payload=calls[0].kwargs['payload']
-        self.assertIn('/abc_informa?coach_question='+str(q['id']),payload['message'])
+        self.assertIn('/app/abc_informa/coachquestions/'+str(q['id']),payload['message'])
         self.assertNotIn(q['body'],payload['message']);self.assertEqual(payload['notification_id'],'informa_coach_question_'+str(q['id']))
         mobile=[c for c in self.ha.call_args_list if '/notify/' in c.args[0]][0].kwargs['payload']
         self.assertEqual(mobile['data']['url'],mobile['data']['clickAction']);self.assertEqual(mobile['data']['tag'],payload['notification_id'])
+        self.assertEqual(mobile['data']['actions'][0]['uri'],mobile['data']['url'])
+        self.assertEqual(mobile['data']['actions'][0]['activationMode'],'foreground')
+
+    def test_old_pending_notification_is_replaced_once_with_the_new_mobile_link(self):
+        q=self.first();self.ha.reset_mock()
+        with closing(self.core.db()) as con:con.execute('UPDATE coach_questions SET notification_format=0');con.commit()
+        self.first();self.first()
+        self.assertEqual(sum('/notify/' in c.args[0] for c in self.ha.call_args_list),1)
+        payload=next(c.kwargs['payload'] for c in self.ha.call_args_list if '/notify/' in c.args[0])
+        self.assertEqual(payload['data']['url'],f"/app/abc_informa/coachquestions/{q['id']}")
+        self.assertEqual(payload['data']['tag'],f"informa_coach_question_{q['id']}")
+
+    def test_mobile_failure_is_recorded_and_does_not_remove_the_ha_question(self):
+        def send(path,**kw):
+            if '/notify/' in path:raise RuntimeError('private notifier error')
+            return {}
+        self.ha.side_effect=send;q=self.first()
+        self.assertFalse(q['mobile_notified']);self.assertTrue(q['notified_at']);self.assertTrue(q['mobile_notification_error'])
+        self.assertNotIn('private notifier',q['mobile_notification_error'])
+        count=self.ha.call_count;self.first();self.assertEqual(self.ha.call_count,count)
 
     def test_answer_edit_and_lost_ack_retry_save_once_per_revision(self):
         q=self.first();first=self.answer(q).get_json()['question'];self.assertEqual(first['state'],'answered')

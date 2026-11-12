@@ -34,6 +34,7 @@
    const field=el('textarea');field.id='if1093Answer';field.className='field';field.rows=5;field.maxLength=2000;field.placeholder='Scrivi qui la tua risposta…';field.value=drafts.get(q.id)?.value??q.answer??'';
    field.disabled=saving;field.oninput=()=>drafts.set(q.id,{value:field.value,revision:drafts.get(q.id)?.revision??q.revision});
    card.append(label,field);
+   if(q.mobile_notification_error)card.appendChild(el('p',q.mobile_notification_error,'sub'));
    const send=button(saving?'Invio in corso…':q.state==='answered'?'Aggiorna risposta':'Invia risposta al Coach',()=>save(q.id),'btn');send.id='if1093Send';send.disabled=saving;card.appendChild(send);
    if(q.state==='open')card.appendChild(button('Rispondi più tardi · 24 ore',()=>postpone(q.id)));
    if(q.state==='answered')card.appendChild(el('p','Risposta salvata. Il Coach la leggerà alla prossima generazione; la seduta già aperta resta invariata.','sub'));
@@ -68,17 +69,38 @@
  async function reload(id){if(await refresh()){drafts.delete(id);selected=id;render()}}
  window.if1093OpenQuestion=function(q){if(q){upsert(q);selected=q.id}go('coachquestions')};
  const baseGo=window.go;
- if(typeof baseGo==='function')window.go=function(name){const out=baseGo.apply(this,arguments);if(name==='coachquestions'){render();refresh()}return out};
- function notificationId(){
-  let own=new URLSearchParams(location.search).get('coach_question');
-  try{own=new URLSearchParams(window.parent.location.search).get('coach_question')||own}catch(e){}
-  return /^[1-9]\d{0,8}$/.test(own||'')?Number(own):null;
+ if(typeof baseGo==='function')window.go=function(name){if(name!=='coachquestions'&&page.classList.contains('active'))clearNotificationLink();const out=baseGo.apply(this,arguments);if(name==='coachquestions'){render();refresh()}return out};
+ let haRoute=null;
+ function target(path,search=''){
+  const value=new URLSearchParams(search).get('coach_question')||path.match(/\/coachquestions\/([1-9]\d{0,8})\/?$/)?.[1];
+  return /^[1-9]\d{0,8}$/.test(value||'')?{id:Number(value),key:path+'?'+search}:null;
  }
- async function checkLink(){const id=notificationId();if(!id||lastLink===String(id))return;lastLink=String(id);selected=id;go('coachquestions')}
+ function notificationTarget(){
+  // HA forwards the route to subscribed app frames; no parent URL access needed.
+  const route=haRoute&&target(haRoute.prefix+haRoute.path);if(route)return route;
+  try{const p=window.parent.location;const t=target(p.pathname,p.search);if(t)return t}catch(e){}
+  return target(location.pathname,location.search);
+ }
+ function clearNotificationLink(){
+  if(!notificationTarget())return;
+  if(window.parent===window){const url=new window.URL(location.href);url.searchParams.delete('coach_question');url.pathname=url.pathname.replace(/\/coachquestions\/[1-9]\d{0,8}\/?$/,'');history.replaceState(null,'',url);haRoute=null;lastLink='';return}
+  let path=haRoute?.prefix;
+  try{const url=new window.URL(window.parent.location.href);url.searchParams.delete('coach_question');url.pathname=url.pathname.replace(/\/coachquestions\/[1-9]\d{0,8}\/?$/,'');path=url.pathname+url.search}catch(e){}
+  if(typeof path==='string'&&/^\/(?:app\/[a-z0-9_]+|[a-z0-9_]+)(?:\?[^#]*)?$/.test(path))window.parent.postMessage({type:'home-assistant/navigate',path,options:{replace:true}},location.origin);
+ }
+ function checkLink(force=false){const t=notificationTarget();if(!t){lastLink='';return}if(!force&&lastLink===t.key)return;lastLink=t.key;selected=t.id;go('coachquestions')}
+ function subscribe(){if(window.parent!==window)window.parent.postMessage({type:'home-assistant/subscribe-properties'},location.origin)}
+ window.addEventListener('message',event=>{
+  if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=='home-assistant/properties')return;
+  const route=event.data.route;if(!route||typeof route.path!=='string'||typeof route.prefix!=='string')return;
+  haRoute={prefix:route.prefix,path:route.path};checkLink();
+ });
+ window.addEventListener('pageshow',()=>{subscribe();checkLink(true)});
+ subscribe();
  const observer=new MutationObserver(entries);observer.observe(app,{childList:true,subtree:true});
  setTimeout(async()=>{await refresh(true);await checkLink();if(location.hash==='#coachquestions')render()},500);
  setInterval(checkLink,1500);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden){refresh();checkLink()}});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){subscribe();refresh();checkLink(true)}});
  const css=el('style','.if1093-entry{margin-bottom:14px!important}.if1093-question label{display:block;margin:18px 0 8px;font-weight:700}.if1093-question textarea{display:block;width:100%;min-height:140px;resize:vertical;font:inherit;line-height:1.5;box-sizing:border-box}.if1093-question h2{line-height:1.4}');document.head.appendChild(css);
  entries();
 })();

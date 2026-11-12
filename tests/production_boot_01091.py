@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory() as directory:
     script='''
 import os,json
 from unittest.mock import patch
-os.environ['INFORMA_VERSION']='0.10.93'
+os.environ['INFORMA_VERSION']='0.10.94'
 os.environ.pop('SUPERVISOR_TOKEN',None)
 import coach_questions_01093 as server
 client=server.app.test_client()
@@ -22,6 +22,7 @@ for path in ['/', '/api/state','/api/ai-coach/context','/api/ai-coach/today','/a
     response=client.get(path);checks[path]=response.status_code
     assert response.status_code==200,(path,response.get_data(as_text=True)[:500])
 assert client.post('/api/measurements-0978/reminder-check').status_code==200
+assert 'app.js?v=01094' in client.get('/').get_data(as_text=True)
 body={'exercise':'Chest press alla macchina','set_no':1,'reps':10,'weight':5,'request_id':'smoke:chest:1'}
 wid=client.post('/api/set',json=body).get_json()['workout_id']
 assert client.post('/api/set',json=body).get_json()['workout_id']==wid

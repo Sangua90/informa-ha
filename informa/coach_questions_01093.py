@@ -24,17 +24,22 @@ with closing(root.db()) as con:
         state TEXT NOT NULL DEFAULT 'open', answer TEXT, revision INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL, answered_at TEXT, deferred_until TEXT,
         notified_at TEXT, notify_lease REAL NOT NULL DEFAULT 0,
-        notify_retry_at REAL NOT NULL DEFAULT 0, notify_error TEXT);
+        notify_retry_at REAL NOT NULL DEFAULT 0, notify_error TEXT,
+        notification_format INTEGER NOT NULL DEFAULT 0,
+        mobile_notified_at TEXT, mobile_error TEXT);
     CREATE TABLE IF NOT EXISTS coach_question_answers(
         question_id INTEGER NOT NULL, revision INTEGER NOT NULL,
         answer TEXT NOT NULL, answered_at TEXT NOT NULL,
         PRIMARY KEY(question_id,revision));
     ''')
+    existing={r[1] for r in con.execute('PRAGMA table_info(coach_questions)')}
+    for name,kind in [('notification_format','INTEGER NOT NULL DEFAULT 0'),('mobile_notified_at','TEXT'),('mobile_error','TEXT')]:
+        if name not in existing:con.execute(f'ALTER TABLE coach_questions ADD COLUMN {name} {kind}')
     con.commit()
 
 
 def public(row):
-    return {k: row[k] for k in ('id','topic','body','source','state','answer','revision','created_at','answered_at','deferred_until','notified_at')} | {'notification_pending': row['state']=='open' and not row['notified_at']}
+    return {k: row[k] for k in ('id','topic','body','source','state','answer','revision','created_at','answered_at','deferred_until','notified_at')} | {'notification_pending': row['state']=='open' and (not row['notified_at'] or row['notification_format']<2 or bool(row['mobile_error'])), 'mobile_notified':bool(row['mobile_notified_at']), 'mobile_notification_error':row['mobile_error']}
 
 
 def listing():
@@ -90,10 +95,10 @@ def panel_path():
 def notify_question(id):
     now=time.time()
     with closing(root.db()) as con:
-        claimed=con.execute("UPDATE coach_questions SET notify_lease=? WHERE id=? AND state='open' AND notified_at IS NULL AND notify_lease<? AND notify_retry_at<=? AND (deferred_until IS NULL OR deferred_until<=?)",(now+120,id,now,now,datetime.now().isoformat(timespec='seconds'))).rowcount
+        claimed=con.execute("UPDATE coach_questions SET notify_lease=? WHERE id=? AND state='open' AND (notified_at IS NULL OR notification_format<2 OR mobile_error IS NOT NULL) AND notify_lease<? AND notify_retry_at<=? AND (deferred_until IS NULL OR deferred_until<=?)",(now+120,id,now,now,datetime.now().isoformat(timespec='seconds'))).rowcount
         con.commit()
     if not claimed:return False
-    link=panel_path()+'?coach_question='+str(id)
+    link='/app/'+panel_path().strip('/')+'/coachquestions/'+str(id)
     tag='informa_coach_question_'+str(id)
     try:
         # Keep question/answer contents out of notifications and lock-screen previews.
@@ -106,14 +111,16 @@ def notify_question(id):
             con.execute('UPDATE coach_questions SET notify_lease=0,notify_retry_at=?,notify_error=? WHERE id=?',(now+300,'Notifica Home Assistant non disponibile',id));con.commit()
         return False
     # The same Companion notifier is already used by measurement reminders.
+    mobile_at=None;mobile_error=None
     try:
         root.hass_request('services/notify/mobile_app_iphone_17pro_di',method='POST',payload={
             'title':'InFormha · Domanda del Coach','message':'Apri InFormha per leggere la domanda e inviare la tua risposta.',
-            'data':{'url':link,'clickAction':link,'tag':tag}},timeout=10)
+            'data':{'url':link,'clickAction':link,'tag':tag,'actions':[{'action':'URI','title':'Leggi e rispondi','uri':link,'activationMode':'foreground'}]}},timeout=10)
+        mobile_at=datetime.now().isoformat(timespec='seconds')
     except Exception:
-        pass  # The clickable notification in Home Assistant remains available.
+        mobile_error='Invio all’iPhone non confermato. La domanda resta disponibile in InFormha.'
     with closing(root.db()) as con:
-        con.execute('UPDATE coach_questions SET notified_at=?,notify_lease=0,notify_error=NULL WHERE id=?',(datetime.now().isoformat(timespec='seconds'),id));con.commit()
+        con.execute('UPDATE coach_questions SET notified_at=?,notify_lease=0,notify_error=NULL,notification_format=2,mobile_notified_at=?,mobile_error=?,notify_retry_at=? WHERE id=?',(datetime.now().isoformat(timespec='seconds'),mobile_at,mobile_error,now+300 if mobile_error else 0,id));con.commit()
         row=con.execute('SELECT state FROM coach_questions WHERE id=?',(id,)).fetchone()
     if row and row['state']=='answered':dismiss_notification(id)
     return True

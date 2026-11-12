@@ -237,3 +237,31 @@ test('coach questions: AI clarification opens the question page and does not cre
  assert.equal(f.w.document.querySelector('.page.active').dataset.page,'checkin');assert.equal(f.calls.filter(x=>x.url==='api/coach-questions/7/postpone').length,1);
  }finally{f.close()}
 });
+
+test('notification fix: native HA app path opens the specific question without query parameters',async()=>{
+ const f=await fixture({url:'https://informa.test/app/abc_informa/coachquestions/7',questions:[coachQuestion()]});try{
+ assert.equal(f.w.document.querySelector('.page.active').dataset.page,'coachquestions');assert.equal(f.w.document.querySelector('.if1093-question').dataset.questionId,'7');
+ }finally{f.close()}
+});
+
+test('notification fix: HA route bridge opens the question in an already loaded webview',async()=>{
+ const f=await fixture({questions:[coachQuestion()]});try{
+ f.w.dispatchEvent(new f.w.MessageEvent('message',{origin:'https://informa.test',source:f.w,data:{type:'home-assistant/properties',route:{prefix:'/app/abc_informa',path:'/coachquestions/7'}}}));await f.flush();
+ assert.equal(f.w.document.querySelector('.page.active').dataset.page,'coachquestions');assert.equal(f.w.document.querySelector('.if1093-question').dataset.questionId,'7');
+ }finally{f.close()}
+});
+
+test('notification fix: closing does not trap navigation, and a repeated old notification opens again',async()=>{
+ const f=await fixture({url:'https://informa.test/?coach_question=7',questions:[coachQuestion()]});try{
+ f.w.document.querySelector('[data-page=coachquestions] .if1088-close').click();await f.advance(2000);assert.notEqual(f.w.document.querySelector('.page.active').dataset.page,'coachquestions');
+ f.w.history.replaceState(null,'','/?coach_question=7#home');await f.advance(2000);
+ assert.equal(f.w.document.querySelector('.page.active').dataset.page,'coachquestions');
+ }finally{f.close()}
+});
+
+test('notification fix: messages from other origins cannot navigate or choose a question',async()=>{
+ const f=await fixture({questions:[coachQuestion()]});try{
+ f.w.dispatchEvent(new f.w.MessageEvent('message',{origin:'https://untrusted.test',source:f.w,data:{type:'home-assistant/properties',route:{prefix:'/app/abc_informa',path:'/coachquestions/7'}}}));await f.flush();
+ assert.equal(f.w.document.querySelector('.page.active').dataset.page,'home');
+ }finally{f.close()}
+});
