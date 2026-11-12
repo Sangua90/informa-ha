@@ -188,8 +188,10 @@ def ai_connection_test_01098():
     cfg=training.config._ai_config_092()
     if cfg['provider']=='none':return root.jsonify(ok=True,provider='none',connected=True,message='Coach locale attivo')
     try:
-        answer=training.request_ai('Rispondi soltanto con: Connessione Gemini attiva.',{'training':{},'nutrition':{},'supplements':{}},timeout=20)
-        return root.jsonify(ok=True,provider='gemini',model=cfg['model'],connected=True,message=answer[:180],connection=training.request_info())
+        schema={'type':'object','properties':{'connection':{'type':'string','enum':['ok']}},'required':['connection'],'additionalProperties':False}
+        answer=training.request_ai('Esegui un test di connessione senza dati personali. Restituisci soltanto un oggetto JSON con connection uguale a ok.',{'training':{},'nutrition':{},'supplements':{}},timeout=20,schema=schema)
+        if json.loads(answer)!={'connection':'ok'}:raise RuntimeError('Gemini non ha restituito il formato richiesto')
+        return root.jsonify(ok=True,provider='gemini',model=cfg['model'],connected=True,message='Connessione Gemini attiva.',connection={**training.request_info(),'structured_output':True})
     except Exception as error:
         message=str(error) if isinstance(error,RuntimeError) else 'Risposta Gemini non utilizzabile'
         return root.jsonify(ok=False,provider='gemini',model=cfg['model'],connected=False,error=message,connection=training.request_info()),502

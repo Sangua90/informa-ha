@@ -4,7 +4,7 @@ The original bounded retries could stop after one 503 when Interactions supplied
 
 At most three calls share the existing total deadline. A short first-call timeout reserves time for the alternate interface. The failed Interactions URI is not called again before its Retry-After. The alternate honors its own Retry-After. Authentication, permission, billing and ordinary quota errors do not trigger failover. Reasoning parts and truncated candidate output are not accepted as an answer.
 
-The manual connection endpoint uses this exact transport. Its diagnostics contain only endpoint names, HTTP statuses, allowlisted Google error codes and numeric Retry-After values, in thread-local state. No upstream error body, private URL, API key or context is returned in diagnostics. The UI keeps success or failure visible after its configuration refresh and exposes these diagnostics in an optional closed detail. Double-clicks do not duplicate the test.
+The manual connection endpoint uses this exact transport and verifies a tiny structured JSON result, without personal context. This exercises the output format required by workout generation, rather than establishing only plain-text connectivity. Its diagnostics contain only endpoint names, HTTP statuses, allowlisted Google error codes, numeric Retry-After values and a structured-output validation flag, in thread-local state. No upstream error body, private URL, API key or context is returned in diagnostics. The UI keeps success or failure visible after its configuration refresh and exposes these diagnostics in an optional closed detail. Double-clicks do not duplicate the test.
 
 ## Executed checks
 

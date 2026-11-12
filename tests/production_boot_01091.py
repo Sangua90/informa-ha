@@ -78,7 +78,9 @@ def provider(req,timeout):
         raise urllib.error.HTTPError('test',503,'busy',{'Retry-After':'120'},io.BytesIO(b'{"error":{"code":"service_unavailable"}}'))
     payload=json.loads(req.data)
     assert '/models/gemini-3.6-flash:generateContent' in req.full_url
-    if 'Rispondi soltanto con:' in payload['contents'][0]['parts'][0]['text']:return GeminiResponse('Connessione Gemini attiva.')
+    if 'test di connessione' in payload['contents'][0]['parts'][0]['text']:
+        assert payload['generationConfig']['responseFormat']['text']['schema']['required']==['connection']
+        return GeminiResponse(json.dumps({'connection':'ok'}))
     context=server.training.unified_context();sources=context['coverage']['sources']+['checkin']
     assert payload['generationConfig']['responseFormat']['text']['schema']['required']==['decision','reason','data_used','items']
     return GeminiResponse(json.dumps({'decision':'train','reason':'Dati recenti considerati','data_used':sources,'items':[{'id':'chest','sets':2,'reps':10,'rest':60,'load_policy':'maintain'},{'id':'plank','sets':2,'reps':30,'rest':60,'load_policy':'maintain'}]}))
@@ -86,6 +88,7 @@ with patch.object(server.training.config,'_ai_config_092',return_value={'provide
     connection=client.post('/api/ai/test')
     assert connection.status_code==200,connection.get_json()
     assert connection.get_json()['connected'] and connection.get_json()['connection']['api']=='generateContent'
+    assert connection.get_json()['connection']['structured_output']
     proposal=client.post('/api/ai-workout-01089',json={'exercise_count':2,'minutes':45,'energy':'Normale','pain':'Nessuno'}).get_json()
     assert proposal['mode']=='gemini',proposal
     assert proposal['plan'][1]['repType']=='seconds' and proposal['plan'][1]['reps']==30
