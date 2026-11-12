@@ -31,6 +31,7 @@ with closing(root.db()) as con:
         question_id INTEGER NOT NULL, revision INTEGER NOT NULL,
         answer TEXT NOT NULL, answered_at TEXT NOT NULL,
         PRIMARY KEY(question_id,revision));
+    CREATE TABLE IF NOT EXISTS coach_notification_test(id INTEGER PRIMARY KEY CHECK(id=1),sent_at REAL NOT NULL);
     ''')
     existing={r[1] for r in con.execute('PRAGMA table_info(coach_questions)')}
     for name,kind in [('notification_format','INTEGER NOT NULL DEFAULT 0'),('mobile_notified_at','TEXT'),('mobile_error','TEXT')]:
@@ -92,6 +93,23 @@ def panel_path():
     return _panel
 
 
+def iphone_service():
+    # Select the registered phone, never a tablet or a guessed group notifier.
+    preferred=('mobile_app_iphone_17pro_di_edo','mobile_app_iphone_17pro_di')
+    try:registry=root.hass_request('services',timeout=5)
+    except Exception:return preferred[0]  # Verified service in this installation.
+    if not isinstance(registry,list):return preferred[0]
+    choices={name for domain in registry if domain.get('domain')=='notify' for name in domain.get('services',{}) if re.fullmatch(r'mobile_app_iphone[a-z0-9_]*',name)}
+    for name in preferred:
+        if name in choices:return name
+    if len(choices)==1:return next(iter(choices))
+    raise RuntimeError('Notificatore iPhone non disponibile o non univoco')
+
+
+def mobile_data(link,tag):
+    return {'url':link,'clickAction':link,'tag':tag,'actions':[{'action':'URI','title':'Leggi e rispondi','uri':link,'activationMode':'foreground'}]}
+
+
 def notify_question(id):
     now=time.time()
     with closing(root.db()) as con:
@@ -113,9 +131,9 @@ def notify_question(id):
     # The same Companion notifier is already used by measurement reminders.
     mobile_at=None;mobile_error=None
     try:
-        root.hass_request('services/notify/mobile_app_iphone_17pro_di',method='POST',payload={
+        root.hass_request('services/notify/'+iphone_service(),method='POST',payload={
             'title':'InFormha · Domanda del Coach','message':'Apri InFormha per leggere la domanda e inviare la tua risposta.',
-            'data':{'url':link,'clickAction':link,'tag':tag,'actions':[{'action':'URI','title':'Leggi e rispondi','uri':link,'activationMode':'foreground'}]}},timeout=10)
+            'data':mobile_data(link,tag)},timeout=10)
         mobile_at=datetime.now().isoformat(timespec='seconds')
     except Exception:
         mobile_error='Invio all’iPhone non confermato. La domanda resta disponibile in InFormha.'
@@ -151,6 +169,21 @@ def ai_question(value):
 @app.get('/api/coach-questions')
 def coach_questions_list():
     return root.jsonify(ok=True,items=listing())
+
+
+@app.post('/api/coach-questions/test-notification')
+def coach_notification_test():
+    now=time.time()
+    with closing(root.db()) as con:
+        con.execute('BEGIN IMMEDIATE');last=con.execute('SELECT sent_at FROM coach_notification_test WHERE id=1').fetchone()
+        if last and now-last['sent_at']<60:return root.jsonify(ok=False,error='Attendi un minuto prima di riprovare la notifica'),429
+        con.execute('INSERT OR REPLACE INTO coach_notification_test(id,sent_at) VALUES(1,?)',(now,))
+        q=con.execute("SELECT id FROM coach_questions ORDER BY (state='open') DESC,id DESC LIMIT 1").fetchone();con.commit()
+    link='/app/'+panel_path().strip('/')+('/coachquestions/'+str(q['id']) if q else '')
+    try:
+        root.hass_request('services/notify/'+iphone_service(),method='POST',payload={'title':'InFormha · Prova notifica','message':'Tocca per aprire InFormha e le domande del Coach.','data':mobile_data(link,'informa_coach_test')},timeout=10)
+    except Exception:return root.jsonify(ok=False,error='Notifica iPhone non inviata. La domanda resta disponibile in InFormha.'),502
+    return root.jsonify(ok=True)
 
 
 @app.post('/api/coach-questions/check')

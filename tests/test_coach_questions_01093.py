@@ -136,3 +136,22 @@ class CoachQuestionsTest(unittest.TestCase):
         def invalid(p,c,**kw):return json.dumps({'decision':'clarify','reason':'Test','data_used':c['coverage']['sources'],'items':[],'question':{'topic':'invalid','text':'Invented'}})
         with patch.object(self.training,'request_ai',invalid):data=self.client.post('/api/ai-workout-01089',json={}).get_json()
         self.assertEqual(data['mode'],'local_fallback');self.assertEqual(len(self.q.listing()),before)
+
+    def test_registered_iphone_service_is_selected_instead_of_the_old_truncated_name(self):
+        registry=[{'domain':'notify','services':{'mobile_app_ipad_di_edoardo':{},'mobile_app_iphone_17pro_di_edo':{},'mobile_app_tablet':{}}}]
+        self.ha.side_effect=lambda path,**kw:registry if path=='services' else {}
+        self.first()
+        self.assertTrue(any(c.args[0]=='services/notify/mobile_app_iphone_17pro_di_edo' for c in self.ha.call_args_list))
+        self.assertFalse(any(c.args[0]=='services/notify/mobile_app_iphone_17pro_di' for c in self.ha.call_args_list))
+
+    def test_notifier_discovery_uses_one_phone_and_never_guesses_between_two(self):
+        self.ha.return_value=[{'domain':'notify','services':{'mobile_app_iphone_new':{},'mobile_app_ipad':{}}}]
+        self.assertEqual(self.q.iphone_service(),'mobile_app_iphone_new')
+        self.ha.return_value=[{'domain':'notify','services':{'mobile_app_iphone_one':{},'mobile_app_iphone_two':{},'mobile_app_ipad':{}}}]
+        with self.assertRaises(RuntimeError):self.q.iphone_service()
+
+    def test_test_notification_preserves_the_completed_question_and_is_rate_limited(self):
+        q=self.first();self.answer(q,'Tre volte')
+        self.assertEqual(self.client.post('/api/coach-questions/test-notification').status_code,200)
+        self.assertEqual(self.client.post('/api/coach-questions/test-notification').status_code,429)
+        current=self.q.listing()[0];self.assertEqual(current['state'],'answered');self.assertEqual(current['answer'],'Tre volte');self.assertEqual(current['revision'],1)

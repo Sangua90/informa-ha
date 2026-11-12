@@ -1,3 +1,11 @@
+## 0.10.95
+
+- Guida illustrata alle otto misure, con posizione del metro e istruzioni accessibili dal simbolo ⓘ di ogni campo.
+- Rimozione dei vecchi campi nascosti duplicati: vengono salvati i valori inseriti nel modulo visibile.
+- Dopo l’invio, la domanda viene chiusa; le risposte restano consultabili e modificabili nello storico chiuso.
+- Corretto il servizio iPhone troncato e aggiunta la ricerca del notificatore realmente registrato.
+- Pulsante per provare la notifica sull’iPhone senza creare nuove domande o cambiare le risposte.
+
 ## 0.10.94
 
 - Corretto il collegamento delle domande: ora usa il percorso nativo delle app di Home Assistant.

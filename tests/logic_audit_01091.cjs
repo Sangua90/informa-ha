@@ -216,7 +216,9 @@ test('coach questions: save is single-flight, persists the answer, and can be ed
  let field=f.w.document.getElementById('if1093Answer');field.value='Due volte, martedì e sabato';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));f.w.deferQuestion=true;
  f.w.document.getElementById('if1093Send').click();await f.flush();f.w.document.getElementById('if1093Send').click();
  assert.equal(f.calls.filter(x=>x.url==='api/coach-questions/7/answer').length,1);f.w.resolveQuestion();await f.flush();
- assert.equal(f.w.document.getElementById('if1093Answer').value,'Due volte, martedì e sabato');assert.match(f.w.document.querySelector('.if1093-question').textContent,/Risposta salvata/);
+ assert.equal(f.w.document.getElementById('if1093Answer'),null);assert.match(f.w.document.getElementById('if1093Confirmation').textContent,/domanda è completata/);
+ const history=f.w.document.querySelector('[data-page=coachquestions] details');assert.equal(history.open,false);history.querySelector('summary').click();history.querySelector('button[data-question-id="7"]').click();
+ assert.equal(f.w.document.getElementById('if1093Answer').value,'Due volte, martedì e sabato');
  f.w.deferQuestion=false;field=f.w.document.getElementById('if1093Answer');field.value='Tre volte';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));f.w.document.getElementById('if1093Send').click();await f.flush();
  const saves=f.calls.filter(x=>x.url==='api/coach-questions/7/answer');assert.equal(saves[1].body.revision,1);assert.equal(saves[1].body.answer,'Tre volte');
  }finally{f.close()}
@@ -263,5 +265,40 @@ test('notification fix: messages from other origins cannot navigate or choose a 
  const f=await fixture({questions:[coachQuestion()]});try{
  f.w.dispatchEvent(new f.w.MessageEvent('message',{origin:'https://untrusted.test',source:f.w,data:{type:'home-assistant/properties',route:{prefix:'/app/abc_informa',path:'/coachquestions/7'}}}));await f.flush();
  assert.equal(f.w.document.querySelector('.page.active').dataset.page,'home');
+ }finally{f.close()}
+});
+
+test('answered questions: an old notification shows completion, with the question and answer closed',async()=>{
+ const f=await fixture({url:'https://informa.test/app/abc_informa/coachquestions/7',questions:[coachQuestion({state:'answered',answer:'Tre volte',revision:1,mobile_notification_error:'Old phone error'})]});try{
+ assert.equal(f.w.document.getElementById('if1093Answer'),null);assert.equal(f.w.document.querySelector('.if1093-question'),null);
+ assert.match(f.w.document.getElementById('if1093Confirmation').textContent,/completata/);assert.equal(f.w.document.querySelector('[data-page=coachquestions] details').open,false);
+ assert.ok(!f.w.document.querySelector('[data-page=coachquestions]').textContent.includes('Old phone error'));
+ }finally{f.close()}
+});
+
+test('measurement help: every field has a visual guide and X preserves unsaved measurements',async()=>{
+ const f=await fixture();try{f.w.go('progress');await f.advance();assert.equal(f.w.document.querySelectorAll('[data-measure-help]').length,8);
+ const field=f.w.document.getElementById('mWaist');field.value='99.5';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));
+ f.w.document.querySelector('[data-measure-help=mWaist]').click();await f.flush();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'measureguide');
+ assert.equal(f.w.document.querySelector('[data-zone=waist]').getAttribute('stroke'),'#ff9418');assert.match(f.w.document.querySelector('.if1095-guide ol').textContent,/costola/);
+ f.w.document.querySelector('[data-page=measureguide] .if1088-close').click();await f.advance();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'progress');assert.equal(f.w.document.getElementById('mWaist').value,'99.5');
+ assert.equal(f.calls.filter(x=>x.url==='api/measurements-0978'&&x.method==='POST').length,0);
+ }finally{f.close()}
+});
+
+test('measurement help: each measure selects its own diagram, side and unit',async()=>{
+ const f=await fixture();try{for(const [id,title,zone] of [['mHeight','Altezza',null],['mWeight','Peso',null],['mWaist','Vita','waist'],['mChest','Torace','chest'],['mArmR','Braccio destro','armR'],['mArmL','Braccio sinistro','armL'],['mThighR','Coscia destra','thighR'],['mThighL','Coscia sinistra','thighL']]){
+ f.w.if1095MeasureGuide(id);await f.flush();assert.match(f.w.document.getElementById('if1095DiagramTitle').textContent,new RegExp(title));assert.equal(f.w.document.querySelector('.if1095-guide h2').textContent,title);
+ assert.ok(f.w.document.querySelector('.if1095-guide ol').children.length>=2);if(zone)assert.equal(f.w.document.querySelector('[data-zone='+zone+']').getAttribute('stroke'),'#ff9418');
+ assert.match(f.w.document.querySelector('.if1095-guide .ey').textContent,id==='mWeight'?/kg/:/cm/);
+ }
+ }finally{f.close()}
+});
+
+test('measurements: only the visible fields exist and their entered values reach the save',async()=>{
+ const f=await fixture();try{f.w.go('progress');await f.advance();
+ for(const [id,value] of [['mWaist','99.5'],['mChest','110'],['mArmR','37'],['mArmL','36.5'],['mThighR','55'],['mThighL','54.5']]){assert.equal(f.w.document.querySelectorAll('#'+id).length,1);f.w.document.getElementById(id).value=value}
+ await f.w.if978Save();const save=f.calls.filter(x=>x.url==='api/measurements-0978'&&x.method==='POST').at(-1);
+ assert.equal(save.body.waist_cm,99.5);assert.equal(save.body.chest_cm,110);assert.equal(save.body.arm_r_cm,37);assert.equal(save.body.arm_l_cm,36.5);assert.equal(save.body.thigh_r_cm,55);assert.equal(save.body.thigh_l_cm,54.5);
  }finally{f.close()}
 });
