@@ -42,6 +42,8 @@
 
  const card0=window.if50ExerciseCard;
  const sessions=new Map();window.if978ResetTimers=()=>sessions.clear();
+ window.if978TimerSnapshot=()=>Object.fromEntries([...sessions].map(([id,s])=>[id,{done:[...s.done],index:s.index,end:s.end,left:s.index>=0&&!s.paused?Math.max(0,Math.ceil((s.end-Date.now())/1000)):s.left,paused:s.paused}]));
+ window.if978RestoreTimers=function(saved){sessions.clear();for(const [id,value] of Object.entries(saved||{})){const s=session(id);if(s)Object.assign(s,value,{saving:false})}};
  function session(id){
   const ex=IF50.plan.find(e=>e.id===id);
   if(!ex||!(ex.mobility||ex.stretching))return null;

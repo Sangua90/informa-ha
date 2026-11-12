@@ -118,6 +118,33 @@ class AITrainingTest(unittest.TestCase):
         for bad in [0,6,True,'5']:
             self.assertEqual(self.client.post('/api/exercise-effort-01089',json={**body,'effort':bad}).status_code,400)
 
+    def test_transient_503_retries_then_returns_the_actual_provider_response(self):
+        import urllib.error
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return b'{"steps":[{"content":[{"text":"OK provider"}]}]}'
+        failure=urllib.error.HTTPError('test',503,'busy',{},None)
+        with patch.object(self.module.urllib.request,'urlopen',side_effect=[failure,failure,Response()]) as send,patch.object(self.module.time,'sleep') as sleep:
+            self.assertEqual(self.module.request_ai('Test',{}),'OK provider');self.assertEqual(send.call_count,3);self.assertEqual(sleep.call_count,2)
+
+    def test_provider_failures_are_bounded_and_permanent_errors_are_not_retried(self):
+        import urllib.error
+        for code,count in [(503,3),(401,1),(400,1),(429,1)]:
+            with self.subTest(code=code),patch.object(self.module.urllib.request,'urlopen',side_effect=urllib.error.HTTPError('private-url',code,'secret upstream body',{},None)) as send,patch.object(self.module.time,'sleep'),self.assertRaises(RuntimeError) as error:
+                self.module.request_ai('Test',{})
+            self.assertEqual(send.call_count,count);self.assertNotIn('secret',str(error.exception));self.assertNotIn('private-url',str(error.exception))
+
+    def test_provider_deadline_prevents_unbounded_retry(self):
+        import urllib.error
+        with patch.object(self.module.urllib.request,'urlopen',side_effect=urllib.error.URLError('offline')) as send,patch.object(self.module.time,'monotonic',side_effect=[0,0,39]),patch.object(self.module.time,'sleep') as sleep,self.assertRaises(RuntimeError):
+            self.module.request_ai('Test',{},timeout=40)
+        self.assertEqual(send.call_count,1);sleep.assert_not_called()
+
+    def test_new_measurements_are_in_fresh_ai_context_without_rewriting_old_limbs(self):
+        con=self.core.db();con.execute("INSERT INTO body_measurements(ts,hip_cm,calf_cm,measurement_side,arm_l_cm) VALUES('2026-11-12',105,40,'left',37)");con.commit();con.close()
+        ctx=self.module.unified_context();self.assertEqual(ctx['latest_measurements']['hip_cm'],105);self.assertEqual(ctx['latest_measurements']['calf_cm'],40);self.assertEqual(ctx['measurements'][0]['measurement_side'],'left');self.assertEqual(ctx['latest_measurements']['arm_l_cm'],37);self.assertIsNone(ctx['measurements'][0]['arm_r_cm'])
+
     def test_health_history_is_dated_numeric_and_not_raw_import_payloads(self):
         con=self.core.db()
         con.execute('CREATE TABLE health_rest_metrics(id INTEGER PRIMARY KEY,metric_name TEXT,units TEXT,sample_ts TEXT,sample_json TEXT)')

@@ -6,7 +6,9 @@ const bundle=fs.readFileSync(path.join(web,'app.js'),'utf8')+names.map(n=>fs.rea
 async function fixture(options={}){
  const dom=new JSDOM(fs.readFileSync(path.join(web,'index.html'),'utf8'),{url:options.url||'https://informa.test/',runScripts:'dangerously'}),w=dom.window;
  w.questionItems=options.questions||[];
- const jobs=new Map(),calls=[],observers=[],Observer=w.MutationObserver;let now=Date.now(),seq=0;
+ for(const [k,v] of Object.entries(options.storage||{}))w.localStorage.setItem(k,v);
+ const server=options.server||{session:null,revision:0,closed:{}};
+ const jobs=new Map(),calls=[],observers=[],Observer=w.MutationObserver;let now=options.now||Date.now(),seq=0;
  w.MutationObserver=class extends Observer{constructor(fn){super(fn);observers.push(this)}};
  w.setTimeout=(fn,ms=0)=>{jobs.set(++seq,{fn,time:now+ms});return seq};w.clearTimeout=id=>jobs.delete(id);
  w.setInterval=(fn,ms)=>{jobs.set(++seq,{fn,time:now+ms,interval:ms});return seq};w.clearInterval=id=>jobs.delete(id);
@@ -23,6 +25,17 @@ async function fixture(options={}){
   if(w.deferArchive&&url==='api/workout-flow-0949/archive')await new Promise(resolve=>(w.archiveResolvers??=[]).push(resolve));
   if(w.deferLoad&&url.startsWith('api/load-progression-0969/'))await new Promise(resolve=>(w.loadResolvers??=[]).push(resolve));
   if(w.failFinish&&url==='api/coach/finish')throw Error('offline');
+  if(url.startsWith('api/workout-session')){
+   let data={ok:true};let status=200;
+   const sid=url.match(/workout-session\/([^/]+)\/close/)?.[1],query=new URL(url,'https://informa.test/').searchParams.get('session_id');
+   if(sid){server.closed[sid]=body.state;if(server.session?.session_id===sid)server.session=null}
+   else if(opts.method==='PUT'){
+    if(server.closed[body.snapshot.session_id]){data={error:'closed'};status=410}
+    else if(body.revision!==(server.session?server.revision:0)){data={error:'conflict'};status=409}
+    else{if(!server.session)server.revision=0;server.session=JSON.parse(JSON.stringify(body.snapshot));data.revision=++server.revision}
+   }else data=server.closed[query]?{session:null,state:server.closed[query]}:{session:server.session,revision:server.revision};
+   return {ok:status===200,status,json:async()=>data};
+  }
   let data={ok:true,items:[],disabled:[],guides:{},data:{},connected:false,reminder:{due:false},workout_id:101};
   if(url==='api/state')data={profile:{name:'Test'},version:'test'};
   if(url==='api/nutrition/today')data={totals:{},entries:[]};
@@ -42,11 +55,11 @@ async function fixture(options={}){
  async function flush(){for(let i=0;i<18;i++)await Promise.resolve()}
  async function advance(ms=500){const end=now+ms;for(let i=0;i<5000;i++){const next=[...jobs].filter(([,j])=>j.time<=end).sort((a,b)=>a[1].time-b[1].time)[0];if(!next)break;const [id,j]=next;now=Math.max(now,j.time);jobs.delete(id);if(j.interval)jobs.set(id,{...j,time:now+j.interval});await j.fn();await flush()}now=end;await flush()}
  await flush();await advance(600);
- return {w,plan,calls,advance,flush,jump:ms=>{now+=ms},generate:async()=>{await w.if50Generate();await advance(600)},close:()=>{observers.forEach(o=>o.disconnect());dom.window.close()}};
+ return {w,plan,calls,server,clock:()=>now,storage:()=>Object.fromEntries(Object.entries(w.localStorage)),advance,flush,jump:ms=>{now+=ms},generate:async()=>{await w.if50Generate();await advance(600)},close:()=>{observers.forEach(o=>o.disconnect());dom.window.close()}};
 }
 test('full bundle: new generation cannot inherit prior workout ID or archived rows',async()=>{
  const f=await fixture();try{await f.generate();await f.w.if108Skip('chest');await f.advance();assert.equal(f.w.testWorkId(),101);
- await f.generate();assert.equal(f.w.testWorkId(),null);assert.ok(f.w.if108Progress().every(x=>!x.closed));
+ await f.w.if50Discard();await f.generate();assert.equal(f.w.testWorkId(),null);assert.ok(f.w.if108Progress().every(x=>!x.closed));
  }finally{f.close()}
 });
 test('full bundle: failed finish preserves the session; retry closes once after confirmation',async()=>{
@@ -59,7 +72,7 @@ test('full bundle: failed finish preserves the session; retry closes once after 
 test('full bundle: treadmill is first when planned and its phase resets for the next session',async()=>{
  const f=await fixture();try{f.plan.treadmill_choice='Sì';f.plan.treadmillMinutes=2;await f.generate();assert.equal(f.w.localStorage.getItem('informha_workout_active_0109'),'treadmill');
  f.w.if1048Toggle();await f.advance(61000);assert.match(f.w.document.querySelector('.if1048-phase').textContent,/Fase due/);
- await f.generate();assert.match(f.w.document.querySelector('.if1048-phase').textContent,/Fase uno/);
+ await f.w.if50Discard();await f.generate();assert.match(f.w.document.querySelector('.if1048-phase').textContent,/Fase uno/);
  }finally{f.close()}
 });
 test('full bundle: stretching is retained until all target strength work is decided',async()=>{
@@ -74,10 +87,10 @@ test('full bundle: recovery uses elapsed time and cancellation prevents late nav
  f.w.if950CancelRecovery();f.w.go('home');await f.advance(100000);assert.equal(f.w.document.querySelector('.page.active').dataset.page,'home');
  }finally{f.close()}
 });
-test('full bundle: a late saved-set response cannot corrupt a newly generated session',async()=>{
+test('full bundle: generation stays blocked until a pending set is saved and its session closed',async()=>{
  const f=await fixture();try{await f.generate();f.w.if949Start('chest');f.w.if1041SetWeight('chest',5);f.w.deferSet=true;
  const saving=f.w.if50CompleteSet('chest',1);await f.flush();assert.ok(f.w.resolveSet);
- await f.generate();f.w.resolveSet();await saving;await f.advance();
+ const sid=f.plan.sessionId;await f.generate();assert.equal(f.plan.sessionId,sid);f.w.resolveSet();await saving;await f.advance();await f.w.if50Discard();await f.generate();
  assert.equal(f.w.testWorkId(),null);assert.equal(f.w.document.querySelectorAll('[data-page=workout] .check.done').length,0);assert.notEqual(f.w.document.querySelector('.page.active').dataset.page,'recovery');
  }finally{f.close()}
 });
@@ -160,10 +173,10 @@ test('second pass: Plank countdown still saves seconds through the complete prod
  }finally{f.close()}
 });
 
-test('second pass: a late replacement response cannot alter a newly prepared session',async()=>{
+test('second pass: generation cannot replace a session while its substitution is being saved',async()=>{
  const f=await fixture();try{await f.generate();f.w.if949Start('chest');f.w.deferArchive=true;
  const replacing=f.w.if60Swap('chest','pec_fly');await f.flush();assert.ok(f.w.archiveResolvers?.length);
- await f.generate();f.w.archiveResolvers.forEach(resolve=>resolve());await replacing;await f.advance();
+ const sid=f.plan.sessionId;await f.generate();assert.equal(f.plan.sessionId,sid);f.w.archiveResolvers.forEach(resolve=>resolve());await replacing;await f.advance();await f.w.if50Discard();await f.generate();
  assert.equal(f.w.testWorkId(),null);assert.ok(f.plan.plan.some(x=>x.id==='chest'));assert.ok(!f.plan.plan.some(x=>x.id==='pec_fly'));
  assert.ok(f.w.if108Progress().every(x=>!x.closed));
  }finally{f.close()}
@@ -182,12 +195,12 @@ test('second pass: removing an exercise preserves already performed partial work
  }finally{f.close()}
 });
 
-for(const action of ['finish','discard'])test('second pass: late '+action+' confirmation preserves a newer session',async()=>{
+for(const action of ['finish','discard'])test('second pass: '+action+' must finish before the next session can be prepared',async()=>{
  const f=await fixture();try{await f.generate();await f.w.if108Skip('chest');await f.advance();
  f.w[action==='finish'?'deferFinish':'deferDiscard']=true;
  const closing=action==='finish'?f.w.if50Finish():f.w.if50Discard();await f.flush();assert.ok(f.w.resolveClosure);
  if(action==='discard'){await f.w.if50Discard();assert.equal(f.calls.filter(x=>x.method==='DELETE').length,1)}
- await f.generate();f.w.resolveClosure();await closing;await f.advance();
+ const sid=f.plan.sessionId;await f.generate();assert.equal(f.plan.sessionId,sid);f.w.resolveClosure();await closing;await f.advance();await f.generate();
  assert.equal(f.w.testWorkId(),null);assert.equal(f.plan.closed,false);assert.ok(f.plan.plan.some(x=>x.id==='chest'));
  assert.equal(f.w.if928WorkoutPrepared(),true);assert.ok(f.w.if108Progress().every(x=>!x.closed));
  }finally{f.close()}
@@ -276,29 +289,77 @@ test('answered questions: an old notification shows completion, with the questio
  }finally{f.close()}
 });
 
-test('measurement help: every field has a visual guide and X preserves unsaved measurements',async()=>{
- const f=await fixture();try{f.w.go('progress');await f.advance();assert.equal(f.w.document.querySelectorAll('[data-measure-help]').length,8);
- const field=f.w.document.getElementById('mWaist');field.value='99.5';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));
- f.w.document.querySelector('[data-measure-help=mWaist]').click();await f.flush();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'measureguide');
- assert.equal(f.w.document.querySelector('[data-zone=waist]').getAttribute('stroke'),'#ff9418');assert.match(f.w.document.querySelector('.if1095-guide ol').textContent,/costola/);
- f.w.document.querySelector('[data-page=measureguide] .if1088-close').click();await f.advance();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'progress');assert.equal(f.w.document.getElementById('mWaist').value,'99.5');
+
+test('inline measurements: eight unique fields stay on the page and the landmark follows focus',async()=>{
+ const f=await fixture();try{f.w.go('progress');await f.advance();
+ for(const [id,zone] of [['mHeight',null],['mWeight',null],['mChest','chest'],['mArm','armR'],['mWaist','waist'],['mHip','hips'],['mThigh','thighR'],['mCalf','calfR']]){
+  assert.equal(f.w.document.querySelectorAll('#'+id).length,1);f.w.document.getElementById(id).focus();await f.flush();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'progress');
+  if(zone)assert.equal(f.w.document.querySelector('[data-zone='+zone+']').getAttribute('stroke'),'#ff9418');assert.ok(f.w.document.querySelector('#if1096MeasureHelp ol').children.length>=2);
+ }
+ const field=f.w.document.getElementById('mWaist');field.value='99.5';f.w.document.getElementById('mHip').focus();assert.equal(field.value,'99.5');
+ assert.equal(f.w.document.querySelectorAll('#mArmR,#mArmL,#mThighR,#mThighL').length,0);
  assert.equal(f.calls.filter(x=>x.url==='api/measurements-0978'&&x.method==='POST').length,0);
  }finally{f.close()}
 });
-
-test('measurement help: each measure selects its own diagram, side and unit',async()=>{
- const f=await fixture();try{for(const [id,title,zone] of [['mHeight','Altezza',null],['mWeight','Peso',null],['mWaist','Vita','waist'],['mChest','Torace','chest'],['mArmR','Braccio destro','armR'],['mArmL','Braccio sinistro','armL'],['mThighR','Coscia destra','thighR'],['mThighL','Coscia sinistra','thighL']]){
- f.w.if1095MeasureGuide(id);await f.flush();assert.match(f.w.document.getElementById('if1095DiagramTitle').textContent,new RegExp(title));assert.equal(f.w.document.querySelector('.if1095-guide h2').textContent,title);
- assert.ok(f.w.document.querySelector('.if1095-guide ol').children.length>=2);if(zone)assert.equal(f.w.document.querySelector('[data-zone='+zone+']').getAttribute('stroke'),'#ff9418');
- assert.match(f.w.document.querySelector('.if1095-guide .ey').textContent,id==='mWeight'?/kg/:/cm/);
- }
+test('inline measurements: one chosen side is saved without fabricating the opposite side',async()=>{
+ const f=await fixture();try{f.w.go('progress');await f.advance();f.w.document.getElementById('mSide').value='left';
+ for(const [id,value] of [['mWaist','99.5'],['mChest','110'],['mArm','37'],['mHip','105'],['mThigh','55'],['mCalf','40']])f.w.document.getElementById(id).value=value;
+ await f.w.if978Save();const save=f.calls.filter(x=>x.url==='api/measurements-0978'&&x.method==='POST').at(-1);
+ assert.equal(save.body.arm_l_cm,37);assert.equal(save.body.thigh_l_cm,55);assert.equal(save.body.arm_r_cm,undefined);assert.equal(save.body.thigh_r_cm,undefined);assert.equal(save.body.hip_cm,105);assert.equal(save.body.calf_cm,40);assert.equal(save.body.measurement_side,'left');
  }finally{f.close()}
 });
-
-test('measurements: only the visible fields exist and their entered values reach the save',async()=>{
- const f=await fixture();try{f.w.go('progress');await f.advance();
- for(const [id,value] of [['mWaist','99.5'],['mChest','110'],['mArmR','37'],['mArmL','36.5'],['mThighR','55'],['mThighL','54.5']]){assert.equal(f.w.document.querySelectorAll('#'+id).length,1);f.w.document.getElementById(id).value=value}
- await f.w.if978Save();const save=f.calls.filter(x=>x.url==='api/measurements-0978'&&x.method==='POST').at(-1);
- assert.equal(save.body.waist_cm,99.5);assert.equal(save.body.chest_cm,110);assert.equal(save.body.arm_r_cm,37);assert.equal(save.body.arm_l_cm,36.5);assert.equal(save.body.thigh_r_cm,55);assert.equal(save.body.thigh_l_cm,54.5);
+test('durable session: treadmill survives a cold webview and elapsed time continues',async()=>{
+ const server={session:null,revision:0,closed:{}};let f=await fixture({server});try{
+  f.plan.treadmill_choice='Sì';f.plan.treadmillMinutes=2;await f.generate();f.w.if1048Toggle();await f.advance(9000);
+  f.w.dispatchEvent(new f.w.Event('pagehide'));await f.flush();const storage=f.storage(),now=f.clock(),before=f.w.if1041TimerSnapshot().treadmill;
+  assert.equal(before.running,true);f.close();f=await fixture({server,storage,now});f.w.if1096Resume();await f.advance(1000);
+  assert.equal(f.w.if928WorkoutPrepared(),true);assert.equal(f.w.document.querySelector('.page.active').dataset.page,'workout');assert.equal(f.w.if1041TimerSnapshot().treadmill.running,true);assert.equal(f.w.if1041TimerSnapshot().treadmill.end,before.end);
+  f.jump(15000);await f.advance(500);assert.ok(f.w.if1041TimerSnapshot().treadmill.left<before.left-10);assert.match(f.w.document.querySelector('.if1048-main').textContent,/PAUSA/);
+ }finally{f.close()}
+});
+test('durable session: manually paused treadmill stays paused across app switch and restart',async()=>{
+ let f=await fixture();try{f.plan.treadmill_choice='Sì';f.plan.treadmillMinutes=2;await f.generate();f.w.if1048Toggle();await f.advance(9000);f.w.if1048Toggle();
+ f.w.dispatchEvent(new f.w.Event('pagehide'));await f.flush();const before=f.w.if1041TimerSnapshot().treadmill,storage=f.storage(),server=f.server;f.close();f=await fixture({server,storage});f.jump(120000);f.w.if1096Resume();await f.advance();
+ assert.equal(f.w.if1041TimerSnapshot().treadmill.running,false);assert.equal(f.w.if1041TimerSnapshot().treadmill.left,before.left);
+ }finally{f.close()}
+});
+test('durable session: skipped order, partial sets, unsaved weights and substitution survive cold restart',async()=>{
+ let f=await fixture();try{await f.generate();f.w.if949Start('chest');f.w.if1041SetWeight('chest',5);await f.w.if50CompleteSet('chest',1);await f.advance();await f.w.if108Skip('chest');await f.advance();await f.w.if60Swap('lat','pec_fly');await f.advance();
+ f.w.if1041SetWeight('pec_fly',9);f.w.if1096Checkpoint();await f.advance();const progress=JSON.stringify(f.w.if108Progress().map(({id,kind})=>({id,kind}))),storage=f.storage(),server=f.server,sid=f.plan.sessionId;f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
+ assert.equal(f.plan.sessionId,sid);assert.equal(f.w.testWorkId(),101);assert.equal(f.w.document.querySelector('#if50ex_pec_fly .if1041-weight-input').value,'9');assert.equal(JSON.stringify(f.w.if108Progress().map(({id,kind})=>({id,kind}))),progress);
+ }finally{f.close()}
+});
+test('durable session: Plank keeps running across background and manual pause survives restart',async()=>{
+ let f=await fixture();try{f.w.aiPlan=[{id:'plank',sets:2,reps:30,rest:60}];await f.generate();f.w.if949Start('plank');await f.advance();f.w.if1041Primary('plank');await f.advance(5000);
+ f.w.dispatchEvent(new f.w.Event('pagehide'));assert.equal(f.w.if1041TimerSnapshot().hold.running,true);f.jump(10000);await f.advance(200);assert.ok(f.w.if1041TimerSnapshot().hold.left<20);
+ f.w.if1041Primary('plank');const hold=f.w.if1041TimerSnapshot().hold;const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.if1096Resume();f.jump(60000);await f.advance();assert.equal(f.w.if1041TimerSnapshot().hold.running,false);assert.equal(f.w.if1041TimerSnapshot().hold.left,hold.left);assert.equal(f.calls.filter(x=>x.url==='api/set').length,0);
+ }finally{f.close()}
+});
+test('durable session: recovery and stretching retain elapsed time and explicit pause',async()=>{
+ let f=await fixture();try{f.plan.stretch_mode='Sì';await f.generate();const extra=f.plan.plan.find(e=>e.mobility);f.w.if978Side(extra.id,0);await f.advance(2000);f.w.dispatchEvent(new f.w.Event('pagehide'));assert.equal(f.w.if978TimerSnapshot()[extra.id].paused,false);
+ const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.if1096Resume();f.jump(10000);await f.advance();assert.ok(f.w.if978TimerSnapshot()[extra.id].left<extra.seconds-8);
+ f.w.if950SetContext('chest',1);f.w.startTimer(90);f.w.if950PauseRecovery();f.w.if1096Checkpoint();await f.advance();const next=f.storage();f.close();f=await fixture({storage:next,server});f.jump(60000);f.w.if1096Resume();await f.advance();await f.flush();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'recovery');assert.equal(f.w.if950RecoverySnapshot().left,90);assert.equal(f.w.if950RecoverySnapshot().paused,true);
+ }finally{f.close()}
+});
+for(const action of ['finish','discard'])test('durable session: '+action+' removes resume and a stale mirror cannot reopen it',async()=>{
+ let f=await fixture();try{await f.generate();await f.w.if108Skip('chest');await f.advance();const old=f.storage(),server=f.server;
+ if(action==='finish')await f.w.if50Finish();else await f.w.if50Discard();await f.advance();assert.equal(f.w.localStorage.getItem('informha_session_01096'),null);f.close();f=await fixture({storage:old,server});assert.equal(f.w.if928WorkoutPrepared(),false);assert.equal(f.w.document.getElementById('if1096Resume'),null);
+ }finally{f.close()}
+});
+test('durable session: running Plank expires after cold restart and records one timed set',async()=>{
+ let f=await fixture();try{f.w.aiPlan=[{id:'plank',sets:2,reps:30,rest:60}];await f.generate();f.w.if949Start('plank');await f.advance();f.w.if1041Primary('plank');await f.advance(2000);f.w.dispatchEvent(new f.w.Event('pagehide'));await f.flush();
+ const storage=f.storage(),server=f.server,now=f.clock()+35000;f.close();f=await fixture({storage,server,now});f.w.if1096Resume();await f.advance(600);
+ const saves=f.calls.filter(c=>c.url==='api/set');assert.equal(saves.length,1);assert.equal(saves[0].body.rep_type,'seconds');assert.equal(saves[0].body.reps,30);
+ assert.ok(f.w.document.getElementById('if50c_plank_1').classList.contains('done'));
+ }finally{f.close()}
+});
+test('durable session: running recovery counts time away after a cold restart',async()=>{
+ let f=await fixture();try{await f.generate();f.w.if950SetContext('chest',1);f.w.startTimer(90);f.w.if1096Checkpoint();await f.advance(500);
+ const storage=f.storage(),server=f.server,now=f.clock()+20000;f.close();f=await fixture({storage,server,now});f.w.if1096Resume();await f.advance();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'recovery');assert.ok(f.w.if950RecoverySnapshot().left<70);assert.equal(f.w.if950RecoverySnapshot().paused,false);
+ }finally{f.close()}
+});
+test('durable session: removing all exercises still retains a session that can be closed',async()=>{
+ let f=await fixture();try{await f.generate();await f.w.if108Remove('chest');await f.advance();await f.w.if108Remove('lat');await f.advance();assert.equal(f.plan.plan.length,0);
+ const storage=f.storage(),server=f.server;assert.ok(storage.informha_session_01096);f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();assert.equal(f.w.document.querySelector('.page.active').dataset.page,'endworkout');assert.equal(f.w.testWorkId(),101);
  }finally{f.close()}
 });

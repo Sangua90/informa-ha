@@ -2,6 +2,8 @@
 import json
 import math
 import os
+import random
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta
@@ -54,7 +56,7 @@ def unified_context():
         ctx['profile'] = dict(profile) if profile else {}
         measurements = rows(con, 'SELECT * FROM body_measurements ORDER BY id DESC LIMIT 60')
         ctx['measurements'] = [{k:v for k,v in r.items() if k != 'id'} for r in measurements]
-        ctx['latest_measurements'] = {key:next((r[key] for r in measurements if r.get(key) is not None), None) for key in ('height_cm','weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm')}
+        ctx['latest_measurements'] = {key:next((r[key] for r in measurements if r.get(key) is not None), None) for key in ('height_cm','weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm','hip_cm','calf_cm')}
         ctx['latest_measurements']['height_cm'] = ctx['latest_measurements']['height_cm'] or ctx['profile'].get('height_cm')
         sets = rows(con, '''SELECT s.workout_id,s.exercise,s.set_no,s.weight,s.reps,s.rep_type,s.fatigue,s.rest_sec,w.ts
                             FROM sets s LEFT JOIN workouts w ON w.id=s.workout_id ORDER BY s.id DESC LIMIT 500''')
@@ -126,14 +128,27 @@ def request_ai(question, ctx, timeout=40, schema=None):
     if schema:
         payload['response_format'] = {'type':'text','mime_type':'application/json','schema':schema}
     req = urllib.request.Request('https://generativelanguage.googleapis.com/v1beta/interactions', data=json.dumps(payload).encode(), method='POST', headers={'Content-Type':'application/json','x-goog-api-key':cfg['api_key'],'Api-Revision':'2026-05-20'})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            data = json.loads(response.read().decode())
-    except urllib.error.HTTPError as e:
-        # Keep upstream response/key details out of the browser and logs.
-        raise RuntimeError(f'Gemini non disponibile (HTTP {e.code})') from e
-    except (urllib.error.URLError, TimeoutError) as e:
-        raise RuntimeError('Gemini non raggiungibile o tempo di risposta esaurito') from e
+    deadline=time.monotonic()+timeout
+    for attempt in range(3):
+        try:
+            remaining=deadline-time.monotonic()
+            if remaining<=0:raise TimeoutError()
+            with urllib.request.urlopen(req, timeout=min(25,remaining)) as response:
+                data = json.loads(response.read().decode())
+            break
+        except (urllib.error.URLError,TimeoutError) as e:
+            code=e.code if isinstance(e,urllib.error.HTTPError) else None
+            retry=code in (500,502,503,504) or code is None
+            delay=(2**attempt)+random.uniform(0,.3)
+            if isinstance(e,urllib.error.HTTPError):
+                try:retry_after=float(e.headers.get('Retry-After','0'))
+                except (ValueError,AttributeError):retry_after=0
+                if code==429 and 0<retry_after<=4:retry=True
+                delay=max(delay,retry_after)
+            if not retry or attempt==2 or time.monotonic()+delay+2>=deadline:
+                message=f'Gemini non disponibile (HTTP {code})' if code else 'Gemini non raggiungibile o tempo di risposta esaurito'
+                raise RuntimeError(message+f' · {attempt+1} tentativ'+('o' if attempt==0 else 'i')) from e
+            time.sleep(delay)
     if data.get('status') == 'failed':
         raise RuntimeError('Generazione Gemini non riuscita')
     text = config._extract_interaction_text(data)

@@ -44,7 +44,7 @@ def validate_writes_01091():
         '/api/nutrition/entry': ('quantity_g','calories','protein_g','carbs_g','fat_g','fiber_g','water_ml'),
         '/api/nutrition/goals': ('calories','protein_g','carbs_g','fat_g','fiber_g','water_ml'),
         '/api/measurement': ('weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm'),
-        '/api/measurements-0978': ('weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm','height_cm'),
+        '/api/measurements-0978': ('weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm','height_cm','hip_cm','calf_cm'),
         '/api/treadmill-0970': ('duration_min','avg_speed_kmh','max_speed_kmh','avg_incline_pct','max_incline_pct'),
         '/api/coach/finish': ('duration_min',),
         '/api/exercise-effort-01089': ('effort',),

@@ -54,7 +54,10 @@ def measurements_history_0978():
 @app.post('/api/measurements-0978')
 def measurements_save_0978():
     x = root.request.get_json(force=True)
-    fields = ('weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm','height_cm')
+    fields = ('weight_kg','waist_cm','chest_cm','arm_r_cm','arm_l_cm','thigh_r_cm','thigh_l_cm','height_cm','hip_cm','calf_cm')
+    side=x.get('measurement_side')
+    if side not in (None,'right','left'):
+        return root.jsonify(ok=False,error='Lato di riferimento non valido'),400
     values = []
     for key in fields:
         v = x.get(key)
@@ -70,8 +73,8 @@ def measurements_save_0978():
         return root.jsonify(ok=False, error='Inserisci almeno una misura'), 400
     con = root.db()
     con.execute(
-        "INSERT INTO body_measurements (ts,weight_kg,waist_cm,chest_cm,arm_r_cm,arm_l_cm,thigh_r_cm,thigh_l_cm,height_cm) VALUES(?,?,?,?,?,?,?,?,?)",
-        (datetime.now().isoformat(timespec='seconds'), *values)
+        "INSERT INTO body_measurements (ts,weight_kg,waist_cm,chest_cm,arm_r_cm,arm_l_cm,thigh_r_cm,thigh_l_cm,height_cm,hip_cm,calf_cm,measurement_side) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+        (datetime.now().isoformat(timespec='seconds'), *values,side)
     )
     # Keep profile weight aligned when a weight was entered.
     if values[0] is not None:

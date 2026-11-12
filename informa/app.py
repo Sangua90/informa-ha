@@ -101,6 +101,9 @@ def init_db():
     measurement_columns = {row[1] for row in con.execute("PRAGMA table_info(body_measurements)")}
     if "height_cm" not in measurement_columns:
         con.execute("ALTER TABLE body_measurements ADD COLUMN height_cm REAL")
+    for column,kind in [('hip_cm','REAL'),('calf_cm','REAL'),('measurement_side','TEXT')]:
+        if column not in measurement_columns:
+            con.execute(f'ALTER TABLE body_measurements ADD COLUMN {column} {kind}')
     set_columns = {row[1] for row in con.execute("PRAGMA table_info(sets)")}
     if "rep_type" not in set_columns:
         con.execute("ALTER TABLE sets ADD COLUMN rep_type TEXT NOT NULL DEFAULT 'reps'")

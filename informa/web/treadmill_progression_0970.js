@@ -11,7 +11,7 @@
     const card=document.getElementById('if50ex_treadmill');if(!card)return;
     let box=card.querySelector('#if970Treadmill');if(box)box.remove();
     const minutes=num('if931TreadmillMin')||num('if50CardioMin')||Number((IF50.plan||[]).find(x=>x.id==='treadmill')?.minutes)||20;
-    const session=IF50.sessionId;const d=await plan(minutes);if(!d.ok||session!==IF50.sessionId||card!==document.getElementById('if50ex_treadmill'))return;
+    const session=IF50.sessionId;const d=window.IF970_TREADMILL_PLAN?.phases?.length?window.IF970_TREADMILL_PLAN:await plan(minutes);if(!d.ok||session!==IF50.sessionId||card!==document.getElementById('if50ex_treadmill'))return;
     window.IF970_TREADMILL_PLAN=d;
     box=document.createElement('div');box.id='if970Treadmill';box.className='card coach';
     const rows=(d.phases||[]).map((p,i)=>`<div class="choice" style="margin-top:7px"><b>${i+1}. ${p.name}</b><div class="sub">${p.minutes} min · ${p.speed_kmh} km/h · inclinazione ${p.incline_pct}%</div></div>`).join('');

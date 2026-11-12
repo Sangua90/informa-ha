@@ -13,17 +13,26 @@ with tempfile.TemporaryDirectory() as directory:
     script='''
 import os,json
 from unittest.mock import patch
-os.environ['INFORMA_VERSION']='0.10.95'
+os.environ['INFORMA_VERSION']='0.10.96'
 os.environ.pop('SUPERVISOR_TOKEN',None)
-import coach_questions_01093 as server
+import workout_sessions_01096 as server
 client=server.app.test_client()
 checks={}
-for path in ['/', '/api/state','/api/ai-coach/context','/api/ai-coach/today','/api/coach/week','/api/measurements-0978','/api/nutrition/today','/api/treadmill-0970/plan?minutes=5','/api/coach-questions']:
+for path in ['/', '/api/state','/api/ai-coach/context','/api/ai-coach/today','/api/coach/week','/api/measurements-0978','/api/nutrition/today','/api/treadmill-0970/plan?minutes=5','/api/coach-questions','/api/workout-session']:
     response=client.get(path);checks[path]=response.status_code
     assert response.status_code==200,(path,response.get_data(as_text=True)[:500])
 assert client.post('/api/measurements-0978/reminder-check').status_code==200
-assert 'app.js?v=01095' in client.get('/').get_data(as_text=True)
-body={'exercise':'Chest press alla macchina','set_no':1,'reps':10,'weight':5,'request_id':'smoke:chest:1'}
+assert 'app.js?v=01096' in client.get('/').get_data(as_text=True)
+measurement={'hip_cm':105,'calf_cm':40,'arm_l_cm':37,'thigh_l_cm':55,'measurement_side':'left'}
+assert client.post('/api/measurements-0978',json=measurement).status_code==200
+row=client.get('/api/measurements-0978').get_json()['items'][0]
+assert row['hip_cm']==105 and row['arm_l_cm']==37 and row['arm_r_cm'] is None and row['measurement_side']=='left'
+assert client.post('/api/measurements-0978',json={'hip_cm':float('nan')}).status_code==400
+assert client.post('/api/measurements-0978',json={'calf_cm':-1}).status_code==400
+assert client.get('/api/ai-coach/context').get_json()['context']['latest_measurements']['calf_cm']==40
+snapshot={'session_id':'smoke-session','plan':[{'id':'chest','name':'Chest press alla macchina','sets':2,'reps':10,'rest':60}], 'options':{'started':123},'flow':{},'names':{},'updated_at':123}
+assert client.put('/api/workout-session',json={'revision':0,'snapshot':snapshot}).status_code==200
+body={'exercise':'Chest press alla macchina','set_no':1,'reps':10,'weight':5,'request_id':'smoke-session:chest:1'}
 wid=client.post('/api/set',json=body).get_json()['workout_id']
 assert client.post('/api/set',json=body).get_json()['workout_id']==wid
 assert client.post('/api/set',json={**body,'weight':7}).get_json()['saved_set']['weight']==5
@@ -31,7 +40,10 @@ archive={'request_id':'smoke:archive:chest','workout_id':wid,'exercise':body['ex
 assert client.post('/api/workout-flow-0949/archive',json=archive).get_json()['status']=='Parziale'
 assert client.post('/api/workout-flow-0949/archive',json={**archive,'status':'Saltato'}).get_json()['status']=='Parziale'
 assert client.post('/api/workout-flow-0949/archive',json={**archive,'request_id':'smoke:other','status':'Saltato'}).status_code==409
+assert client.get('/api/workout-session').get_json()['session']['flow']['chest']['status']=='Parziale'
 assert client.post('/api/coach/finish',json={'workout_id':wid,'duration_min':22,'effort':3,'reason':'Tempo finito'}).status_code==200
+assert client.get('/api/workout-session').get_json()['session'] is None
+assert client.put('/api/workout-session',json={'revision':1,'snapshot':snapshot}).status_code==410
 assert client.post('/api/set',json={**body,'set_no':2,'request_id':'smoke:chest:2','workout_id':wid}).status_code==409
 detail=client.get('/api/workouts-0933/'+str(wid)).get_json()
 assert len(detail['sets'])==1 and detail['workout']['duration_min']==22

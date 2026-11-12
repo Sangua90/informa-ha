@@ -76,7 +76,7 @@ async function if50Finish(){
  const buttons=[...document.querySelectorAll('[data-page="endworkout"] button')];buttons.forEach(b=>b.disabled=true);
  const dur=Math.max(1,Math.round((Date.now()-(IF50.started||Date.now()))/60000));
  try{
-  const out=await api('api/coach/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId,reason:IF50.finishReason,effort:Number(IF50.effort||0),duration_min:dur,useful_work:'Salvato per priorità, senza debito opzionale'})});
+  const out=await api('api/coach/finish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workout_id:currentWorkoutId,session_id:IF50.sessionId,reason:IF50.finishReason,effort:Number(IF50.effort||0),duration_min:dur,useful_work:'Salvato per priorità, senza debito opzionale'})});
   if(out?.ok===false)throw Error(out.error||'Salvataggio non riuscito');
   if(epoch!==IF50.sessionId)return false;
   if50Summary(dur);IF50.closed=true;IF50.started=null;currentWorkoutId=null;go('summary');if50LoadWeek();return true;

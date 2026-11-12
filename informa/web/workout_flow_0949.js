@@ -1,7 +1,7 @@
 // InFormha 0.9.93 - stato esercizi persistente, completamento esplicito e archiviazione sicura
 (function(){
   const KEY='informha_workout_flow_0949';
-  let states={};
+  let states={},hydrating=false;
   function load(){try{states=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){states={}}}
   function sync(){try{const disk=JSON.parse(localStorage.getItem(KEY)||'{}')||{};states={...disk,...states};Object.keys(disk).forEach(id=>{if(disk[id]?.stage==='archived')states[id]=disk[id]})}catch(e){}}function save(){sync();try{localStorage.setItem(KEY,JSON.stringify(states))}catch(e){}}
   function reset(){window.if108ResetOrder?.();window.if950CancelRecovery?.();window.if108CancelEffort?.();window.if1041ResetTimers?.();window.if978ResetTimers?.();states={};try{localStorage.removeItem(KEY);localStorage.removeItem('informha_workout_active_0109')}catch(e){}document.querySelector('[data-page=workout]')?.replaceChildren()}window.if949ResetSession=reset;
@@ -11,8 +11,8 @@
   function cardId(c){return c.id==='if50ex_cardio'?'cardio':String(c.id||'').replace('if50ex_','')}
   function cards(){return [...document.querySelectorAll('[data-page="workout"] .if50-ex,[data-page="workout"] #if50ex_cardio')]}
   function choice(c){return [...c.querySelectorAll('.choice')].find(x=>[...x.querySelectorAll('button')].some(b=>['Completato','Parziale','Saltato'].includes((b.textContent||'').trim())))}
-  function capture(c){const id=cardId(c),s=state(id);c.querySelectorAll('.setrow').forEach(row=>{const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;const weight=row.querySelector('[id^=if50w_]'),reps=row.querySelector('[id^=if50r_]');s.sets[m[1]]={weight:weight?.value??'',edited:!!weight?.dataset.edited,reps:reps?.value??'',done:!!check?.classList.contains('done')};if(s.sets[m[1]].done&&s.stage==='planned')s.stage='started'});const f=c.querySelector('select[id^="if50f_"]');if(f)s.fatigue=f.value||s.fatigue;save()}
-  function captureAll(){cards().forEach(capture)}
+  function capture(c){if(hydrating)return;const id=cardId(c),s=state(id);c.querySelectorAll('.setrow').forEach(row=>{const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;const weight=row.querySelector('[id^=if50w_]'),reps=row.querySelector('[id^=if50r_]');s.sets[m[1]]={weight:weight?.value??'',edited:!!weight?.dataset.edited,reps:reps?.value??'',done:!!check?.classList.contains('done')};if(s.sets[m[1]].done&&s.stage==='planned')s.stage='started'});const f=c.querySelector('select[id^="if50f_"]');if(f)s.fatigue=f.value||s.fatigue;save()}
+  function captureAll(){cards().forEach(capture)}window.if949CaptureSession=captureAll;window.if949ReloadSession=load;
   function done(s){return Object.values(s.sets||{}).filter(x=>x.done).length}
   function restore(c,s){c.querySelectorAll('.setrow').forEach(row=>{const check=row.querySelector('.check'),m=(check?.id||'').match(/_(\d+)$/);if(!m)return;const v=s.sets?.[m[1]],weight=row.querySelector('[id^=if50w_]'),reps=row.querySelector('[id^=if50r_]');if(!v)return;if(weight){weight.value=v.weight??'';if(v.edited)weight.dataset.edited='1';}if(reps)reps.value=v.reps??'';if(v.done){check.classList.add('done');check.textContent='✓'}});const f=c.querySelector('select[id^="if50f_"]');if(f&&s.fatigue){f.value=s.fatigue;f.dispatchEvent(new Event('change',{bubbles:true}))}}
   function decorateCard(c){
@@ -28,7 +28,7 @@
     const f=c.querySelector('select[id^="if50f_"]'),ch=choice(c);if(f?.closest('.row'))f.closest('.row').style.display=s.stage==='planned'?'none':'';if(ch){ch.style.display='none'}
     c.querySelectorAll('.if60-actions button').forEach(b=>{if((b.textContent||'').trim()==='Togli')b.textContent='Salta';b.disabled=s.stage==='archived'});c.classList.toggle('if949-archived',s.stage==='archived')
   }
-  function decorate(){cards().forEach(decorateCard)}
+  function decorate(){cards().forEach(decorateCard)}window.if949HydrateSession=function(){hydrating=true;try{decorate()}finally{hydrating=false}};
   async function archive(id,status,priority,notes){const epoch=IF50.sessionId,ex=exercise(id),name=ex?.name||(id==='cardio'?'Tapis roulant / cardio':id);const out=await api('api/workout-flow-0949/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request_id:IF50.sessionId?IF50.sessionId+':archive:'+id:undefined,workout_id:currentWorkoutId||null,workout_title:IF50.planTitle||'Seduta adattata',exercise:name,priority:priority||ex?.priority||'Utile',status,notes:notes||null})});if(epoch!==IF50.sessionId)throw Error('La seduta è cambiata');currentWorkoutId=out.workout_id;const s=state(id);s.stage='archived';s.status=out.status||status;s.archivedAt=new Date().toISOString();save();return out}
   function next(id){const all=cards(),i=all.findIndex(c=>cardId(c)===id),n=all.slice(i+1).find(c=>state(cardId(c)).stage==='planned');if(n){const nid=cardId(n);setTimeout(()=>{if(typeof window.if949Start==='function')window.if949Start(nid);n.scrollIntoView({behavior:'smooth',block:'start'})},120)}}
   window.if949Start=function(id){captureAll();const s=state(id);if(s.stage!=='planned')return;s.stage='started';s.startedAt=new Date().toISOString();save();const c=card(id);if(c){decorateCard(c);c.querySelector('.setrow input')?.focus()}};

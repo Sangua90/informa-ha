@@ -1,3 +1,10 @@
+## 0.10.96
+
+- Seduta conservata sul dispositivo e su Home Assistant: piano, ordine, serie, pesi, sostituzioni e timer si ripristinano dopo la chiusura. La Home offre “Riprendi allenamento”. Una nuova generazione non sostituisce una seduta aperta; salvataggio ed eliminazione la chiudono senza riaprirla da copie obsolete.
+- Cambiare app non mette in pausa: i timer usano il tempo trascorso e conservano la pausa solo quando scelta dall’utente. Rimane la conferma manuale per avviare la fase successiva del tapis roulant.
+- Gemini ritenta gli errori temporanei (compreso HTTP 503) entro un limite complessivo, con lo stesso trasporto per generazione, chat e prova connessione. Il fallback locale resta esplicito se il servizio non risponde.
+- Misure in un’unica pagina con sagoma grande, campi e istruzioni contestuali; braccio e coscia hanno un solo valore sul lato scelto, con fianchi e polpaccio aggiunti. Storico bilaterale conservato e nuove misure incluse nel contesto AI.
+
 ## 0.10.95
 
 - Guida illustrata alle otto misure, con posizione del metro e istruzioni accessibili dal simbolo ⓘ di ogni campo.
