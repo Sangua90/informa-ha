@@ -5,7 +5,7 @@
     {name:'Fassi F 7.9 HRC',type:'Tapis roulant',detail:'Usato per riscaldamento, camminata inclinata, cardio e defaticamento con velocità, durata e inclinazione modulabili.',tags:['Cardio','Velocità','Inclinazione']},
     {name:'Panca regolabile Carnielli',type:'Panca',detail:'Panca regolabile utilizzabile con manubri e per esercizi a corpo libero.',tags:['Panca','Manubri']},
     {name:'Rack Energetics + barra EZ',type:'Pesi liberi',detail:'Rack con barra EZ per esercizi compatibili con la tua dotazione.',tags:['Rack','Barra EZ']},
-    {name:'Manubri componibili',type:'Pesi liberi',detail:'Manubri caricabili. I pesi esatti disponibili non vengono inventati: si registrano quelli realmente montati.',tags:['Manubri','Carico reale']},
+    {name:'Manubri componibili',type:'Pesi liberi',detail:'Registra i kg dei soli dischi montati su un manubrio, sommando le due estremità. Escludi impugnatura e fermadischi. Con due manubri il valore resta per ciascuno, senza raddoppiarlo. I pesi disponibili non vengono inventati.',tags:['Manubri','Carico reale']},
     {name:'Mini stepper',type:'Cardio',detail:'Attrezzo cardio compatto utilizzabile come alternativa o complemento al tapis roulant.',tags:['Cardio','Stepper']}
   ];
   const ACCESSORIES=['Barra lat larga','Corda tricipiti','Triangolo presa stretta','Barra corta angolata','Cavigliera / cuffia','Maniglia singola / presa morbida'];

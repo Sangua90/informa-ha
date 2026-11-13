@@ -376,3 +376,58 @@ test('Gemini connection: actual result remains visible after settings reload and
  assert.match(f.w.document.getElementById('if91AiTestResult').textContent,/Verifica non riuscita.*503/);assert.equal(f.w.document.querySelector('#if91AiTestResult img'),null);
  }finally{f.close()}
 });
+
+
+test('dumbbell convention: all twelve exercises distinguish one and two implements, never machines or bodyweight',async()=>{
+ const f=await fixture();try{
+ const weighted=Object.values(f.w.IF72_LIBRARY).filter(x=>x.loadType==='kg');assert.equal(weighted.length,12);
+ for(const ex of weighted){const load=f.w.if1099Load(ex);assert.equal(load.basis,'dumbbell_discs_each');assert.equal(load.count,['one_arm_dumbbell_row','goblet_squat','single_leg_romanian_deadlift','seated_dumbbell_calf_raise'].includes(ex.id)?1:2);assert.match(load.note,/impugnatura e fermadischi/)}
+ assert.equal(f.w.if1099Load({id:'curl',name:'Curl bicipiti al cavo basso',equipment:'Fassi'}).basis,'kg_total');
+ assert.equal(f.w.if1099Load(f.w.IF72_LIBRARY.chest).basis,'machine_plates');
+ assert.equal(f.w.if1099Load(f.w.IF72_LIBRARY.calf_raise).basis,'bodyweight');
+ }finally{f.close()}
+});
+
+test('dumbbell convention: two-manubri labels survive late suggestions, plus/minus and rerender; save keeps each-disc value',async()=>{
+ const f=await fixture();try{f.w.aiPlan=[{id:'dumbbell_shoulder_press',sets:2,reps:10,rest:2}];f.w.loadSuggestion=6;await f.generate();
+ const card=()=>f.w.document.getElementById('if50ex_dumbbell_shoulder_press');
+ assert.match(card().querySelector('.if1041-weight small').textContent,/DISCHI PER MANUBRIO/);assert.match(card().querySelector('.if1099-load-note').textContent,/2 manubri/);
+ assert.equal(card().querySelector('.if1041-weight-input').value,'6');
+ assert.match(card().querySelector('.if969-load').textContent,/6 kg di dischi per manubrio/);
+ f.w.if1041Weight('dumbbell_shoulder_press',1);assert.equal(card().querySelector('.if1041-weight-input').value,'7');f.w.if1041Weight('dumbbell_shoulder_press',-1);
+ f.w.if50RenderWorkout();await f.advance();assert.equal(card().querySelector('.if1041-weight-input').value,'6');assert.match(card().textContent,/non la somma dei due/);
+ f.w.if949Start('dumbbell_shoulder_press');await f.w.if50CompleteSet('dumbbell_shoulder_press',1);await f.advance();
+ assert.equal(f.calls.find(x=>x.url==='api/set').body.weight,6);assert.equal(f.w.document.querySelector('[data-page="recovery"]').classList.contains('active'),true);
+ }finally{f.close()}
+});
+
+test('dumbbell convention: one-manubrio instruction and decimal load survive cold resume and history uses the same unit',async()=>{
+ let f=await fixture();try{f.w.aiPlan=[{id:'goblet_squat',sets:2,reps:10,rest:2}];await f.generate();
+ f.w.if1041SetWeight('goblet_squat','7,5');f.w.if1096Checkpoint();await f.advance();const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
+ const card=f.w.document.getElementById('if50ex_goblet_squat');assert.equal(card.querySelector('.if1041-weight-input').value,'7.5');assert.match(card.querySelector('.if1099-load-note').textContent,/Usa 1 manubrio/);
+ const api=f.w.api;f.w.api=async url=>url==='api/workouts-0933/55'?{workout:{title:'Seduta'},sets:[{exercise:'Goblet squat a box/panca',weight:7.5,reps:10,set_no:1}],cardio:[]}:api(url);
+ await f.w.if933OpenDetail(55);assert.match(f.w.document.getElementById('if933DetailHost').textContent,/7.5 kg di dischi per manubrio/);
+ }finally{f.close()}
+});
+
+
+test('bodyweight progression: local fallback and substitutions use the shared next-session target, with a visible reason',async()=>{
+ const f=await fixture();try{
+ const targets={heel_taps:{target:12,repType:'reps',action:'progress',previous_sets:2,reason:'Due sedute complete e facili: +2 ripetizioni.'},plank:{target:35,repType:'seconds',action:'progress',previous_sets:2,reason:'Due sedute complete e facili: +5 secondi.'}};
+ const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');if(url.startsWith('api/bodyweight-progression-01099'))return {items:targets};return api(url,opts)};
+ f.w.if1087Available=id=>id==='heel_taps'||id==='plank';await f.generate();
+ assert.equal(f.plan.aiGeneration.mode,'local_fallback');assert.equal(f.plan.plan.length,2);
+ for(const ex of f.plan.plan){assert.equal(ex.reps,targets[ex.id].target);assert.equal(ex.sets,2);assert.equal(ex.progression.reason,targets[ex.id].reason)}
+ assert.match(f.w.document.querySelector('.if1044-current .if1099-progression-note').textContent,/Due sedute complete/);
+ const replacement=f.w.if60ToPlan('plank');assert.equal(replacement.reps,35);assert.equal(replacement.sets,2);
+ }finally{f.close()}
+});
+
+test('bodyweight progression: new timed target is retained on cold resume and the countdown saves exactly those seconds',async()=>{
+ let f=await fixture();try{f.w.aiPlan=[{id:'plank',sets:2,reps:35,rest:2,progression:{action:'progress',target:35,reason:'Due sedute complete e facili: +5 secondi.'}}];await f.generate();
+ f.w.if1096Checkpoint();await f.advance();const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
+ assert.equal(f.plan.plan[0].reps,35);assert.match(f.w.document.querySelector('.if1099-progression-note').textContent,/5 secondi/);
+ f.w.if949Start('plank');f.w.if1041Primary('plank');await f.advance(34000);assert.equal(f.calls.filter(x=>x.url==='api/set').length,0);await f.advance(1500);
+ const saved=f.calls.find(x=>x.url==='api/set');assert.equal(saved.body.reps,35);assert.equal(saved.body.rep_type,'seconds');assert.equal(saved.body.weight,null);
+ }finally{f.close()}
+});

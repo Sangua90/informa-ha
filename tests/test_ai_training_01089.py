@@ -108,8 +108,100 @@ class AITrainingTest(unittest.TestCase):
         with patch.object(self.module.urllib.request,'urlopen',open_request):
             self.assertEqual(self.module.request_ai('Prova',self.module.unified_context(),schema={'type':'object'}),'{}')
         self.assertFalse(payload['store'])
+        self.assertIn('Manubri: il carico registrato',payload['system_instruction'])
         self.assertEqual(payload['response_format']['mime_type'],'application/json')
         self.assertNotIn(self.cfg['api_key'],payload['input'])
+
+    def test_dumbbell_context_uses_discs_on_one_implement_without_converting_saved_loads(self):
+        catalog=self.module.training_catalog()
+        weighted=[e for e in catalog if e['loadType']=='kg']
+        self.assertEqual(len(weighted),12)
+        for e in weighted:
+            self.assertEqual(e['loadBasis'],'dumbbell_discs_each')
+            self.assertEqual(e['dumbbellCount'],1 if e['id'] in {'one_arm_dumbbell_row','goblet_squat','single_leg_romanian_deadlift','seated_dumbbell_calf_raise'} else 2)
+        exercise=next(e for e in weighted if e['id']=='dumbbell_shoulder_press')
+        self.client.post('/api/set',json={'exercise':exercise['name'],'weight':7.5,'reps':10,'set_no':1})
+        ctx=self.module.unified_context()
+        saved=ctx['training']['set_history'][0]
+        self.assertEqual(saved['weight'],7.5)
+        self.assertEqual(saved['load_basis'],'dumbbell_discs_each')
+        self.assertEqual(saved['dumbbell_count'],2)
+        self.assertEqual(self.module.known_load(exercise,ctx,'maintain'),7.5)
+        self.assertIn('esclusi impugnatura e fermadischi',ctx['equipment']['load_convention'])
+        self.assertIn('mai per la coppia',self.module.safe_context(ctx)['equipment']['load_convention'])
+
+    def bodyweight_context(self, id='heel_taps', reps=10, fatigue='Facile', completed=True, hours=72):
+        ctx=self.module.unified_context()
+        ex=next(e for e in ctx['exercise_catalog'] if e['id']==id)
+        ctx['training']['set_history']=[{'workout_id':wid,'exercise':ex['name'],'reps':reps,'rep_type':ex['repType'],'set_no':n,'fatigue':fatigue,'ts':(datetime.now()-__import__('datetime').timedelta(hours=hours+offset)).isoformat()} for wid,offset in [(2,0),(1,168)] for n in (2,1)]
+        ctx['training']['exercise_outcomes']=[{'workout_id':wid,'exercise':ex['name'],'status':'Completato' if completed else 'Parziale'} for wid in (2,1)]
+        ctx['training']['effort_ratings']=[]
+        return ctx
+
+    def test_bodyweight_initial_targets_and_two_complete_easy_sessions_progress_in_correct_units(self):
+        initial=self.module.bodyweight_progressions(self.module.unified_context())
+        self.assertEqual(initial['heel_taps']['target'],10)
+        self.assertEqual(initial['plank']['target'],30)
+        self.assertNotIn('stretch_calves',initial)
+        for id,reps,target in [('heel_taps',10,12),('plank',30,35)]:
+            with self.subTest(id=id):
+                result=self.module.bodyweight_progressions(self.bodyweight_context(id,reps))[id]
+                self.assertEqual((result['target'],result['action'],result['previous_sets']),(target,'progress',2))
+
+    def test_bodyweight_partial_missing_outcome_one_set_or_mixed_repetitions_never_progress(self):
+        for scenario in ('partial','missing','one_set','mixed','one_session','duplicate_set'):
+            ctx=self.bodyweight_context()
+            if scenario=='partial':ctx['training']['exercise_outcomes'][0]['status']='Parziale'
+            if scenario=='missing':ctx['training']['exercise_outcomes']=[]
+            if scenario=='one_set':ctx['training']['set_history']=ctx['training']['set_history'][::2]
+            if scenario=='one_session':ctx['training']['set_history']=ctx['training']['set_history'][:2]
+            if scenario=='mixed':ctx['training']['set_history'][0]['reps']=12
+            if scenario=='duplicate_set':
+                for row in ctx['training']['set_history']:row['set_no']=1
+            with self.subTest(scenario=scenario):self.assertEqual(self.module.bodyweight_progressions(ctx)['heel_taps']['action'],'maintain')
+
+    def test_bodyweight_moderate_effort_holds_and_hard_effort_reduces_in_correct_units(self):
+        for id,reps,target in [('heel_taps',10,8),('plank',30,25)]:
+            ctx=self.bodyweight_context(id,reps,fatigue='Giusta')
+            self.assertEqual(self.module.bodyweight_progressions(ctx)[id]['action'],'maintain')
+            ctx['training']['effort_ratings']=[{'workout_id':2,'exercise_id':id,'effort':5}]
+            result=self.module.bodyweight_progressions(ctx)[id]
+            self.assertEqual((result['target'],result['action']),(target,'reduce'))
+
+    def test_bodyweight_numeric_easy_rating_is_session_bound_and_overrides_hidden_moderate_default(self):
+        ctx=self.bodyweight_context(fatigue='Giusta')
+        ctx['training']['effort_ratings']=[{'workout_id':wid,'exercise_id':'heel_taps','effort':2} for wid in (2,1)]
+        self.assertEqual(self.module.bodyweight_progressions(ctx)['heel_taps']['target'],12)
+        ctx['training']['effort_ratings'][0]['workout_id']=999
+        self.assertEqual(self.module.bodyweight_progressions(ctx)['heel_taps']['target'],10)
+
+    def test_bodyweight_short_recovery_low_energy_or_pain_prevents_increase_and_long_break_reduces(self):
+        self.assertEqual(self.module.bodyweight_progressions(self.bodyweight_context(hours=12))['heel_taps']['action'],'maintain')
+        ctx=self.bodyweight_context()
+        for energy,pain in [('Bassa','Nessuno'),('Normale','Schiena')]:
+            self.assertEqual(self.module.bodyweight_progressions(ctx,energy,pain)['heel_taps']['action'],'maintain')
+        self.assertEqual(self.module.bodyweight_progressions(self.bodyweight_context(hours=800))['heel_taps']['target'],8)
+
+    def test_bodyweight_ceiling_stays_bounded_and_recommends_a_variant(self):
+        for id,reps in [('heel_taps',20),('plank',60)]:
+            result=self.module.bodyweight_progressions(self.bodyweight_context(id,reps))[id]
+            self.assertEqual((result['target'],result['action']),(reps,'ceiling'))
+            self.assertIn('variante',result['reason'])
+
+    def test_real_workout_route_applies_bodyweight_target_to_ai_plan_and_caps_simultaneous_series_increase(self):
+        ctx=self.bodyweight_context()
+        with patch.object(self.module,'unified_context',return_value=ctx),patch.object(self.module,'request_ai',lambda q,c,**kw:json.dumps(self.plan(c,('heel_taps','plank')))):
+            response=self.client.post('/api/ai-workout-01089',json={'exercise_count':2,'minutes':30,'energy':'Normale','pain':'Nessuno'})
+        data=response.get_json()
+        self.assertEqual(data['mode'],'gemini')
+        self.assertEqual(data['plan'][0]['reps'],12)
+        self.assertEqual(data['plan'][0]['progression']['action'],'progress')
+        self.assertEqual(data['plan'][1]['reps'],30)
+        targets=self.module.bodyweight_progressions(ctx)
+        value=self.plan(ctx,('heel_taps','plank'));value['items'][0]['sets']=4
+        candidates=self.module.allowed_candidates(ctx,'Nessuno')
+        result=self.module.validate_plan(value,candidates,2,'Normale',30,ctx['coverage']['sources'],targets)
+        self.assertEqual(result[0]['sets'],2)
 
     def test_effort_is_idempotent_and_payload_is_validated(self):
         body={'exercise_id':'plank','effort':5,'recorded_at':'2026-11-10T12:00:00'}

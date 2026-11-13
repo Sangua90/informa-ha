@@ -55,6 +55,7 @@
 
   window.if68Prepare=async function(){
     const last=await recentGroups();
+    try{const data=await api('api/bodyweight-progression-01099?energy='+encodeURIComponent(IF50.energy||'Normale')+'&pain='+encodeURIComponent(IF50.pain||'Nessuno'));IF50.bodyweightProgression=data.items||{};IF50.bodyweightProgressionUnavailable=false}catch(e){IF50.bodyweightProgression={};IF50.bodyweightProgressionUnavailable=true}
     const ranked=['Petto','Schiena','Gambe','Femorali','Spalle','Glutei','Core','Tricipiti','Bicipiti','Polpacci'].map(group=>({group,tie:Math.random()})).sort((a,b)=>score(b.group,last)-score(a.group,last)||a.tie-b.tie).map(x=>x.group);
     IF50.adaptiveGroups=ranked;
     IF50.adaptiveRecovery=last;

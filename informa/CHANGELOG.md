@@ -1,3 +1,10 @@
+## 0.10.99
+
+- Progressione esplicita del corpo libero condivisa tra Gemini e Coach locale: dopo due sedute complete, facili e comparabili, +2 ripetizioni oppure +5 secondi per Plank. Nessun aumento automatico con sedute parziali, recupero breve, energia bassa o fastidi; riduzione prudente dopo sforzo alto o lunga interruzione. Il motivo compare nella scheda e la seduta già aperta conserva i suoi obiettivi.
+
+- Carichi dei manubri espliciti: kg dei soli dischi montati su un manubrio, sommando le due estremità ed escludendo impugnatura e fermadischi. Gli esercizi indicano se usare uno o due manubri; il valore resta sempre per ciascuno.
+- Stessa convenzione in allenamento, suggerimenti, storico, attrezzatura e contesto Gemini. I valori salvati e i comandi +/− non vengono raddoppiati, dimezzati o corretti con una tara presunta.
+
 ## 0.10.98
 
 - Se Interactions non risponde o restituisce un errore temporaneo come HTTP 503, il Coach prova anche generateContent, la seconda interfaccia ufficiale di Google, con lo stesso modello, contesto e schema della seduta. Restano un massimo di tre chiamate e una scadenza complessiva; errori di autenticazione e quota non causano un cambio di canale.

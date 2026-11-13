@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {JSDOM}=require('../.test-runtime/node_modules/jsdom');
 // Keep the rendering/state wrappers in their actual Docker bundle order.
-const wrapperNames=new Set(['workout_ui_067.js','workout_flow_0949.js','workout_focus_0950.js','adaptive_library_0972.js','treadmill_focus_fix_0974.js','treadmill_render_fix_0975.js','automatic_stretching_0978.js','temporary_equipment_0979.js','treadmill_flow_fix_0983.js','treadmill_complete_fix_0984.js','treadmill_advance_fix_0990.js','exercise_complete_fix_0994.js','treadmill_final_fix_0995.js','workout_controller_0108.js','workout_runner_01041.js']);
+const wrapperNames=new Set(['load_conventions_01099.js','workout_ui_067.js','workout_flow_0949.js','workout_focus_0950.js','adaptive_library_0972.js','treadmill_focus_fix_0974.js','treadmill_render_fix_0975.js','automatic_stretching_0978.js','temporary_equipment_0979.js','treadmill_flow_fix_0983.js','treadmill_complete_fix_0984.js','treadmill_advance_fix_0990.js','exercise_complete_fix_0994.js','treadmill_final_fix_0995.js','workout_controller_0108.js','workout_runner_01041.js']);
 const docker=fs.readFileSync(path.join(__dirname,'../informa/Dockerfile'),'utf8');
 const scripts=docker.match(/RUN for f in (.*?); do cat/)[1].split(' ').filter(x=>wrapperNames.has(x));
 function fixture(){
