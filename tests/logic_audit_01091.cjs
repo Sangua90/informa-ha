@@ -412,13 +412,14 @@ test('dumbbell convention: one-manubrio instruction and decimal load survive col
 
 
 test('bodyweight progression: local fallback and substitutions use the shared next-session target, with a visible reason',async()=>{
- const f=await fixture();try{
+ let f=await fixture();try{
  const targets={heel_taps:{target:12,repType:'reps',action:'progress',previous_sets:2,reason:'Due sedute complete e facili: +2 ripetizioni.'},plank:{target:35,repType:'seconds',action:'progress',previous_sets:2,reason:'Due sedute complete e facili: +5 secondi.'}};
  const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');if(url.startsWith('api/bodyweight-progression-01099'))return {items:targets};return api(url,opts)};
  f.w.if1087Available=id=>id==='heel_taps'||id==='plank';await f.generate();
  assert.equal(f.plan.aiGeneration.mode,'local_fallback');assert.equal(f.plan.plan.length,2);
  for(const ex of f.plan.plan){assert.equal(ex.reps,targets[ex.id].target);assert.equal(ex.sets,2);assert.equal(ex.progression.reason,targets[ex.id].reason)}
  assert.match(f.w.document.querySelector('.if1044-current .if1099-progression-note').textContent,/Due sedute complete/);
+ f.w.if1096Checkpoint();await f.advance();const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
  const replacement=f.w.if60ToPlan('plank');assert.equal(replacement.reps,35);assert.equal(replacement.sets,2);
  }finally{f.close()}
 });
