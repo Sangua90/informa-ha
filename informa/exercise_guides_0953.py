@@ -15,6 +15,7 @@ GUIDE_IDS = (
     "shoulder_press",
     "lateral_raise",
     "romanian_deadlift",
+    "bird_dog",
 )
 BUNDLED_DIR = Path(__file__).resolve().parent / "web" / "guides_default"
 
@@ -65,7 +66,7 @@ def exercise_guides_info_0953():
 
 
 print(
-    "[INFORMHA_EXERCISE_GUIDES] version=0.9.53 approved_guides=6 "
+    "[INFORMHA_EXERCISE_GUIDES] version=0.9.53 approved_guides=7 "
     "auto_install=1 preserves_custom=1 "
     f"installed={sum(1 for item in _guide_status.values() if item['installed'])}",
     flush=True,

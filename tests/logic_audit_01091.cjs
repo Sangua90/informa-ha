@@ -15,6 +15,8 @@ async function fixture(options={}){
  w.Date.now=()=>now;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;w.console={log(){},error(){},warn(){}};
  w.fetch=async(url,opts={})=>{
   const body=typeof opts.body==='string'?JSON.parse(opts.body):{};calls.push({url,body,method:opts.method||'GET'});
+  if(w.deferNote&&url==='api/coach-notes'&&opts.method==='POST')await new Promise(resolve=>w.resolveNote=resolve);
+  if(w.failNote&&url==='api/coach-notes'&&opts.method==='POST')throw Error('Nota non inviata: collegamento assente');
   if(w.deferSet&&url==='api/set')await new Promise(resolve=>w.resolveSet=resolve);
   if(url.match(/^api\/coach-questions\/\d+\/answer$/)){
    if(w.deferQuestion)await new Promise(resolve=>w.resolveQuestion=resolve);
@@ -41,13 +43,20 @@ async function fixture(options={}){
    return {ok:status===200,status,json:async()=>data};
   }
   let data={ok:true,items:[],disabled:[],guides:{},data:{},connected:false,reminder:{due:false},workout_id:101};
+  if(url==='api/coach-notes'){
+   server.notes??=[];server.preferences??={};
+   if(opts.method==='POST'){const changes=w.noteChanges||[{exercise_id:body.exercise_id,reps:20}];const note={id:server.notes.length+1,body:body.body,exercise_id:body.exercise_id,summary:w.noteSummary||'Impostato: Bird dog 20 ripetizioni per lato.',active:true,current:true,changes};server.notes.unshift(note);for(const c of changes)server.preferences[c.exercise_id]={reps:c.reps};data={ok:true,note}}
+   else data={ok:true,items:server.notes,preferences:server.preferences};
+  }
+  if(url.match(/^api\/coach-notes\/\d+\/active$/)){const id=Number(url.split('/')[2]),note=server.notes.find(n=>n.id===id);note.active=body.active;if(!body.active)for(const c of note.changes)delete server.preferences[c.exercise_id];data={ok:true}}
+  if(url.startsWith('api/bodyweight-progression-01099'))data={items:{},exercise_preferences:server.preferences||{}};
   if(url==='api/state')data={profile:{name:'Test'},version:'test'};
   if(url==='api/nutrition/today')data={totals:{},entries:[]};
   if(url.startsWith('api/load-progression-0969/')&&w.loadSuggestion!=null)data={suggestion:w.loadSuggestion,reason:'Ultimo carico'};
   if(url==='api/set'&&w.savedSet)data={...data,saved_set:w.savedSet};
   if(url==='api/workout-flow-0949/archive'&&w.archiveStatus)data={...data,status:w.archiveStatus};
   if(url==='api/nutrition/analyze-photo')data={ok:true,understood:'Mela',calories:80,protein_g:0,carbs_g:20,fat_g:0,fiber_g:3};
-  if(url==='api/ai-workout-01089')data={mode:'gemini',decision:'train',reason:'Fixture',plan:w.aiPlan||[{id:'chest',sets:2,reps:10,rest:2},{id:'lat',sets:2,reps:10,rest:2}]};
+  if(url==='api/ai-workout-01089')data={mode:'gemini',decision:'train',reason:'Fixture',plan:(w.aiPlan||[{id:'chest',sets:2,reps:10,rest:2},{id:'lat',sets:2,reps:10,rest:2}]).map(e=>({...e,...server.preferences?.[e.id]}))};
   if(url==='api/ai-workout-01089'&&w.clarifyQuestion){w.questionItems=[w.clarifyQuestion];data={mode:'gemini',decision:'clarify',reason:'Serve un chiarimento',question:w.clarifyQuestion,plan:null}}
   if(url==='api/coach-questions'||url==='api/coach-questions/check')data={ok:true,items:w.questionItems};
   const questionId=Number(url.match(/^api\/coach-questions\/(\d+)\//)?.[1]);
@@ -234,7 +243,7 @@ test('coach questions: save is single-flight, persists the answer, and can be ed
  f.w.document.getElementById('if1093Send').click();await f.flush();f.w.document.getElementById('if1093Send').click();
  assert.equal(f.calls.filter(x=>x.url==='api/coach-questions/7/answer').length,1);f.w.resolveQuestion();await f.flush();
  assert.equal(f.w.document.getElementById('if1093Answer'),null);assert.match(f.w.document.getElementById('if1093Confirmation').textContent,/domanda è completata/);
- const history=f.w.document.querySelector('[data-page=coachquestions] details');assert.equal(history.open,false);history.querySelector('summary').click();history.querySelector('button[data-question-id="7"]').click();
+ const history=f.w.document.querySelector('[data-page=coachquestions] > details');assert.equal(history.open,false);history.querySelector('summary').click();history.querySelector('button[data-question-id="7"]').click();
  assert.equal(f.w.document.getElementById('if1093Answer').value,'Due volte, martedì e sabato');
  f.w.deferQuestion=false;field=f.w.document.getElementById('if1093Answer');field.value='Tre volte';field.dispatchEvent(new f.w.Event('input',{bubbles:true}));f.w.document.getElementById('if1093Send').click();await f.flush();
  const saves=f.calls.filter(x=>x.url==='api/coach-questions/7/answer');assert.equal(saves[1].body.revision,1);assert.equal(saves[1].body.answer,'Tre volte');
@@ -430,5 +439,46 @@ test('bodyweight progression: new timed target is retained on cold resume and th
  assert.equal(f.plan.plan[0].reps,35);assert.match(f.w.document.querySelector('.if1099-progression-note').textContent,/5 secondi/);
  f.w.if949Start('plank');f.w.if1041Primary('plank');await f.advance(34000);assert.equal(f.calls.filter(x=>x.url==='api/set').length,0);await f.advance(1500);
  const saved=f.calls.find(x=>x.url==='api/set');assert.equal(saved.body.reps,35);assert.equal(saved.body.rep_type,'seconds');assert.equal(saved.body.weight,null);
+ }finally{f.close()}
+});
+
+
+test('Bird dog: final runner shows each side and total, saves repetitions once, resumes and retains the guide',async()=>{
+ let f=await fixture();try{f.w.aiPlan=[{id:'bird_dog',sets:2,reps:6,rest:2}];await f.generate();
+ let card=f.w.document.getElementById('if50ex_bird_dog');assert.match(card.querySelector('.if1041-line').textContent,/6 rip. per lato.*12 totali/);assert.match(f.w.document.getElementById('if50r_bird_dog_1').getAttribute('aria-label'),/per lato/);assert.equal(card.querySelector('.if1041-weight'),null);
+ assert.ok(card.querySelector('[onclick="openGuide(\'bird_dog\')"]'));assert.equal(f.w.if108Timed(f.plan.plan[0]),false);
+ f.w.if1096Checkpoint();await f.advance();const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
+ assert.equal(f.plan.plan[0].perSide,true);f.w.if949Start('bird_dog');await f.w.if50CompleteSet('bird_dog',1);await f.advance();const saved=f.calls.find(c=>c.url==='api/set');assert.equal(saved.body.reps,6);assert.equal(saved.body.rep_type,'reps');assert.equal(saved.body.weight,null);
+ const api=f.w.api;f.w.api=async url=>url==='api/workouts-0933/55'?{workout:{title:'Seduta'},sets:[{exercise:'Bird dog',reps:6,set_no:1,rep_type:'reps',weight:null}],cardio:[]}:api(url);
+ await f.w.if933OpenDetail(55);assert.match(f.w.document.getElementById('if933DetailHost').textContent,/6 rep per lato/);
+ }finally{f.close()}
+});
+
+test('Coach notes: draft survives question renders, save is single-flight and clears only after acknowledgement',async()=>{
+ const f=await fixture({questions:[coachQuestion()]});try{f.w.go('coachquestions');await f.flush();const input=f.w.document.getElementById('if1101NoteBody'),select=f.w.document.getElementById('if1101NoteExercise');select.value='bird_dog';select.dispatchEvent(new f.w.Event('change'));input.value='Vorrei 20 ripetizioni per lato';input.dispatchEvent(new f.w.Event('input'));
+ f.w.go('home');f.w.go('coachquestions');await f.flush();assert.equal(f.w.document.getElementById('if1101NoteBody'),input);assert.equal(input.value,'Vorrei 20 ripetizioni per lato');
+ f.w.deferNote=true;const send=f.w.document.getElementById('if1101NoteSend');send.click();await f.flush();send.click();assert.equal(f.calls.filter(c=>c.url==='api/coach-notes'&&c.method==='POST').length,1);assert.equal(input.value,'Vorrei 20 ripetizioni per lato');
+ f.w.resolveNote();await f.flush();assert.equal(input.value,'');assert.match(f.w.document.getElementById('if1101NoteStatus').textContent,/20 ripetizioni per lato/);assert.equal(f.w.questionItems[0].state,'open');
+ f.w.deferNote=false;f.w.aiPlan=[{id:'bird_dog',sets:2,reps:6,rest:60}];await f.generate();assert.equal(f.plan.plan[0].reps,20);assert.match(f.w.document.querySelector('#if50ex_bird_dog .if1041-line').textContent,/40 totali/);
+ }finally{f.close()}
+});
+
+test('Coach notes: failed save retains the draft on cold restart and displays note text safely',async()=>{
+ let f=await fixture();try{f.w.go('coachquestions');await f.flush();let input=f.w.document.getElementById('if1101NoteBody'),select=f.w.document.getElementById('if1101NoteExercise');select.value='bird_dog';select.dispatchEvent(new f.w.Event('change'));input.value='Voglio 20 ripetizioni per lato';input.dispatchEvent(new f.w.Event('input'));f.w.failNote=true;f.w.document.getElementById('if1101NoteSend').click();await f.flush();assert.equal(input.value,'Voglio 20 ripetizioni per lato');assert.match(f.w.document.getElementById('if1101NoteStatus').textContent,/collegamento assente/);
+ const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.go('coachquestions');await f.flush();input=f.w.document.getElementById('if1101NoteBody');assert.equal(input.value,'Voglio 20 ripetizioni per lato');assert.equal(f.w.document.getElementById('if1101NoteExercise').value,'bird_dog');
+ f.w.noteSummary='<img id="injected-note" src=x onerror=alert(1)>';f.w.document.getElementById('if1101NoteSend').click();await f.flush();assert.equal(f.w.document.getElementById('injected-note'),null);assert.match(f.w.document.getElementById('if1101NoteStatus').textContent,/img id=/);
+ }finally{f.close()}
+});
+
+test('Coach notes: removing a preference preserves the open workout and the next local plan returns to its normal target',async()=>{
+ let f=await fixture();try{f.w.go('coachquestions');await f.flush();const input=f.w.document.getElementById('if1101NoteBody'),select=f.w.document.getElementById('if1101NoteExercise');select.value='bird_dog';select.dispatchEvent(new f.w.Event('change'));input.value='Voglio 20 ripetizioni per lato';input.dispatchEvent(new f.w.Event('input'));f.w.document.getElementById('if1101NoteSend').click();await f.flush();f.w.aiPlan=[{id:'bird_dog',sets:2,reps:6,rest:60}];await f.generate();assert.equal(f.plan.plan[0].reps,20);
+ f.w.go('coachquestions');await f.flush();f.w.document.querySelector('#if1101NotesHistory button').click();await f.flush();assert.equal(f.plan.plan[0].reps,20);
+ await f.w.if50Discard();const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};f.w.if1087Available=id=>id==='bird_dog'||id==='heel_taps';await f.generate();assert.equal(f.plan.aiGeneration.mode,'local_fallback');assert.equal(f.plan.plan.find(e=>e.id==='bird_dog').reps,6);
+ }finally{f.close()}
+});
+
+
+test('Coach notes: an oversized local prescription is reported before a session starts',async()=>{
+ const f=await fixture();try{f.server.preferences={bird_dog:{reps:30,sets:2,rest:180}};f.plan.time=10;const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};f.w.if1087Available=id=>id==='bird_dog'||id==='heel_taps';await f.generate();assert.match(f.w.document.getElementById('if109PlanStatus').textContent,/superano il tempo/);assert.equal(f.server.session,null);assert.equal(f.calls.filter(c=>c.url==='api/set').length,0);
  }finally{f.close()}
 });

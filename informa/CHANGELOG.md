@@ -1,3 +1,10 @@
+## 0.10.101
+
+- Bird dog aggiunto al Core, disponibile a Gemini e al Coach locale, alle sostituzioni e alle esclusioni personali. Guida illustrata inclusa e installata automaticamente preservando le foto personalizzate.
+- Conteggio esplicito per lato e totale: per esempio 6 per lato, 12 totali. Storico e ripresa mantengono la stessa unità; la durata della scheda considera entrambi i lati. Base prudente 6 per lato e progressione di una ripetizione per lato dopo due sedute complete e facili.
+- Nuovo riquadro Note per il Coach nella pagina delle domande: testo libero ed esercizio facoltativo, interpretazione Gemini di ripetizioni/secondi, serie e recuperi, conferma di cosa è stato applicato alle prossime schede. Le altre preferenze restano nel contesto del Coach. Bozze conservate in caso di errore, invio singolo, indicazioni archiviabili e riattivabili.
+- Preferenze numeriche condivise tra Gemini, Coach locale e sostituzioni. Le note nuove prevalgono sui vecchi parametri, senza riaprire indicazioni superate né riscrivere la seduta già aperta.
+
 ## 0.10.100
 
 - La valutazione esplicita dello sforzo prevale sulle vecchie etichette delle serie: “Moderato” impedisce un aumento automatico anche se lo storico delle serie riportava “Facile”. Conservate tutte le nuove convenzioni dei manubri e la progressione del corpo libero della 0.10.99.

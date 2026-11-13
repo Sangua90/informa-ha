@@ -19,7 +19,7 @@ const IF60_GROUPS={
 };
 let IF60_PENDING=[];
 function if60Library(id){return window.IF72_LIBRARY?.[id]||IF51_LIBRARY[id]||IF50_EX[id]||null}
-function if60PainBlocks(id){const ex=if60Library(id);return !!(ex?.painAvoid||[]).includes(IF50.pain)}
+function if60PainBlocks(id){const ex=if60Library(id);return (ex?.painAvoid||[]).some(p=>(String(IF50.pain||'')+' '+String(IF50.pain_detail||'')).toLowerCase().includes(p.toLowerCase()))}
 const IF60_FAMILIES=[
  ['chest','pec_fly','push_up'],
  ['lat','lat_close_grip','lat_reverse_grip','straight_arm_pulldown','one_arm_dumbbell_row'],
@@ -30,7 +30,7 @@ const IF60_FAMILIES=[
  ['romanian_deadlift','single_leg_romanian_deadlift','hamstring_walkout'],
  ['glute_bridge','bodyweight_glute_kickback'],
  ['calf_raise','single_leg_step_calf_raise','seated_dumbbell_calf_raise'],
- ['plank','incline_bench_crunch','heel_taps','reverse_crunch'],
+ ['plank','incline_bench_crunch','heel_taps','reverse_crunch','bird_dog'],
  ['treadmill','stepper']
 ];
 function if60NormGroup(g){g=String(g||'').toLowerCase();if(g.includes('bicip'))return'Bicipiti';if(g.includes('tricip'))return'Tricipiti';if(g.includes('petto'))return'Petto';if(g.includes('schiena'))return'Schiena';if(g.includes('spall'))return'Spalle';if(g.includes('femoral')||g.includes('catena'))return'Femorali';if(g.includes('gamb')||g.includes('quadric'))return'Gambe';if(g.includes('glute'))return'Glutei';if(g.includes('polp'))return'Polpacci';if(g.includes('core'))return'Core';if(g.includes('cardio'))return'Cardio';return g}

@@ -1,0 +1,19 @@
+# Bird dog and Coach notes — 0.10.101
+
+Bird dog is the 50th catalog entry and belongs to Core. It is bodyweight, counted in repetitions per side, with a six-per-side initial target and two sets. Its slow controlled execution is budgeted at four seconds per extension on each side. After two comparable completed/easy sessions, the automatic target can rise by one repetition per side, up to twelve; explicit user preferences can set a different validated target. The final runner shows each-side and total quantities, history retains the per-side interpretation, and the saved numeric reps are the per-side value. It never starts the Plank countdown. Canonical exclusions, current-exercise order, recovery, substitution and cold-session restoration are retained. Bird dog is filtered conservatively for reported wrist, knee, shoulder or back discomfort.
+
+The included 1122×1402 guide matches the existing grey 3D/black/orange sheets. It is installed through the existing additive guide pack; a user's own Bird dog image takes precedence. A JPEG copy is also supplied separately in the workspace. Reference for execution: https://www.acefitness.org/resources/everyone/exercise-library/14/bird-dog/ . Generated using the built-in image tool with the existing Plank sheet as a style reference; the prompt required a quadruped start, opposite arm/leg extension, neutral level torso, clear Italian technique text and a per-side label.
+
+Coach notes live on the existing Coach questions page. The optional exercise selector and persistent draft survive question rendering and cold restart. Successful acknowledgement clears the text; failures retain it. Saving is single-flight and has a durable request ID. Gemini interprets explicit numerical repetition/seconds, set and recovery preferences within validated limits; generic notes remain coaching context with a clear acknowledgement that no numeric parameter was changed. Numbers must occur in the user's note, exercise/unit constraints are checked, and uncertain changes are rejected rather than applied. The same route supports a preview flag that interprets without saving, for read-only deployment verification.
+
+New structured preferences supersede the corresponding old parameters. Archiving removes only parameters owned by that note and does not resurrect older numeric instructions through the free-text context; restoration is explicit. User exclusions are unaffected. Active notes and current structured preferences join the minimized AI coaching context and declared data sources. Both server validation and the local planner use them for the next plan. Already-open plans retain their prescriptions. A local plan made too long by preferences is rejected before starting, with a useful message. Validated AI plans are not rewritten by a later client preference refresh.
+
+## Executed local checks
+
+- 133 Python tests passed in UTF-8 mode on Windows.
+- 92 JavaScript tests passed across all seven existing suites, including the final production bundle and cold restoration.
+- verify_build.py: 100 JS files, exact 74-fragment bundle, Python syntax and 50-exercise catalog passed.
+- Full production import/handlers on disposable data: twelve GET routes, Bird dog guide HTTP 200, note preview without writes, idempotent note save, validated AI plan with 20 repetitions per side, archive clearing preferences, unchanged performed-work counts. Mocked Google 503-to-generateContent is exercised by connection, note interpretation and workout generation.
+- Existing treadmill skip, set recovery, canonical progress, substitutions, dumbbell per-implement discs and weight controls remain covered.
+
+Actual image builds and installed-HA checks are separate release checks. These results do not claim physical iPhone runtime testing or a real user workout.

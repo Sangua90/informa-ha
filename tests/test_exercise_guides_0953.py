@@ -14,6 +14,7 @@ GUIDE_IDS = (
     "shoulder_press",
     "lateral_raise",
     "romanian_deadlift",
+    "bird_dog",
 )
 
 

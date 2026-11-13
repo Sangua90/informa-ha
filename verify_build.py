@@ -18,7 +18,7 @@ if r.returncode:fail.append(r.stderr)
 Path('bundle-check.js').unlink()
 for p in root.glob('*.py'):ast.parse(p.read_text(encoding='utf-8'))
 sys.path.insert(0,str(root.resolve()));import coach_library_0962 as c
-assert c.exercise_count()==49 and len(c.guide_ids())==49
+assert c.exercise_count()==50 and len(c.guide_ids())==50
 print('JavaScript files:',len(files),'bundle fragments:',len(names),'Python syntax and catalog: OK')
 print('Build checks:', 'PASS' if not fail else '\n'.join(fail))
 raise SystemExit(bool(fail))

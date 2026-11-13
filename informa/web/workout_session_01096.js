@@ -1,7 +1,7 @@
 // Resume the complete unfinished session; saved sets remain canonical on the server.
 (function(){
  const KEY='informha_session_01096',CLOSED='informha_closed_sessions_01096',FLOW='informha_workout_flow_0949',ORDER='informha_workout_order_01085',ACTIVE='informha_workout_active_0109';
- const OPTIONS=['planTitle','started','aiGeneration','bodyweightProgression','bodyweightProgressionUnavailable','energy','pain','pain_detail','time','exerciseCount','treadmill_choice','treadmillMinutes','stretch_mode','finishReason','effort'];
+ const OPTIONS=['planTitle','started','aiGeneration','bodyweightProgression','bodyweightProgressionUnavailable','exercisePreferences','energy','pain','pain_detail','time','exerciseCount','treadmill_choice','treadmillMinutes','stretch_mode','finishReason','effort'];
  let snapshot=null,pendingRecovery=null,revision=0,ready=false,restoring=false,needsResume=false,syncing=false,conflict=false,lastBody='',syncedBody='',syncJob=null;
  const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch(e){return fallback}};
  const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch(e){toast('Memoria del dispositivo piena: verifica il salvataggio della seduta su Home Assistant')}};

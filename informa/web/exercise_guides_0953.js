@@ -2,7 +2,7 @@
 (function(){
   const GUIDE_IDS=new Set([
     'plank','glute_bridge','calf_raise',
-    'shoulder_press','lateral_raise','romanian_deadlift'
+    'shoulder_press','lateral_raise','romanian_deadlift','bird_dog'
   ]);
   const oldOpen=window.openGuide;
 
@@ -14,5 +14,5 @@
     return typeof oldOpen==='function'?oldOpen.apply(this,arguments):undefined;
   };
 
-  console.log('[INFORMHA_EXERCISE_GUIDES] version=0.9.53 approved_guides=6 bundled_photos=1 workout_buttons=1');
+  console.log('[INFORMHA_EXERCISE_GUIDES] version=0.9.53 approved_guides=7 bundled_photos=1 workout_buttons=1');
 })();

@@ -14,7 +14,7 @@ class WorkoutSessionsTest(unittest.TestCase):
         self.core.app.add_url_rule('/api/workouts-0933/<int:workout_id>','workout_delete_0933',lambda workout_id:None,methods=['DELETE'])
         training=types.SimpleNamespace(config=types.SimpleNamespace(),context93=types.SimpleNamespace(),request_ai=lambda:None)
         spec=importlib.util.spec_from_file_location('sessions_test',ROOT/'workout_sessions_01096.py');self.sessions=importlib.util.module_from_spec(spec)
-        with patch.dict(sys.modules,{'app':self.core,'coach_questions_01093':types.SimpleNamespace(app=self.core.app),'ai_training_01089':training}):spec.loader.exec_module(self.sessions)
+        with patch.dict(sys.modules,{'app':self.core,'coach_notes_010101':types.SimpleNamespace(app=self.core.app),'ai_training_01089':training}):spec.loader.exec_module(self.sessions)
         self.snapshot={'session_id':'session-test-123','workout_id':None,'plan':[{'id':'chest','name':'Chest','sets':2,'reps':10,'rest':60}],'options':{'started':'2026-11-12T12:00:00'},'flow':{'chest':{'stage':'started','sets':{'1':{'weight':'9','reps':'10','done':False}}}},'names':{},'order':['chest'],'updated_at':123}
 
     tearDown=legacy.LogicAuditTest.tearDown

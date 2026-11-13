@@ -20,8 +20,10 @@
  }
  function render(){
   entries();if(!page.classList.contains('active'))return;
+  const previousNotes=page.querySelector('#if1101Notes');if(previousNotes)previousNotes.remove();
   const previousClose=page.querySelector(':scope > .if1088-close');page.replaceChildren();if(previousClose)page.appendChild(previousClose);
   page.append(el('div','AI Coach','ey'),el('h1','Domande del Coach'),el('p','Le tue risposte aiutano il Coach a personalizzare le prossime sedute. Puoi modificarle anche in seguito.','sub'));
+  if(previousNotes)page.appendChild(previousNotes);window.if1101MountNotes?.();
   if(error){const p=el('p',error,'card');p.setAttribute('role','alert');page.appendChild(p)}
   const pending=items.filter(q=>q.state==='open'),answered=items.filter(q=>q.state==='answered');
   if(selected==null)selected=pending[0]?.id||null;

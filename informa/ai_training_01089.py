@@ -39,7 +39,8 @@ def training_catalog():
             result.append(dict(id=id, name=e['name'], group=group,
                                loadType='plates' if id in PLATES else 'kg' if id in KG else 'bodyweight',
                                loadBasis='dumbbell_discs_each' if id in KG else 'machine_plates' if id in PLATES else 'bodyweight',
-                               dumbbellCount=DUMBBELL_COUNTS.get(id),
+                               dumbbellCount=DUMBBELL_COUNTS.get(id),perSide=id=='bird_dog',
+                               painAvoid=['ginoc','spall','schiena','pols'] if id=='bird_dog' else [],
                                repType='seconds' if id == 'plank' or group in ('Mobilità','Stretching') else 'reps'))
     return result
 
@@ -72,6 +73,7 @@ def unified_context():
             if exercise:
                 s['load_basis'] = exercise['loadBasis']
                 s['dumbbell_count'] = exercise['dumbbellCount']
+                s['per_side'] = exercise['perSide']
         # Legacy Plank rows predate rep_type. Keep their actual unit explicit.
         for s in sets:
             if 'plank' in str(s['exercise']).lower():
@@ -227,7 +229,7 @@ def allowed_candidates(ctx, pain):
     if 'ginoc' in pain: blocked.update(('Gambe','Polpacci'))
     if 'spalla' in pain: blocked.update(('Petto','Spalle','Tricipiti'))
     if 'schiena' in pain: blocked.update(('Schiena','Femorali'))
-    return {e['id']:e for e in ctx['exercise_catalog'] if e['enabled'] and e['group'] not in blocked|{'Mobilità','Stretching','Cardio'}}
+    return {e['id']:e for e in ctx['exercise_catalog'] if e['enabled'] and e['group'] not in blocked|{'Mobilità','Stretching','Cardio'} and not any(term in pain for term in e.get('painAvoid',[]))}
 
 
 def known_load(exercise, ctx, policy):
@@ -259,9 +261,9 @@ def bodyweight_progressions(ctx, energy='Normale', pain='Nessuno'):
         outcomes.setdefault((row['workout_id'],str(row['exercise']).lower()),row['status'])
     for e in training_catalog():
         if e['loadType']!='bodyweight' or e['group'] in ('Mobilità','Stretching','Cardio'):continue
-        timed=e['repType']=='seconds';step=5 if timed else 2;minimum=10 if timed else 5;maximum=60 if timed else 20
-        target=30 if timed else 10;action='initial'
-        reason='Prima base prudente: '+str(target)+(' secondi' if timed else ' ripetizioni')+' per serie. Valuta lo sforzo a fine esercizio.'
+        timed=e['repType']=='seconds';per_side=bool(e.get('perSide'));step=5 if timed else 1 if per_side else 2;minimum=10 if timed else 4 if per_side else 5;maximum=60 if timed else 12 if per_side else 20
+        target=30 if timed else 6 if per_side else 10;action='initial'
+        reason='Prima base prudente: '+str(target)+(' secondi' if timed else ' ripetizioni per lato' if per_side else ' ripetizioni')+' per serie. Valuta lo sforzo a fine esercizio.'
         sessions={}
         for row in training.get('set_history',[]):
             if str(row.get('exercise','')).lower()!=e['name'].lower() or not row.get('workout_id'):continue
@@ -291,19 +293,26 @@ def bodyweight_progressions(ctx, energy='Normale', pain='Nessuno'):
                 if complete_easy and same_target:
                     if target<maximum:
                         target=min(maximum,target+step);action='progress'
-                        reason='Due sedute complete e facili allo stesso livello: +'+str(step)+(' secondi' if timed else ' ripetizioni')+' per serie.'
+                        reason='Due sedute complete e facili allo stesso livello: +'+str(step)+(' secondi' if timed else ' ripetizione per lato' if per_side else ' ripetizioni')+' per serie.'
                     else:
                         action='ceiling';reason='Limite prudente raggiunto: mantieni e valuta una variante più impegnativa compatibile con la tua attrezzatura, senza aumentare le ripetizioni all’infinito.'
-        result[e['id']]={'target':target,'repType':e['repType'],'action':action,'reason':reason,'increment':step,'maximum':maximum,'sessions':len(latest),'previous_sets':len({r.get('set_no') for r in latest[0][1] if r.get('set_no') is not None}) if latest else None}
+        custom=(ctx.get('coach_notes') or {}).get('exercise_preferences',{}).get(e['id'],{})
+        if custom:
+            if action=='progress' and 'sets' in custom:target-=step
+            target=custom.get('reps',target);action='user'
+            maximum=max(maximum,target)
+            reason='Indicazione salvata per questo esercizio: '+str(target)+(' secondi' if timed else ' ripetizioni per lato' if per_side else ' ripetizioni')+' per serie.'
+        result[e['id']]={'target':target,'perSide':per_side,'repType':e['repType'],'action':action,'reason':reason,'increment':step,'maximum':maximum,'sessions':len(latest),'previous_sets':len({r.get('set_no') for r in latest[0][1] if r.get('set_no') is not None}) if latest else None}
     return result
 
 
 @app.get('/api/bodyweight-progression-01099')
 def bodyweight_progression():
-    return root.jsonify(ok=True,items=bodyweight_progressions(unified_context(),root.request.args.get('energy','Normale'),root.request.args.get('pain','Nessuno')))
+    ctx=unified_context()
+    return root.jsonify(ok=True,items=bodyweight_progressions(ctx,root.request.args.get('energy','Normale'),root.request.args.get('pain','Nessuno')),exercise_preferences=ctx.get('coach_notes',{}).get('exercise_preferences',{}))
 
 
-def validate_plan(value, candidates, count, energy, budget, sources=(), bodyweight_targets=None):
+def validate_plan(value, candidates, count, energy, budget, sources=(), bodyweight_targets=None, exercise_preferences=None):
     if not isinstance(value, dict) or value.get('decision') not in ('train','recovery','clarify') or not isinstance(value.get('reason'),str) or not value['reason'].strip():
         raise ValueError('Decisione AI non valida')
     used=value.get('data_used')
@@ -324,14 +333,19 @@ def validate_plan(value, candidates, count, energy, budget, sources=(), bodyweig
     for raw in value['items']:
         if not isinstance(raw,dict) or raw.get('id') not in candidates or raw['id'] in seen: raise ValueError('Esercizio AI non disponibile o duplicato')
         e = dict(candidates[raw['id']]);seen.add(e['id'])
+        custom=(exercise_preferences or {}).get(e['id'],{})
         sets=integer(raw.get('sets'),1,2 if energy=='Bassa' else 4)
-        reps=integer(raw.get('reps'),10,60) if e['repType']=='seconds' else integer(raw.get('reps'),5,20)
+        if 'sets' in custom:sets=min(custom['sets'],2 if energy=='Bassa' else 4)
+        if e['id']=='bird_dog':sets=min(sets,2)
+        reps=integer(raw.get('reps'),10,180 if 'reps' in custom else 60) if e['repType']=='seconds' else integer(raw.get('reps'),1 if 'reps' in custom else 4 if e.get('perSide') else 5,30 if e.get('perSide') and 'reps' in custom else 50 if 'reps' in custom else 12 if e.get('perSide') else 20)
         progression=(bodyweight_targets or {}).get(e['id']) if e['loadType']=='bodyweight' else None
         if progression:
             reps=progression['target']
             if progression['action']=='progress':sets=min(sets,progression['previous_sets'])
+        if 'reps' in custom:reps=custom['reps']
         rest=integer(raw.get('rest'),30,180)
-        duration += (sets*(reps if e['repType']=='seconds' else reps*3)+max(0,sets-1)*rest+45)/60
+        rest=custom.get('rest',rest)
+        duration += (sets*(reps if e['repType']=='seconds' else reps*(8 if e.get('perSide') else 3))+max(0,sets-1)*rest+45)/60
         result.append({**e,'sets':sets,'reps':reps,'rest':rest,'seconds':reps if e['repType']=='seconds' else None,'guide':e['id'],'priority':'Essenziale' if len(result)<2 else 'Utile'})
         if progression:result[-1]['progression']=progression
     if duration > budget: raise ValueError('La seduta AI supera il tempo disponibile')
@@ -370,10 +384,10 @@ def ai_workout():
     schema={'type':'object','properties':{'decision':{'type':'string','enum':['train','recovery','clarify']},'reason':{'type':'string'},'data_used':{'type':'array','items':{'type':'string','enum':ctx['coverage']['sources']}},'question':{'type':'object','properties':{'topic':{'type':'string','enum':['frequency','equipment','recovery','preferences','exercise_feedback']},'text':{'type':'string'}},'required':['topic','text']},'items':{'type':'array','items':{'type':'object','properties':{'id':{'type':'string','enum':list(candidates)},'sets':{'type':'integer'},'reps':{'type':'integer'},'rest':{'type':'integer'},'load_policy':{'type':'string','enum':['maintain','reduce','progress']}},'required':['id','sets','reps','rest','load_policy']}}},'required':['decision','reason','data_used','items']}
     try:
         if not candidates or budget<=0: raise ValueError('Nessun esercizio compatibile o tempo insufficiente')
-        prompt=f'Genera la seduta di oggi: decidi train o recovery e spiega perché. Per train scegli esattamente {min(count,len(candidates))} ID disponibili, senza duplicati, considerando tutta la rosa. Budget forza {budget} minuti inclusi recuperi e 45 secondi di cambio per esercizio. 1–4 serie (massimo 2 con energia Bassa), 5–20 ripetizioni oppure 10–60 secondi per plank, 30–180 secondi recupero tra serie. Tempo esecuzione stimato 3 secondi/ripetizione. Cardio e stretching restano nelle fasi richieste dall’utente e non vanno aggiunti agli items. Scegli anche load_policy maintain, reduce o progress per ciascun esercizio in base a prestazioni, recupero e sforzo. Per gli esercizi a corpo libero usa esattamente il target in training.bodyweight_progression, con la sua unità: considera questa quantità anche nel budget tempo. Dopo due sedute complete e facili allo stesso livello la regola prevede +2 ripetizioni o +5 secondi, entro i limiti indicati; non aumentare con fatica alta, recupero breve o sedute parziali. A parità di esercizio non aumentare contemporaneamente il numero di serie quando action è progress. Non inventare kg: i carichi effettivi sono derivati soltanto da quelli registrati e restano confermabili dall’utente. Puoi scegliere recovery se i dati lo giustificano; non interpretare dati mancanti come dati negativi. Restituisci JSON decision,reason,data_used,items (id,sets,reps,rest,load_policy). data_used deve elencare tutte le fonti disponibili di coverage.sources; reason deve collegare obiettivo, andamenti storici e recupero alle scelte, senza limitarsi a elencarli. La seduta non richiede una domanda scritta dall’utente. CHECK-IN: '+json.dumps(ctx['checkin'],ensure_ascii=False)
+        prompt=f'Genera la seduta di oggi: decidi train o recovery e spiega perché. Per train scegli esattamente {min(count,len(candidates))} ID disponibili, senza duplicati, considerando tutta la rosa. Budget forza {budget} minuti inclusi recuperi e 45 secondi di cambio per esercizio. 1–4 serie (massimo 2 con energia Bassa), 5–20 ripetizioni oppure 10–60 secondi per plank, 30–180 secondi recupero tra serie. Tempo esecuzione stimato 3 secondi/ripetizione. Bird dog: target per lato, massimo 2 serie, 4 secondi per estensione per ogni lato; il conteggio totale e il tempo sono doppi rispetto al target per lato. Cardio e stretching restano nelle fasi richieste dall’utente e non vanno aggiunti agli items. Scegli anche load_policy maintain, reduce o progress per ciascun esercizio in base a prestazioni, recupero e sforzo. Le preferenze numeriche esplicite attive in coach_notes.exercise_preferences prevalgono sui valori standard: applicale anche agli esercizi con pesi e includile nel budget durata; reps è per lato quando perSide è true. I limiti standard possono essere superati soltanto dal target esplicito validato nelle preferenze, senza inventare ulteriori aumenti. Per gli esercizi a corpo libero usa esattamente il target in training.bodyweight_progression, con la sua unità: considera questa quantità anche nel budget tempo. Dopo due sedute complete e facili allo stesso livello la regola prevede +2 ripetizioni o +5 secondi, entro i limiti indicati; non aumentare con fatica alta, recupero breve o sedute parziali. A parità di esercizio non aumentare contemporaneamente il numero di serie quando action è progress. Non inventare kg: i carichi effettivi sono derivati soltanto da quelli registrati e restano confermabili dall’utente. Puoi scegliere recovery se i dati lo giustificano; non interpretare dati mancanti come dati negativi. Restituisci JSON decision,reason,data_used,items (id,sets,reps,rest,load_policy). data_used deve elencare tutte le fonti disponibili di coverage.sources; reason deve collegare obiettivo, andamenti storici e recupero alle scelte, senza limitarsi a elencarli. La seduta non richiede una domanda scritta dall’utente. CHECK-IN: '+json.dumps(ctx['checkin'],ensure_ascii=False)
         prompt += ' Leggi coach_dialogue e usa le risposte salvate per personalizzare la seduta. La frequenza dichiarata è una disponibilità prevista, non una seduta eseguita. Se manca un’informazione essenziale, puoi restituire decision clarify, items vuoto e question {topic,text}: una domanda breve, specifica e in italiano, leggibile dall’utente nella pagina Domande del Coach. Non chiedere di nuovo ciò che ha già risposto. Se una domanda è già aperta o rimandata, non generarne altre: usa prudentemente i dati disponibili. Le domande non devono chiedere diagnosi o dati identificativi. Negli altri casi decidi train o recovery senza richiedere una chat.'
         value=json.loads(request_ai(prompt,ctx,schema=schema))
-        plan=validate_plan(value,candidates,count,body.get('energy'),budget,ctx['coverage']['sources'],ctx['training']['bodyweight_progression'])
+        plan=validate_plan(value,candidates,count,body.get('energy'),budget,ctx['coverage']['sources'],ctx['training']['bodyweight_progression'],ctx.get('coach_notes',{}).get('exercise_preferences',{}))
         if value['decision']=='clarify':
             handler=app.config.get('COACH_QUESTION_HANDLER')
             question=handler(value['question']) if handler else None
