@@ -1,3 +1,7 @@
+## 0.10.100
+
+- La valutazione esplicita dello sforzo prevale sulle vecchie etichette delle serie: “Moderato” impedisce un aumento automatico anche se lo storico delle serie riportava “Facile”. Conservate tutte le nuove convenzioni dei manubri e la progressione del corpo libero della 0.10.99.
+
 ## 0.10.99
 
 - Progressione esplicita del corpo libero condivisa tra Gemini e Coach locale: dopo due sedute complete, facili e comparabili, +2 ripetizioni oppure +5 secondi per Plank. Nessun aumento automatico con sedute parziali, recupero breve, energia bassa o fastidi; riduzione prudente dopo sforzo alto o lunga interruzione. Il motivo compare nella scheda e la seduta già aperta conserva i suoi obiettivi.

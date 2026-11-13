@@ -276,7 +276,7 @@ def bodyweight_progressions(ctx, energy='Normale', pain='Nessuno'):
         def effort(wid, rows):
             rating=next((r.get('effort') for r in training.get('effort_ratings',[]) if r.get('workout_id')==wid and r.get('exercise_id')==e['id']),None)
             hard=any(r.get('fatigue') in ('Dura','Al limite') for r in rows) or rating in (4,5)
-            easy=rating in (1,2) or all(r.get('fatigue')=='Facile' for r in rows)
+            easy=rating in (1,2) if rating in (1,2,3,4,5) else all(r.get('fatigue')=='Facile' for r in rows)
             return hard,easy and not hard
         if latest:
             wid,rows=latest[0];target=max(minimum,min(maximum,int(min(r['reps'] for r in rows))))

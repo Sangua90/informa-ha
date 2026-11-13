@@ -172,6 +172,12 @@ class AITrainingTest(unittest.TestCase):
         ctx=self.bodyweight_context(fatigue='Giusta')
         ctx['training']['effort_ratings']=[{'workout_id':wid,'exercise_id':'heel_taps','effort':2} for wid in (2,1)]
         self.assertEqual(self.module.bodyweight_progressions(ctx)['heel_taps']['target'],12)
+        # Explicit moderate feedback also overrides old easy set labels.
+        for row in ctx['training']['set_history']:row['fatigue']='Facile'
+        ctx['training']['effort_ratings'][0]['effort']=3
+        self.assertEqual(self.module.bodyweight_progressions(ctx)['heel_taps']['target'],10)
+        for row in ctx['training']['set_history']:row['fatigue']='Giusta'
+        ctx['training']['effort_ratings'][0]['effort']=2
         ctx['training']['effort_ratings'][0]['workout_id']=999
         self.assertEqual(self.module.bodyweight_progressions(ctx)['heel_taps']['target'],10)
 
