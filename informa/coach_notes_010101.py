@@ -129,6 +129,7 @@ def notes_context():
         ctx['coach_notes']={'notes':notes,'exercise_preferences':preferences(con),'meaning':'Indicazioni dichiarate, non sedute eseguite. I parametri strutturati attivi prevalgono su vecchie note testuali e si applicano alle prossime schede.'}
     if notes or ctx['coach_notes']['exercise_preferences']:ctx['coverage']['sources'].append('coach_notes')
     ctx['training']['bodyweight_progression']=training.bodyweight_progressions(ctx)
+    ctx['training']['strength_progression']=training.strength_progressions(ctx)
     return ctx
 
 def safe_notes_context(ctx):return _safe(ctx)|{'coach_notes':ctx.get('coach_notes') or {}}

@@ -103,7 +103,7 @@ class CoachQuestionsTest(unittest.TestCase):
 
     def test_model_can_create_a_validated_clarification_then_reuses_pending_question(self):
         self.answer(self.first())
-        def generate(p,c,**kw):return json.dumps({'decision':'clarify','reason':'Chiarire il recupero','data_used':c['coverage']['sources'],'items':[],'question':{'topic':'recovery','text':'Il fastidio segnalato compare anche durante le attività quotidiane?'}})
+        def generate(p,c,**kw):return json.dumps({'assessment':fixtures.ASSESSMENT,'decision':'clarify','reason':'Chiarire il recupero','data_used':c['coverage']['sources'],'items':[],'question':{'topic':'recovery','text':'Il fastidio segnalato compare anche durante le attività quotidiane?'}})
         with patch.object(self.training,'request_ai',generate):data=self.client.post('/api/ai-workout-01089',json={}).get_json()
         self.assertEqual(data['decision'],'clarify');self.assertEqual(data['question']['topic'],'recovery')
         with patch.object(self.training,'request_ai') as request:
@@ -133,7 +133,7 @@ class CoachQuestionsTest(unittest.TestCase):
 
     def test_invalid_model_question_cannot_notify_or_become_a_workout(self):
         self.answer(self.first());before=len(self.q.listing())
-        def invalid(p,c,**kw):return json.dumps({'decision':'clarify','reason':'Test','data_used':c['coverage']['sources'],'items':[],'question':{'topic':'invalid','text':'Invented'}})
+        def invalid(p,c,**kw):return json.dumps({'assessment':fixtures.ASSESSMENT,'decision':'clarify','reason':'Test','data_used':c['coverage']['sources'],'items':[],'question':{'topic':'invalid','text':'Invented'}})
         with patch.object(self.training,'request_ai',invalid):data=self.client.post('/api/ai-workout-01089',json={}).get_json()
         self.assertEqual(data['mode'],'local_fallback');self.assertEqual(len(self.q.listing()),before)
 

@@ -15,7 +15,7 @@ with tempfile.TemporaryDirectory() as directory:
     script='''
 import os,json
 from unittest.mock import patch
-os.environ['INFORMA_VERSION']='0.10.101'
+os.environ['INFORMA_VERSION']='0.10.102'
 os.environ.pop('SUPERVISOR_TOKEN',None)
 import workout_sessions_01096 as server
 client=server.app.test_client()
@@ -26,7 +26,7 @@ for path in ['/', '/api/state','/api/ai-coach/context','/api/ai-coach/today','/a
 assert client.post('/api/measurements-0978/reminder-check').status_code==200
 assert client.get('/api/exercise-guides-catalog-0962-info').get_json()['exercise_total']==50
 assert client.get('/guide-local/bird_dog').status_code==200
-assert 'app.js?v=010101' in client.get('/').get_data(as_text=True)
+assert 'app.js?v=010102' in client.get('/').get_data(as_text=True)
 measurement={'hip_cm':105,'calf_cm':40,'arm_l_cm':37,'thigh_l_cm':55,'measurement_side':'left'}
 assert client.post('/api/measurements-0978',json=measurement).status_code==200
 row=client.get('/api/measurements-0978').get_json()['items'][0]
@@ -88,8 +88,8 @@ def provider(req,timeout):
         assert payload['generationConfig']['responseFormat']['text']['schema']['required']==['connection']
         return GeminiResponse(json.dumps({'connection':'ok'}))
     context=server.training.unified_context();sources=context['coverage']['sources']+['checkin']
-    assert payload['generationConfig']['responseFormat']['text']['schema']['required']==['decision','reason','data_used','items']
-    return GeminiResponse(json.dumps({'decision':'train','reason':'Dati recenti considerati','data_used':sources,'items':[{'id':'bird_dog' if context.get('coach_notes',{}).get('exercise_preferences') else 'chest','sets':2,'reps':6 if context.get('coach_notes',{}).get('exercise_preferences') else 10,'rest':60,'load_policy':'maintain'},{'id':'plank','sets':2,'reps':30,'rest':60,'load_policy':'maintain'}]}))
+    assert payload['generationConfig']['responseFormat']['text']['schema']['required']==['decision','reason','data_used','items','assessment']
+    return GeminiResponse(json.dumps({'assessment':{k:'Dati disponibili considerati, limiti dichiarati' for k in ('recovery','progress','strategy','limitations')},'decision':'train','reason':'Dati recenti considerati','data_used':sources,'items':[{'id':'bird_dog' if context.get('coach_notes',{}).get('exercise_preferences') else 'lat','sets':2,'reps':6 if context.get('coach_notes',{}).get('exercise_preferences') else 10,'rest':60,'load_policy':'maintain'},{'id':'lat' if context.get('coach_notes',{}).get('exercise_preferences') else 'plank','sets':2,'reps':10 if context.get('coach_notes',{}).get('exercise_preferences') else 30,'rest':60,'load_policy':'maintain'}]}))
 with patch.object(server.training.config,'_ai_config_092',return_value={'provider':'gemini','model':'gemini-3.6-flash','api_key':'smoke-not-secret'}),patch.object(server.training.urllib.request,'urlopen',provider),patch.object(server.training.time,'sleep'):
     connection=client.post('/api/ai/test')
     assert connection.status_code==200,connection.get_json()

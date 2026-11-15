@@ -49,7 +49,7 @@ async function fixture(options={}){
    else data={ok:true,items:server.notes,preferences:server.preferences};
   }
   if(url.match(/^api\/coach-notes\/\d+\/active$/)){const id=Number(url.split('/')[2]),note=server.notes.find(n=>n.id===id);note.active=body.active;if(!body.active)for(const c of note.changes)delete server.preferences[c.exercise_id];data={ok:true}}
-  if(url.startsWith('api/bodyweight-progression-01099'))data={items:{},exercise_preferences:server.preferences||{}};
+  if(url.startsWith('api/bodyweight-progression-01099'))data={items:{},strength_progression:server.strength||{},selection_policy:server.rotation||null,exercise_preferences:server.preferences||{}};
   if(url==='api/state')data={profile:{name:'Test'},version:'test'};
   if(url==='api/nutrition/today')data={totals:{},entries:[]};
   if(url.startsWith('api/load-progression-0969/')&&w.loadSuggestion!=null)data={suggestion:w.loadSuggestion,reason:'Ultimo carico'};
@@ -480,5 +480,35 @@ test('Coach notes: removing a preference preserves the open workout and the next
 
 test('Coach notes: an oversized local prescription is reported before a session starts',async()=>{
  const f=await fixture();try{f.server.preferences={bird_dog:{reps:30,sets:2,rest:180}};f.plan.time=10;const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};f.w.if1087Available=id=>id==='bird_dog'||id==='heel_taps';await f.generate();assert.match(f.w.document.getElementById('if109PlanStatus').textContent,/superano il tempo/);assert.equal(f.server.session,null);assert.equal(f.calls.filter(c=>c.url==='api/set').length,0);
+ }finally{f.close()}
+});
+
+
+test('three-session rotation: local fallback keeps all groups due on the third session through final wrappers',async()=>{
+ const f=await fixture();try{
+ f.plan.exerciseCount=5;f.plan.time=60;f.server.rotation={cycle_session:3,missing_groups:['Gambe','Femorali','Glutei','Polpacci'],required_new_groups:4,weekly_variants:{},blocked_exercise_sets:[],coverage_shortfall:0,focus_options:[{id:'lower',label:'Gambe e parte inferiore',groups:['Gambe','Femorali','Glutei','Polpacci'],missing_groups:['Gambe','Femorali','Glutei','Polpacci'],required_new_groups:4,exercise_count:5}]};
+ const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};
+ await f.generate();const strength=f.plan.plan.filter(e=>!e.cardio&&!e.mobility&&!e.stretching),groups=new Set(strength.map(e=>e.group));
+ assert.equal(strength.length,5);for(const g of f.server.rotation.missing_groups)assert.ok(groups.has(g),g);for(const g of groups)assert.ok(f.server.rotation.focus_options[0].groups.includes(g),g);
+ assert.match(f.w.document.querySelector('.if1102-rotation').textContent,/seduta 3 di 3/);assert.equal(f.plan.aiGeneration.mode,'local_fallback');
+ }finally{f.close()}
+});
+
+test('shared progression: local fallback uses fresh repetitions, rest and load without losing weight controls',async()=>{
+ const f=await fixture();try{
+ f.server.strength={chest:{target:11,rest:105,suggested_load:5,action:'reps',previous_sets:2,reason:'Due sedute complete e facili'},lat:{target:9,rest:135,suggested_load:4,action:'reduce',previous_sets:2,reason:'Sforzo alto'}};
+ f.w.if1087Available=id=>id==='chest'||id==='lat';const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};
+ await f.generate();const e=f.plan.plan.find(e=>e.id==='chest');assert.equal(e.reps,11);assert.equal(e.rest,105);assert.equal(e.suggested_load,5);assert.equal(e.sets,2);
+ assert.equal(f.w.document.getElementById('if50w_chest_1').value,'5');f.w.if1041Weight('chest',1);await f.advance();assert.equal(f.w.document.getElementById('if50w_chest_1').value,'6');
+ }finally{f.close()}
+});
+
+test('AI assessment and validated progression survive legacy hydration and final plan wrappers',async()=>{
+ const f=await fixture();try{
+ f.w.loadSuggestion=99;const api=f.w.api;f.w.api=async(url,opts)=>{
+ const data=await api(url,opts);if(url==='api/ai-workout-01089')return {...data,assessment:{recovery:'Recupero valutato',progress:'Andamento valutato',strategy:'Strategia mirata',limitations:'Dati mancanti dichiarati'},selection_policy:{cycle_session:2,missing_groups:['Schiena'],coverage_shortfall:0},plan:[{id:'chest',sets:2,reps:11,rest:105,suggested_load:6,progression:{action:'reps',reason:'Progressione validata'}},{id:'lat',sets:2,reps:10,rest:120,suggested_load:5}]};return data};
+ await f.generate();assert.equal(f.plan.plan[0].reps,11);assert.equal(f.plan.plan[0].rest,105);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'6');assert.match(f.w.document.querySelector('#if50ex_chest .if969-load').textContent,/6 piastre/);assert.doesNotMatch(f.w.document.querySelector('#if50ex_chest .if969-load').textContent,/99/);
+ const text=f.w.document.querySelector('.if109-source').textContent;for(const label of ['Recupero valutato','Andamento valutato','Strategia mirata','Dati mancanti dichiarati','seduta 2 di 3'])assert.ok(text.includes(label),label);
+ f.w.if1041Weight('chest',1);f.w.if50RenderWorkout();await f.advance();assert.equal(f.w.document.getElementById('if50w_chest_1').value,'7');
  }finally{f.close()}
 });

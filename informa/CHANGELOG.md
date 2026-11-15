@@ -1,3 +1,11 @@
+## 0.10.102
+
+- Valutazione generale Gemini obbligatoria prima della scheda: recupero, andamento, strategia e limiti dei dati, visibili nella motivazione della seduta.
+- Nuovo blocco adattivo di tre sedute reali con focus separati: schiena/spalle/core, petto/braccia, parte inferiore. La copertura deriva dalle serie realmente svolte in sedute terminate; proposte, salti senza serie, cardio e bozze non avanzano il blocco. Le vecchie sedute restano nello storico ma il nuovo split inizia dalla prossima.
+- Controllo contro schede identiche, anche riordinate, e rotazione delle varianti dopo esposizioni ripetute nel tempo. Correzione Gemini una sola volta entro lo stesso limite complessivo di risposta; eventuale ripiego dichiarato sul Coach locale con gli stessi focus.
+- Progressione dei pesi basata su due sedute complete, facili e confrontabili: prima ripetizioni, poi carico confermabile; riduzioni e recuperi adeguati allo sforzo. Per i kg si usano soltanto carichi già registrati, sempre dischi su un solo manubrio. Conservata la progressione specifica del corpo libero e delle preferenze esplicite.
+- Unificata la vecchia logica dei carichi caricata dopo la generazione, evitando suggerimenti discordanti. Nessuna modifica agli obiettivi di una seduta già aperta. Limiti di conteggio e indisponibilità dei gruppi dichiarati, senza promettere una copertura impossibile.
+
 ## 0.10.101
 
 - Bird dog aggiunto al Core, disponibile a Gemini e al Coach locale, alle sostituzioni e alle esclusioni personali. Guida illustrata inclusa e installata automaticamente preservando le foto personalizzate.

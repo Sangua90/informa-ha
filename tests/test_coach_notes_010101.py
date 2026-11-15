@@ -35,7 +35,7 @@ class CoachNotesTest(unittest.TestCase):
         with closing(self.core.db()) as con:
             self.assertEqual(con.execute('SELECT COUNT(*) FROM workouts').fetchone()[0],0)
             self.assertEqual(con.execute('SELECT COUNT(*) FROM sets').fetchone()[0],0)
-        def plan(q,c,**kw):return json.dumps(self.fixture.plan(c,('bird_dog','chest')))
+        def plan(q,c,**kw):return json.dumps(self.fixture.plan(c,('bird_dog','lat')))
         with patch.object(self.training,'request_ai',plan):
             data=self.client.post('/api/ai-workout-01089',json={'exercise_count':2,'minutes':30,'energy':'Normale','pain':'Nessuno'}).get_json()
         self.assertEqual(data['mode'],'gemini',data)
