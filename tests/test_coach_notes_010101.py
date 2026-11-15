@@ -35,12 +35,12 @@ class CoachNotesTest(unittest.TestCase):
         with closing(self.core.db()) as con:
             self.assertEqual(con.execute('SELECT COUNT(*) FROM workouts').fetchone()[0],0)
             self.assertEqual(con.execute('SELECT COUNT(*) FROM sets').fetchone()[0],0)
-        def plan(q,c,**kw):return json.dumps(self.fixture.plan(c,('bird_dog','lat')))
+        def plan(q,c,**kw):return json.dumps({**self.fixture.plan(c),'finisher_id':'bird_dog'})
         with patch.object(self.training,'request_ai',plan):
             data=self.client.post('/api/ai-workout-01089',json={'exercise_count':2,'minutes':30,'energy':'Normale','pain':'Nessuno'}).get_json()
         self.assertEqual(data['mode'],'gemini',data)
-        self.assertEqual(data['plan'][0]['reps'],20)
-        self.assertTrue(data['plan'][0]['perSide'])
+        self.assertEqual(data['plan'][2]['reps'],20)
+        self.assertTrue(data['plan'][2]['perSide'])
 
     def test_retry_uses_the_original_acknowledgement_without_another_provider_call(self):
         first=self.save().get_json()['note']

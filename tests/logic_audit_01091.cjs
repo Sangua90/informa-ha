@@ -49,7 +49,7 @@ async function fixture(options={}){
    else data={ok:true,items:server.notes,preferences:server.preferences};
   }
   if(url.match(/^api\/coach-notes\/\d+\/active$/)){const id=Number(url.split('/')[2]),note=server.notes.find(n=>n.id===id);note.active=body.active;if(!body.active)for(const c of note.changes)delete server.preferences[c.exercise_id];data={ok:true}}
-  if(url.startsWith('api/bodyweight-progression-01099'))data={items:{},strength_progression:server.strength||{},selection_policy:server.rotation||null,exercise_preferences:server.preferences||{}};
+  if(url.startsWith('api/bodyweight-progression-01099'))data={items:{},strength_progression:server.strength||{},selection_policy:server.rotation||null,core_finisher:server.coreFinisher||null,exercise_preferences:server.preferences||{}};
   if(url==='api/state')data={profile:{name:'Test'},version:'test'};
   if(url==='api/nutrition/today')data={totals:{},entries:[]};
   if(url.startsWith('api/load-progression-0969/')&&w.loadSuggestion!=null)data={suggestion:w.loadSuggestion,reason:'Ultimo carico'};
@@ -490,7 +490,7 @@ test('three-session rotation: local fallback keeps all groups due on the third s
  const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};
  await f.generate();const strength=f.plan.plan.filter(e=>!e.cardio&&!e.mobility&&!e.stretching),groups=new Set(strength.map(e=>e.group));
  assert.equal(strength.length,5);for(const g of f.server.rotation.missing_groups)assert.ok(groups.has(g),g);for(const g of groups)assert.ok(f.server.rotation.focus_options[0].groups.includes(g),g);
- assert.match(f.w.document.querySelector('.if1102-rotation').textContent,/seduta 3 di 3/);assert.equal(f.plan.aiGeneration.mode,'local_fallback');
+ assert.match(f.w.document.querySelector('.if1102-rotation').textContent,/seduta 3/);assert.equal(f.plan.aiGeneration.mode,'local_fallback');
  }finally{f.close()}
 });
 
@@ -508,7 +508,7 @@ test('AI assessment and validated progression survive legacy hydration and final
  f.w.loadSuggestion=99;const api=f.w.api;f.w.api=async(url,opts)=>{
  const data=await api(url,opts);if(url==='api/ai-workout-01089')return {...data,assessment:{recovery:'Recupero valutato',progress:'Andamento valutato',strategy:'Strategia mirata',limitations:'Dati mancanti dichiarati'},selection_policy:{cycle_session:2,missing_groups:['Schiena'],coverage_shortfall:0},plan:[{id:'chest',sets:2,reps:11,rest:105,suggested_load:6,progression:{action:'reps',reason:'Progressione validata'}},{id:'lat',sets:2,reps:10,rest:120,suggested_load:5}]};return data};
  await f.generate();assert.equal(f.plan.plan[0].reps,11);assert.equal(f.plan.plan[0].rest,105);assert.equal(f.w.document.getElementById('if50w_chest_1').value,'6');assert.match(f.w.document.querySelector('#if50ex_chest .if969-load').textContent,/6 piastre/);assert.doesNotMatch(f.w.document.querySelector('#if50ex_chest .if969-load').textContent,/99/);
- const text=f.w.document.querySelector('.if109-source').textContent;for(const label of ['Recupero valutato','Andamento valutato','Strategia mirata','Dati mancanti dichiarati','seduta 2 di 3'])assert.ok(text.includes(label),label);
+ const text=f.w.document.querySelector('.if109-source').textContent;for(const label of ['Recupero valutato','Andamento valutato','Strategia mirata','Dati mancanti dichiarati','seduta 2'])assert.ok(text.includes(label),label);
  f.w.if1041Weight('chest',1);f.w.if50RenderWorkout();await f.advance();assert.equal(f.w.document.getElementById('if50w_chest_1').value,'7');
  }finally{f.close()}
 });
@@ -522,5 +522,41 @@ test('shared progression and split: cold resume retains targets for substitution
  f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
  assert.equal(f.plan.selectionPolicy.cycle_session,2);assert.equal(f.plan.strengthProgression.goblet_squat.target,11);
  const replacement=f.w.if60ToPlan('goblet_squat');assert.equal(replacement.reps,11);assert.equal(replacement.rest,105);assert.equal(replacement.suggested_load,7.5);
+ }finally{f.close()}
+});
+
+
+test('exercise count: two main exercises plus a separate timed Core finisher survive final wrappers and resume',async()=>{
+ let f=await fixture();try{
+ const api=f.w.api;f.w.api=async(url,opts)=>{const data=await api(url,opts);if(url==='api/ai-workout-01089')return {...data,plan:[{id:'lat',sets:2,reps:10,rest:60},{id:'dumbbell_shoulder_press',sets:2,reps:10,rest:60},{id:'plank',sets:2,reps:30,rest:60,finisher:true}]};return data};
+ f.plan.exerciseCount=2;f.plan.stretch_mode='Sì';await f.generate();
+ const main=f.plan.plan.filter(e=>!e.cardio&&!e.mobility&&!e.stretching&&!e.finisher),final=f.plan.plan.find(e=>e.finisher);
+ assert.equal(main.length,2);assert.equal(final.id,'plank');assert.equal(final.repType,'seconds');assert.ok(f.plan.plan.indexOf(final)>f.plan.plan.indexOf(main[1]));
+ assert.match(f.w.document.querySelector('[data-page=checkin]').textContent,/Core finale/);
+ f.w.if1096Checkpoint();await f.advance();const storage=f.storage(),server=f.server;f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
+ assert.equal(f.plan.plan.filter(e=>!e.cardio&&!e.mobility&&!e.stretching&&!e.finisher).length,2);assert.equal(f.plan.plan.find(e=>e.finisher).id,'plank');
+ }finally{f.close()}
+});
+
+test('exercise count: local fallback appends Core outside the selected main count and preserves a fourth session with pending groups',async()=>{
+ const f=await fixture();try{
+ f.plan.exerciseCount=2;f.plan.time=60;
+ f.server.rotation={block_number:1,cycle_session:4,missing_groups:['Glutei','Polpacci'],coverage_shortfall:1,carryover_focus_id:'lower',focus_options:[{id:'lower',label:'Gambe: gruppi rimasti',groups:['Glutei','Polpacci'],missing_groups:['Glutei','Polpacci'],required_new_groups:2,exercise_count:2}],weekly_variants:{},blocked_exercise_sets:[]};
+ f.server.coreFinisher={id:'plank',name:'Plank',group:'Core',loadType:'bodyweight',sets:2,reps:30,seconds:30,repType:'seconds',rest:60,finisher:true,guide:'plank'};
+ const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};
+ await f.generate();const main=f.plan.plan.filter(e=>!e.cardio&&!e.mobility&&!e.stretching&&!e.finisher);
+ assert.equal(main.length,2);assert.deepEqual([...new Set(main.map(e=>e.group))].sort(),['Glutei','Polpacci']);assert.equal(f.plan.plan.at(-1).id,'plank');
+ assert.match(f.w.document.querySelector('.if1102-rotation').textContent,/seduta 4/);assert.match(f.w.document.querySelector('.if1102-rotation').textContent,/prossime sedute/);
+ }finally{f.close()}
+});
+
+
+test('local weekly variation prioritizes new variants while retaining enough exercises for the requested main count',async()=>{
+ const f=await fixture();try{
+ f.plan.exerciseCount=5;f.plan.time=90;
+ f.server.rotation={block_number:2,cycle_session:1,missing_groups:['Schiena','Spalle'],coverage_shortfall:0,focus_options:[{id:'back_shoulders',label:'Schiena e spalle',groups:['Schiena','Spalle'],missing_groups:['Schiena','Spalle'],required_new_groups:2,exercise_count:5}],weekly_variants:{Schiena:['one_arm_dumbbell_row'],Spalle:['dumbbell_reverse_fly']},blocked_exercise_sets:[]};
+ const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};
+ await f.generate();const main=f.plan.plan.filter(e=>!e.cardio&&!e.mobility&&!e.stretching&&!e.finisher);
+ assert.equal(main.length,5);assert.ok(main.some(e=>e.id==='one_arm_dumbbell_row'));assert.ok(main.some(e=>e.id==='dumbbell_reverse_fly'));
  }finally{f.close()}
 });

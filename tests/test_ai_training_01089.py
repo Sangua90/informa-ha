@@ -39,8 +39,8 @@ class AITrainingTest(unittest.TestCase):
         sys.modules.pop(self.core.__name__, None)
         self.temp.cleanup()
 
-    def plan(self, ctx, ids=('lat','plank')):
-        return {'assessment':ASSESSMENT,'decision':'train','reason':'Obiettivo forza, storico e recupero considerati','data_used':ctx['coverage']['sources'], 'items':[{'id':id,'sets':2,'reps':30 if id=='plank' else 10,'rest':60} for id in ids]}
+    def plan(self, ctx, ids=('chest','dumbbell_curl')):
+        return {'finisher_id':'plank','assessment':ASSESSMENT,'decision':'train','reason':'Obiettivo forza, storico e recupero considerati','data_used':ctx['coverage']['sources'], 'items':[{'id':id,'sets':2,'reps':30 if id=='plank' else 10,'rest':60} for id in ids]}
 
     def test_context_updates_after_saved_measurements_sets_exclusions_and_effort(self):
         con=self.core.db()
@@ -69,8 +69,8 @@ class AITrainingTest(unittest.TestCase):
             response=self.client.post('/api/ai-workout-01089',json={'exercise_count':2,'minutes':30,'energy':'Normale','pain':'Nessuno'})
         data=response.get_json()
         self.assertEqual(data['mode'],'gemini')
-        self.assertEqual([x['id'] for x in data['plan']],['lat','plank'])
-        self.assertEqual(data['plan'][1]['repType'],'seconds')
+        self.assertEqual([x['id'] for x in data['plan']],['chest','dumbbell_curl','plank'])
+        self.assertEqual(data['plan'][2]['repType'],'seconds')
         self.assertEqual(data['plan'][0]['loadType'],'plates')
         self.assertIn('checkin',data['data_used'])
         self.assertIn('measurements',captured[0])
@@ -198,12 +198,12 @@ class AITrainingTest(unittest.TestCase):
 
     def test_real_workout_route_applies_bodyweight_target_to_ai_plan_and_caps_simultaneous_series_increase(self):
         ctx=self.bodyweight_context()
-        with patch.object(self.module,'unified_context',return_value=ctx),patch.object(self.module,'request_ai',lambda q,c,**kw:json.dumps(self.plan(c,('heel_taps','lat')))):
+        with patch.object(self.module,'unified_context',return_value=ctx),patch.object(self.module,'request_ai',lambda q,c,**kw:json.dumps({**self.plan(c),'finisher_id':'heel_taps'})):
             response=self.client.post('/api/ai-workout-01089',json={'exercise_count':2,'minutes':30,'energy':'Normale','pain':'Nessuno'})
         data=response.get_json()
         self.assertEqual(data['mode'],'gemini')
-        self.assertEqual(data['plan'][0]['reps'],12)
-        self.assertEqual(data['plan'][0]['progression']['action'],'progress')
+        self.assertEqual(data['plan'][2]['reps'],12)
+        self.assertEqual(data['plan'][2]['progression']['action'],'progress')
         self.assertEqual(data['plan'][1]['reps'],10)
         targets=self.module.bodyweight_progressions(ctx)
         value=self.plan(ctx,('heel_taps','plank'));value['items'][0]['sets']=4

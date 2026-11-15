@@ -23,20 +23,23 @@
  const build0=window.if50BuildPlan;if(typeof build0!=='function')return;
  window.if50BuildPlan=function(){
   build0.apply(this,arguments);
-  let strength=(IF50.plan||[]).filter(x=>!x.cardio&&!x.mobility&&!x.stretching);
+  let strength=(IF50.plan||[]).filter(x=>!x.cardio&&!x.mobility&&!x.stretching&&!x.finisher&&x.group!=='Core');
+  let finishers=(IF50.plan||[]).filter(x=>x.finisher||(!x.cardio&&!x.mobility&&!x.stretching&&x.group==='Core')).map(x=>({...x,finisher:true}));
+  if(!Array.isArray(IF50.aiPreparedPlan)&&!finishers.length&&IF50.coreFinisher&&window.if1087Available?.(IF50.coreFinisher.id)!==false)finishers=[{...IF50.coreFinisher}];
   const treadmill=(IF50.plan||[]).find(x=>x.id==='treadmill')||null;
   const stretch=IF50.stretch_mode==='Sì';
+  const finisherMin=finishers.reduce((sum,e)=>sum+((e.sets||1)*(e.repType==='seconds'?e.reps:e.reps*(e.perSide?8:3))+Math.max(0,(e.sets||1)-1)*(e.rest||0)+45)/60,0);
   let pre=stretch&&!treadmill?extras('pre',strength):[];
   let post=stretch?extras('post',strength):[];
   const total=Math.max(10,Number(IF50.time)||45),tmMin=treadmill?Math.max(1,Number(treadmill.duration||treadmill.minutes||IF50.treadmillMinutes)||20):0;
   let extrasMin=(pre.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)+post.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0))/60;
-  let strengthMin=Math.max(8,total-tmMin-extrasMin);
+  let strengthMin=Math.max(8,total-tmMin-extrasMin-finisherMin);
   strength=trimStrength(strength,strengthMin);
   pre=stretch&&!treadmill?extras('pre',strength):[];post=stretch?extras('post',strength):[];
   extrasMin=(pre.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)+post.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0))/60;
-  strengthMin=Math.max(8,total-tmMin-extrasMin);strength=trimStrength(strength,strengthMin);
-  IF50.plan=[...(treadmill?[treadmill]:pre),...strength,...post];
-  IF50.timeBudget={total,treadmill:tmMin,mobility:pre.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)/60,stretching:post.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)/60,strength:strengthMin};
+  strengthMin=Math.max(8,total-tmMin-extrasMin-finisherMin);strength=trimStrength(strength,strengthMin);
+  IF50.plan=[...(treadmill?[treadmill]:pre),...strength,...finishers,...post];
+  IF50.timeBudget={total,treadmill:tmMin,mobility:pre.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)/60,stretching:post.reduce((s,x)=>s+x.seconds*(x.perSide?2:1),0)/60,core:finisherMin,strength:strengthMin};
   return IF50.plan;
  };
 

@@ -25,7 +25,7 @@ class CoachRotationTest(unittest.TestCase):
         self.ctx['training']['rotation_history']={'finished_strength_sessions':len(sessions) if total is None else total,'sessions':sessions}
 
     def test_three_real_sessions_cover_all_available_primary_groups(self):
-        schedules=[['lat','lat_close_grip','dumbbell_shoulder_press','dumbbell_lateral_raise','plank'],
+        schedules=[['lat','lat_close_grip','dumbbell_shoulder_press','dumbbell_lateral_raise','one_arm_dumbbell_row'],
                    ['chest','pec_fly','dumbbell_curl','pushdown','dumbbell_hammer_curl'],
                    ['goblet_squat','leg_extension','romanian_deadlift','bodyweight_glute_kickback','calf_raise']]
         sessions=[];covered=set()
@@ -47,9 +47,9 @@ class CoachRotationTest(unittest.TestCase):
         policy=selection_policy(self.ctx,self.candidates,5)
         self.assertEqual(policy['cycle_session'],1)
         self.assertEqual(policy['covered_groups'],[])
-        self.assertEqual(len(policy['missing_groups']),10)
+        self.assertEqual(len(policy['missing_groups']),9)
         with self.assertRaises(SelectionError):validate_selection([self.catalog[id] for id in reversed(ids)],policy)
-        good=['lat','lat_close_grip','dumbbell_lateral_raise','plank','one_arm_dumbbell_row']
+        good=['lat','lat_close_grip','dumbbell_lateral_raise','dumbbell_reverse_fly','one_arm_dumbbell_row']
         validate_selection([self.catalog[id] for id in good],policy)
 
     def test_proposals_do_not_advance_cycle_or_train_muscles_and_order_cannot_hide_duplicate(self):
@@ -60,7 +60,7 @@ class CoachRotationTest(unittest.TestCase):
 
     def test_small_count_and_unavailable_groups_are_reported_without_fake_coverage(self):
         p=selection_policy(self.ctx,self.candidates,2)
-        self.assertEqual(p['coverage_shortfall'],4)
+        self.assertEqual(p['coverage_shortfall'],3)
         self.assertEqual(p['minimum_exercises_for_coverage'],4)
         candidates={id:e for id,e in self.candidates.items() if e['group'] not in ('Spalle','Polpacci')}
         p=selection_policy(self.ctx,candidates,4)
@@ -68,20 +68,20 @@ class CoachRotationTest(unittest.TestCase):
         self.assertEqual(p['coverage_shortfall'],0)
 
     def test_weekly_variant_is_enforced_only_when_compatible_alternatives_exist(self):
-        self.history([self.session(['lat'],2,2),self.session(['lat'],9,1)],total=3)
+        self.history([self.session(['lat','dumbbell_shoulder_press','chest','dumbbell_curl','pushdown','goblet_squat','romanian_deadlift','bodyweight_glute_kickback','calf_raise'],2,2),self.session(['lat'],9,1)],total=3)
         p=selection_policy(self.ctx,self.candidates,2)
         self.assertNotIn('lat',p['weekly_variants']['Schiena'])
         with self.assertRaises(SelectionError):validate_selection([self.catalog['lat'],self.catalog['chest']],p)
-        validate_selection([self.catalog['lat_close_grip'],self.catalog['plank']],p)
+        validate_selection([self.catalog['lat_close_grip'],self.catalog['dumbbell_shoulder_press']],p)
         narrow={id:e for id,e in self.candidates.items() if e['group']!='Schiena' or id=='lat'}
         self.assertNotIn('Schiena',selection_policy(self.ctx,narrow,2)['weekly_variants'])
 
-    def test_long_break_restarts_cycle_and_narrow_catalog_does_not_ban_only_possible_plan(self):
+    def test_long_break_retains_pending_groups_and_narrow_catalog_does_not_ban_only_possible_plan(self):
         self.history([self.session(['chest','plank'],days=40)],total=2)
         p=selection_policy(self.ctx,{id:self.catalog[id] for id in ('lat','plank')},2)
-        self.assertEqual(p['cycle_session'],1)
+        self.assertEqual(p['cycle_session'],2)
         self.assertEqual(p['blocked_exercise_sets'],[])
-        validate_selection([self.catalog['lat'],self.catalog['plank']],p)
+        validate_selection([self.catalog['lat']],p)
 
     def test_finished_history_counts_only_saved_strength_and_reads_beyond_set_context_limit(self):
         con=self.f.core.db()
@@ -114,8 +114,8 @@ class CoachRotationTest(unittest.TestCase):
         self.assertTrue(next(b for b in p['focus_options'] if b['id']=='back_shoulders')['recent_work_warning'])
 
     def test_model_repairs_duplicate_once_and_preview_never_saves_a_proposal(self):
-        self.m.save_decision('gemini','train','First',{},[self.catalog['lat'],self.catalog['plank']])
-        plans=[self.f.plan(self.ctx),self.f.plan(self.ctx,('chest','dumbbell_curl'))]
+        self.m.save_decision('gemini','train','First',{},[self.catalog['chest'],self.catalog['dumbbell_curl']])
+        plans=[self.f.plan(self.ctx),self.f.plan(self.ctx,('lat','dumbbell_shoulder_press'))]
         for p in plans:p['data_used']=self.ctx['coverage']['sources']+['checkin']
         with patch.object(self.m,'request_ai',side_effect=[json.dumps(p) for p in plans]) as request:
             data=self.f.client.post('/api/ai-workout-01089',json={'preview':True,'exercise_count':2}).get_json()
@@ -146,6 +146,78 @@ class CoachRotationTest(unittest.TestCase):
         p=selection_policy(self.ctx,narrow,5)
         self.assertEqual(p['focus_options'][0]['exercise_count'],1)
         validate_selection([self.catalog['dumbbell_curl']],p)
+
+    def test_two_main_exercises_extend_the_block_and_pending_groups_are_completed_next(self):
+        schedules=[['lat','dumbbell_shoulder_press'],['chest','dumbbell_curl'],
+                   ['pushdown','single_arm_triceps_pushdown'],['goblet_squat','romanian_deadlift'],
+                   ['bodyweight_glute_kickback','calf_raise']]
+        sessions=[]
+        for index,ids in enumerate(schedules):
+            self.history(sessions)
+            p=selection_policy(self.ctx,self.candidates,2)
+            if index==2:
+                self.assertEqual(p['carryover_focus_id'],'chest_arms')
+                self.assertEqual(p['focus_options'][0]['groups'],['Tricipiti'])
+                with self.assertRaises(SelectionError):validate_selection([self.catalog['goblet_squat'],self.catalog['romanian_deadlift']],p)
+            if index==3:
+                self.assertEqual(p['cycle_session'],4)
+                self.assertEqual(set(p['missing_groups']),{'Gambe','Femorali','Glutei','Polpacci'})
+            if index==4:self.assertEqual(p['focus_options'][0]['groups'],['Glutei','Polpacci'])
+            validate_selection([self.catalog[id] for id in ids],p)
+            sessions.insert(0,self.session(ids,days=2,wid=index+1))
+        self.history(sessions);p=selection_policy(self.ctx,self.candidates,2)
+        self.assertEqual((p['cycle_session'],p['block_number']),(1,2))
+
+    def test_localized_pain_suspends_a_group_without_cancelling_coverage_debt(self):
+        ids=['lat','dumbbell_shoulder_press','chest','dumbbell_curl','pushdown','goblet_squat','romanian_deadlift','calf_raise']
+        self.history([self.session(ids,days=2)])
+        p=selection_policy(self.ctx,self.m.allowed_candidates(self.ctx,'Fastidio gluteo destro'),2)
+        self.assertIn('Glutei',p['suspended_groups']);self.assertEqual(p['block_number'],1)
+        p=selection_policy(self.ctx,self.candidates,2)
+        self.assertEqual(p['missing_groups'],['Glutei']);self.assertEqual(p['block_number'],1)
+        available=self.m.allowed_candidates(self.ctx,'Fastidio bicipite destro')
+        self.assertFalse(any(e['group']=='Bicipiti' for e in available.values()))
+        self.assertTrue(any(e['group']=='Tricipiti' for e in available.values()))
+
+    def test_core_is_added_after_two_main_exercises_and_fits_the_total_budget(self):
+        with patch.object(self.m,'request_ai',lambda q,c,**kw:json.dumps(self.f.plan(c))):
+            d=self.f.client.post('/api/ai-workout-01089',json={'preview':True,'exercise_count':2,'minutes':20}).get_json()
+        self.assertEqual(d['mode'],'gemini',d)
+        self.assertEqual(len([e for e in d['plan'] if not e.get('finisher')]),2)
+        self.assertEqual(d['plan'][-1]['id'],'plank');self.assertTrue(d['plan'][-1]['finisher'])
+        self.assertEqual(d['plan'][-1]['repType'],'seconds')
+        self.assertLessEqual(self.m.plan_minutes(d['plan']),20)
+        self.assertIsNone(self.m.core_finisher(self.ctx,'Normale','Nessuno',0,'plank'))
+        with patch.object(self.m,'unified_context',return_value=self.f.bodyweight_context()):
+            d=self.f.client.get('/api/bodyweight-progression-01099?pain=Nessuno%20').get_json()
+        self.assertEqual(d['items']['heel_taps']['action'],'progress')
+        self.ctx['exercise_catalog']=[{**e,'enabled':False} if e['group']=='Core' else e for e in self.ctx['exercise_catalog']]
+        self.assertIsNone(self.m.core_finisher(self.ctx,'Normale','Nessuno',20))
+
+    def test_partial_work_stays_pending_and_core_only_history_does_not_close_a_block(self):
+        session=self.session(['chest','dumbbell_curl'],days=3)
+        session['exercises'][0]['status']='Parziale'
+        session['exercises'][1]['status']='Completato'
+        self.history([session]);p=selection_policy(self.ctx,self.candidates,2)
+        self.assertIn('Petto',p['missing_groups']);self.assertNotIn('Bicipiti',p['missing_groups'])
+        self.assertEqual(p['block_number'],1)
+        con=self.f.core.db()
+        con.execute('CREATE TABLE workout_finish(id INTEGER PRIMARY KEY,workout_id INTEGER,ts TEXT)')
+        con.execute('INSERT INTO workouts(id,ts,title) VALUES(99,?,?)',(datetime.now().isoformat(),'Core only'))
+        con.execute("INSERT INTO sets(workout_id,exercise,set_no,reps) VALUES(99,'Plank',1,30)")
+        con.execute('INSERT INTO workout_finish(workout_id) VALUES(99)');con.commit()
+        self.assertEqual(finished_history(con,self.m.training_catalog())['program_finished_sessions'],0)
+        con.close()
+
+    def test_repeated_previews_cannot_make_a_small_pending_group_impossible(self):
+        self.history([self.session(['chest','dumbbell_curl'],days=2)])
+        # The three compatible triceps exercises give only three distinct pairs.
+        ids=['pushdown','single_arm_triceps_pushdown','triceps_short_bar_pushdown']
+        candidates={id:e for id,e in self.candidates.items() if e['group']!='Tricipiti' or id in ids}
+        self.ctx['training']['previous_proposals_not_completed_workouts']=[{'ts':datetime.now().isoformat(),'mode':'gemini','decision':'train','plan':[self.catalog[id] for id in pair]} for pair in [(ids[0],ids[1]),(ids[0],ids[2]),(ids[1],ids[2])]]
+        p=selection_policy(self.ctx,candidates,2)
+        self.assertEqual(p['carryover_focus_id'],'chest_arms')
+        validate_selection([self.catalog[id] for id in ids[:2]],p)
 
 
 class StrengthProgressionTest(unittest.TestCase):

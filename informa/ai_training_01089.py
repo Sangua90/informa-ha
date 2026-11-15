@@ -139,7 +139,7 @@ def unified_context():
 
 def safe_context(ctx):
     # No name, API key, photos, raw health import payloads or internal file paths.
-    return {k:ctx.get(k) for k in ('generated_at','goal','profile','measurements','latest_measurements','training','nutrition','supplements','body_progress','health','health_auto_export','equipment','exercise_catalog','coverage','checkin')}
+    return {k:ctx.get(k) for k in ('generated_at','goal','profile','measurements','latest_measurements','training','nutrition','supplements','body_progress','health','health_auto_export','equipment','exercise_catalog','coverage','checkin','core_finisher_catalog')}
 
 
 _transport_state=threading.local()
@@ -236,8 +236,10 @@ def allowed_candidates(ctx, pain):
     blocked = set()
     pain = str(pain).lower()
     if 'ginoc' in pain: blocked.update(('Gambe','Polpacci'))
-    if 'spalla' in pain: blocked.update(('Petto','Spalle','Tricipiti'))
+    if 'spall' in pain: blocked.update(('Petto','Spalle','Tricipiti'))
     if 'schiena' in pain: blocked.update(('Schiena','Femorali'))
+    for stems,groups in [(('pett',),('Petto',)),(('bicip',),('Bicipiti',)),(('tricip',),('Tricipiti',)),(('polpacc',),('Polpacci',)),(('glute',),('Glutei',)),(('femoral',),('Femorali',)),(('quadric','cosci','gamb'),('Gambe',)),(('addom','core'),('Core',))]:
+        if any(s in pain for s in stems):blocked.update(groups)
     return {e['id']:e for e in ctx['exercise_catalog'] if e['enabled'] and e['group'] not in blocked|{'Mobilità','Stretching','Cardio'} and not any(term in pain for term in e.get('painAvoid',[]))}
 
 
@@ -318,10 +320,11 @@ def bodyweight_progressions(ctx, energy='Normale', pain='Nessuno'):
 @app.get('/api/bodyweight-progression-01099')
 def bodyweight_progression():
     ctx=unified_context()
-    energy=root.request.args.get('energy','Normale');pain=root.request.args.get('pain','Nessuno')
+    energy=root.request.args.get('energy','Normale');pain=root.request.args.get('pain','Nessuno').strip()
     try:count=integer(int(root.request.args.get('count',4)),2,5)
     except (ValueError,TypeError):count=4
-    return root.jsonify(ok=True,items=bodyweight_progressions(ctx,energy,pain),strength_progression=strength_progressions(ctx,energy,pain),selection_policy=selection_policy(ctx,allowed_candidates(ctx,pain),count),exercise_preferences=ctx.get('coach_notes',{}).get('exercise_preferences',{}))
+    ctx['training']['bodyweight_progression']=bodyweight_progressions(ctx,energy,pain)
+    return root.jsonify(ok=True,items=ctx['training']['bodyweight_progression'],core_finisher=core_finisher(ctx,energy,pain,180),strength_progression=strength_progressions(ctx,energy,pain),selection_policy=selection_policy(ctx,allowed_candidates(ctx,pain),count),exercise_preferences=ctx.get('coach_notes',{}).get('exercise_preferences',{}))
 
 
 def validate_plan(value, candidates, count, energy, budget, sources=(), bodyweight_targets=None, exercise_preferences=None, strength_targets=None):
@@ -377,6 +380,32 @@ def validate_assessment(value):
     return assessment
 
 
+def plan_minutes(plan):
+    return sum((e['sets']*(e['reps'] if e['repType']=='seconds' else e['reps']*(8 if e.get('perSide') else 3))+max(0,e['sets']-1)*e['rest']+45)/60 for e in plan)
+
+
+def core_finisher(ctx,energy,pain,budget,chosen=None):
+    """One compatible Core exercise outside the selected main-exercise count."""
+    if chosen=='none' or budget<=0:return None
+    available={id:e for id,e in allowed_candidates(ctx,pain).items() if e['group']=='Core'}
+    if not available:return None
+    if chosen is not None and chosen not in available:raise ValueError('Core finale escluso o non compatibile')
+    from coach_rotation_010102 import age_hours,key
+    def last_age(e):
+        ages=[age_hours(r.get('ts')) for r in ctx['training'].get('set_history',[]) if key(r.get('exercise'))==key(e['name'])]
+        return min([h for h in ages if h is not None and h>=0],default=99999)
+    pool=[available[chosen]] if chosen else sorted(available.values(),key=last_age,reverse=True)
+    for e in pool:
+        target=ctx['training']['bodyweight_progression'][e['id']]
+        raw={'decision':'train','reason':'Core finale separato','data_used':ctx['coverage']['sources'],'items':[{'id':e['id'],'sets':1 if energy=='Bassa' else 2,'reps':target['target'],'rest':60}]}
+        try:plan=validate_plan(raw,{e['id']:e},1,energy,budget,ctx['coverage']['sources'],ctx['training']['bodyweight_progression'],ctx.get('coach_notes',{}).get('exercise_preferences',{}))
+        except ValueError as error:
+            if 'tempo disponibile' in str(error):continue
+            raise
+        return {**plan[0],'finisher':True,'priority':'Finale · Core','suggested_load':None,'load_policy':'maintain'}
+    return None
+
+
 def save_decision(mode, decision, reason, body, plan):
     con=root.db()
     con.execute('INSERT INTO ai_workout_decisions(ts,mode,decision,reason,request_json,plan_json) VALUES(?,?,?,?,?,?)', (datetime.now().isoformat(timespec='seconds'),mode,decision,reason,json.dumps(body,ensure_ascii=False),json.dumps(plan,ensure_ascii=False)))
@@ -405,20 +434,23 @@ def ai_workout():
     pending=gate() if gate and not preview else None
     if pending:
         return root.jsonify(ok=True,mode='clarification',decision='clarify',question=pending,reason='Il Coach ha bisogno di un chiarimento. Puoi rispondere oppure rimandare di 24 ore.',plan=None)
-    candidates=allowed_candidates(ctx,str(body.get('pain','Nessuno'))+' '+str(body.get('pain_detail','')))
+    pain_text=str(body.get('pain','Nessuno'))+' '+str(body.get('pain_detail',''))
+    compatible=allowed_candidates(ctx,pain_text)
+    candidates={id:e for id,e in compatible.items() if e['group']!='Core'}
     rotation=selection_policy(ctx,candidates,count)
-    ctx['exercise_catalog']=list(candidates.values())
+    ctx['core_finisher_catalog']=[e for e in compatible.values() if e['group']=='Core']
     ctx['training']['selection_policy']=rotation
     budget=minutes-treadmill-((4.5 if treadmill else 10.5) if body.get('stretching') is True else 0)
     schema={'type':'object','properties':{'decision':{'type':'string','enum':['train','recovery','clarify']},'reason':{'type':'string'},'data_used':{'type':'array','items':{'type':'string','enum':ctx['coverage']['sources']}},'question':{'type':'object','properties':{'topic':{'type':'string','enum':['frequency','equipment','recovery','preferences','exercise_feedback']},'text':{'type':'string'}},'required':['topic','text']},'items':{'type':'array','items':{'type':'object','properties':{'id':{'type':'string','enum':list(candidates)},'sets':{'type':'integer'},'reps':{'type':'integer'},'rest':{'type':'integer'},'load_policy':{'type':'string','enum':['maintain','reduce','progress']}},'required':['id','sets','reps','rest','load_policy']}}},'required':['decision','reason','data_used','items']}
     schema['properties']['assessment']={'type':'object','properties':{k:{'type':'string'} for k in ('recovery','progress','strategy','limitations')},'required':['recovery','progress','strategy','limitations']}
     schema['required'].append('assessment')
+    schema['properties']['finisher_id']={'type':'string','enum':['none']+[e['id'] for e in ctx['core_finisher_catalog']]}
     try:
         if not candidates or budget<=0: raise ValueError('Nessun esercizio compatibile o tempo insufficiente')
-        prompt=f'Genera la seduta di oggi: decidi train o recovery e spiega perché. Per train scegli ID disponibili senza duplicati, considerando tutta la rosa del focus. Il numero richiesto è {count}; usa exercise_count del focus scelto se le esclusioni non consentono di raggiungerlo. Budget forza {budget} minuti inclusi recuperi e 45 secondi di cambio per esercizio. 1–4 serie (massimo 2 con energia Bassa), 5–20 ripetizioni oppure 10–60 secondi per plank, 30–180 secondi recupero tra serie. Tempo esecuzione stimato 3 secondi/ripetizione. Bird dog: target per lato, massimo 2 serie, 4 secondi per estensione per ogni lato; il conteggio totale e il tempo sono doppi rispetto al target per lato. Cardio e stretching restano nelle fasi richieste dall’utente e non vanno aggiunti agli items. Scegli anche load_policy maintain, reduce o progress per ciascun esercizio in base a prestazioni, recupero e sforzo. Le preferenze numeriche esplicite attive in coach_notes.exercise_preferences prevalgono sui valori standard: applicale anche agli esercizi con pesi e includile nel budget durata; reps è per lato quando perSide è true. I limiti standard possono essere superati soltanto dal target esplicito validato nelle preferenze, senza inventare ulteriori aumenti. Per gli esercizi a corpo libero usa esattamente il target in training.bodyweight_progression, con la sua unità: considera questa quantità anche nel budget tempo. Dopo due sedute complete e facili allo stesso livello la regola prevede +2 ripetizioni o +5 secondi, entro i limiti indicati; non aumentare con fatica alta, recupero breve o sedute parziali. A parità di esercizio non aumentare contemporaneamente il numero di serie quando action è progress. Non inventare kg: i carichi effettivi sono derivati soltanto da quelli registrati e restano confermabili dall’utente. Puoi scegliere recovery se i dati lo giustificano; non interpretare dati mancanti come dati negativi. Restituisci JSON decision,reason,data_used,items (id,sets,reps,rest,load_policy). data_used deve elencare tutte le fonti disponibili di coverage.sources; reason deve collegare obiettivo, andamenti storici e recupero alle scelte, senza limitarsi a elencarli. La seduta non richiede una domanda scritta dall’utente. CHECK-IN: '+json.dumps(ctx['checkin'],ensure_ascii=False)
+        prompt=f'Genera la seduta di oggi: decidi train o recovery e spiega perché. Per train scegli ID disponibili senza duplicati, considerando tutta la rosa del focus. Il numero richiesto è {count}; usa exercise_count del focus scelto se le esclusioni non consentono di raggiungerlo. Budget forza {budget} minuti inclusi recuperi e 45 secondi di cambio per esercizio. 1–4 serie (massimo 2 con energia Bassa), 5–20 ripetizioni oppure 10–60 secondi per plank, 30–180 secondi recupero tra serie. Tempo esecuzione stimato 3 secondi/ripetizione. Bird dog: target per lato, massimo 2 serie, 4 secondi per estensione per ogni lato; il conteggio totale e il tempo sono doppi rispetto al target per lato. Cardio e stretching restano nelle fasi richieste dall’utente e non vanno aggiunti agli items. Il budget include anche il Core finale. Scegli anche load_policy maintain, reduce o progress per ciascun esercizio in base a prestazioni, recupero e sforzo. Le preferenze numeriche esplicite attive in coach_notes.exercise_preferences prevalgono sui valori standard: applicale anche agli esercizi con pesi e includile nel budget durata; reps è per lato quando perSide è true. I limiti standard possono essere superati soltanto dal target esplicito validato nelle preferenze, senza inventare ulteriori aumenti. Per gli esercizi a corpo libero usa esattamente il target in training.bodyweight_progression, con la sua unità: considera questa quantità anche nel budget tempo. Dopo due sedute complete e facili allo stesso livello la regola prevede +2 ripetizioni o +5 secondi, entro i limiti indicati; non aumentare con fatica alta, recupero breve o sedute parziali. A parità di esercizio non aumentare contemporaneamente il numero di serie quando action è progress. Non inventare kg: i carichi effettivi sono derivati soltanto da quelli registrati e restano confermabili dall’utente. Puoi scegliere recovery se i dati lo giustificano; non interpretare dati mancanti come dati negativi. Restituisci JSON decision,reason,data_used,items (id,sets,reps,rest,load_policy). data_used deve elencare tutte le fonti disponibili di coverage.sources; reason deve collegare obiettivo, andamenti storici e recupero alle scelte, senza limitarsi a elencarli. La seduta non richiede una domanda scritta dall’utente. CHECK-IN: '+json.dumps(ctx['checkin'],ensure_ascii=False)
         prompt += ' Leggi coach_dialogue e usa le risposte salvate per personalizzare la seduta. La frequenza dichiarata è una disponibilità prevista, non una seduta eseguita. Se manca un’informazione essenziale, puoi restituire decision clarify, items vuoto e question {topic,text}: una domanda breve, specifica e in italiano, leggibile dall’utente nella pagina Domande del Coach. Non chiedere di nuovo ciò che ha già risposto. Se una domanda è già aperta o rimandata, non generarne altre: usa prudentemente i dati disponibili. Le domande non devono chiedere diagnosi o dati identificativi. Negli altri casi decidi train o recovery senza richiedere una chat.'
-        prompt += ' Rispetta training.selection_policy. Organizza tre sedute con focus separati: schiena/spalle/core, petto/bicipiti/tricipiti, gambe/femorali/glutei/polpacci. Scegli UN SOLO focus di focus_options, considerando recupero e fastidi; usa soltanto i suoi groups e almeno required_new_groups gruppi DISTINCTI dei SUOI missing_groups. Non mescolare gruppi di focus diversi per riempire i posti: puoi usare due varianti per i gruppi principali, mantenendo il numero richiesto. I focus già completati escono dalle opzioni fino al prossimo blocco. Questa è la seduta cycle_session/3: tutte e tre le sedute sufficientemente complete devono coprire i gruppi disponibili. Le serie svolte in sedute terminate determinano la copertura; proposte, cardio, salti senza serie e bozze non la fanno avanzare. Il lavoro parziale e i dati delle ultime sedute restano rilevanti per recupero e progressione. Puoi mantenere alcuni esercizi per confrontare i progressi, ma non ricopiare blocked_exercise_sets neanche cambiando ordine o quantità. Quando scegli un gruppo in weekly_variants includi almeno una delle varianti indicate. Usa tutta la rosa compatibile del focus. Applica esattamente training.strength_progression per target, rest e load_policy; non aumentare anche le serie per action reps/load/density. Il server normalizza e verifica questi valori prima del controllo durata. La valutazione complessiva può ridurre le serie o scegliere recovery: non forzare un focus se il recupero è insufficiente. Se coverage_shortfall è positivo spiega che conteggio, salti o gruppi indisponibili impediscono la copertura completa in questo blocco: non dichiararla raggiunta. Le varianti ruotano nel tempo, non casualmente a ogni serie.'
-        prompt += ' Prima di scegliere gli esercizi compila assessment con 1–2 frasi concrete per campo, massimo 350 caratteri ciascuno: recovery valuta recupero complessivo e freschezza dei dati salute insieme a energia, fastidi e carico recente, senza dedurre idoneità da un singolo HRV; progress incrocia obiettivo, andamento datato delle misure, prestazioni, sforzo, alimentazione e aderenza disponibili; strategy spiega la distribuzione del blocco di tre sedute, le varianti e la progressione proposta; limitations dichiara dati mancanti, vecchi o insufficienti. Non basta elencare fonti: collega i dati alle decisioni concrete. Non inventare misure o disponibilità dei pesi. Se la valutazione generale suggerisce prudenza riduci le serie o scegli recovery; per chiarimenti essenziali usa clarify. La rotazione non obbliga ad allenarsi quando occorre recuperare.'
+        prompt += ' Rispetta training.selection_policy. Organizza tre sedute con focus separati: schiena/spalle, petto/bicipiti/tricipiti, gambe/femorali/glutei/polpacci. Scegli UN SOLO focus di focus_options, considerando recupero e fastidi; usa soltanto i suoi groups e almeno required_new_groups gruppi DISTINCTI dei SUOI missing_groups. Non mescolare gruppi di focus diversi per riempire i posti: puoi usare due varianti per i gruppi principali, mantenendo il numero richiesto. I focus già completati escono dalle opzioni fino al prossimo blocco. Il numero selezionato conta soltanto gli esercizi principali: Core/Plank finale, cardio, mobilità e stretching sono separati. Per il Core finale indica finisher_id dal core_finisher_catalog, oppure none se incompatibile; il server ne verifica target e durata insieme alla seduta. Il blocco si chiude solo dopo la copertura dei gruppi, mai automaticamente alla terza seduta: con pochi esercizi ne servono di più. Completa prima carryover_focus_id quando allenabile; i suoi groups contengono soltanto quelli rinviati. Fastidi e dolori sospendono il gruppo interessato senza cancellarne il lavoro da recuperare. Le serie svolte in sedute terminate determinano la copertura; proposte, cardio, salti senza serie e bozze non la fanno avanzare. Il lavoro parziale e i dati delle ultime sedute restano rilevanti per recupero e progressione. Puoi mantenere alcuni esercizi per confrontare i progressi, ma non ricopiare blocked_exercise_sets neanche cambiando ordine o quantità. Quando scegli un gruppo in weekly_variants includi almeno una delle varianti indicate. Usa tutta la rosa compatibile del focus. Applica esattamente training.strength_progression per target, rest e load_policy; non aumentare anche le serie per action reps/load/density. Il server normalizza e verifica questi valori prima del controllo durata. La valutazione complessiva può ridurre le serie o scegliere recovery: non forzare un focus se il recupero è insufficiente. Se coverage_shortfall è positivo spiega che conteggio, salti o gruppi indisponibili impediscono la copertura completa in questo blocco: non dichiararla raggiunta. Le varianti ruotano nel tempo, non casualmente a ogni serie.'
+        prompt += ' Prima di scegliere gli esercizi compila assessment con 1–2 frasi concrete per campo, massimo 350 caratteri ciascuno: recovery valuta recupero complessivo e freschezza dei dati salute insieme a energia, fastidi e carico recente, senza dedurre idoneità da un singolo HRV; progress incrocia obiettivo, andamento datato delle misure, prestazioni, sforzo, alimentazione e aderenza disponibili; strategy spiega la copertura progressiva del blocco, le varianti e la progressione proposta; limitations dichiara dati mancanti, vecchi o insufficienti. Non basta elencare fonti: collega i dati alle decisioni concrete. Non inventare misure o disponibilità dei pesi. Se la valutazione generale suggerisce prudenza riduci le serie o scegli recovery; per chiarimenti essenziali usa clarify. La rotazione non obbliga ad allenarsi quando occorre recuperare.'
         deadline=time.monotonic()+40
         for attempt in range(2):
             remaining=deadline-time.monotonic()
@@ -445,12 +477,17 @@ def ai_workout():
         for exercise,raw in zip(plan,value['items']):
             if exercise['loadType']=='bodyweight':
                 exercise['load_policy']='maintain';exercise['suggested_load']=None
+        if value['decision']=='train':
+            final=core_finisher(ctx,body['energy'],pain_text,budget-plan_minutes(plan),value.get('finisher_id'))
+            if final:plan.append(final)
+            else:value['reason']+=' Core finale non aggiunto: scelta di recupero, esclusioni, fastidi o tempo disponibile.'
         # Re-read exclusions after the network round trip, before committing a plan.
         con=root.db();disabled={r[0] for r in con.execute('SELECT exercise_id FROM exercise_exclusions')};con.close()
         if any(e['id'] in disabled for e in plan): raise ValueError('La lista esercizi è cambiata durante la generazione')
         if value['decision']=='train' and rotation['coverage_shortfall']:
-            value['reason']+=' Copertura incompleta con il numero di esercizi scelto o le serie effettivamente svolte: servono fino a '+str(rotation['minimum_exercises_for_coverage'])+' esercizi per focus e, se necessario, ulteriori sedute per i gruppi rimasti.'
-        if value['decision']=='train' and len(plan)<count:value['reason']+=' Nel focus compatibile sono disponibili soltanto '+str(len(plan))+' esercizi distinti: mantengo il focus senza duplicati né gruppi estranei.'
+            value['reason']+=' I gruppi rimasti proseguono nelle prossime sedute: il blocco si chiude solo quando risultano svolti. I gruppi sospesi per fastidi restano da recuperare.'
+        main_count=sum(not e.get('finisher') for e in plan)
+        if value['decision']=='train' and main_count<count:value['reason']+=' Nel focus compatibile sono disponibili soltanto '+str(main_count)+' esercizi distinti: mantengo il focus senza duplicati né gruppi estranei.'
         if not preview:save_decision('gemini',value['decision'],value['reason'][:1600],body,plan)
         return root.jsonify(ok=True,preview=preview,mode='gemini',decision=value['decision'],reason=value['reason'][:1600],assessment=assessment,plan=plan,selection_policy=rotation,coverage=ctx['coverage'],data_used=value['data_used'],generated_at=ctx['generated_at'])
     except (ValueError,RuntimeError,TypeError,KeyError) as e:

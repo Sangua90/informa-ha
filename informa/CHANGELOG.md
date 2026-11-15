@@ -1,3 +1,11 @@
+## 0.10.103
+
+- Il numero scelto indica soltanto gli esercizi principali del focus: Core finale (plank o alternativa compatibile), cardio, mobilità e stretching restano separati dal conteggio e inclusi nel tempo totale.
+- Il blocco muscolare si completa sulla copertura reale, non al terzo allenamento: i gruppi rinviati hanno priorità nelle sedute successive. Con due esercizi si possono impiegare più sedute senza perdere gruppi al cambio del blocco o dopo una riapertura.
+- Solo esercizi canonici completati in sedute terminate coprono il gruppo. Serie parziali mantengono il lavoro in sospeso pur contando per il recupero; salti, proposte e Core finale non completano gruppi principali.
+- Fastidi e dolori localizzati sospendono gli esercizi interessati senza cancellare il lavoro da recuperare. Le esclusioni rimangono rispettate; i gruppi non disponibili sono dichiarati.
+- Core finale a tempo normalizzato con countdown; preservati preferenze, progressioni, ordine del piano, sostituzioni e ripresa della seduta. La spiegazione iniziale chiarisce conteggio, aggiunte e durata complessiva.
+
 ## 0.10.102
 
 - Valutazione generale Gemini obbligatoria prima della scheda: recupero, andamento, strategia e limiti dei dati, visibili nella motivazione della seduta.

@@ -1,10 +1,10 @@
-"""Three-session coverage and weekly variation, from performed strength only."""
+"""Coverage-driven blocks and weekly variation from canonical completed work."""
 from datetime import datetime
 from math import ceil, comb
 
 
-GROUPS = ('Petto','Schiena','Gambe','Femorali','Spalle','Glutei','Core','Tricipiti','Bicipiti','Polpacci')
-BLOCKS = (('back_shoulders','Schiena, spalle e core',('Schiena','Spalle','Core')),
+GROUPS = ('Petto','Schiena','Gambe','Femorali','Spalle','Glutei','Tricipiti','Bicipiti','Polpacci')
+BLOCKS = (('back_shoulders','Schiena e spalle',('Schiena','Spalle')),
           ('chest_arms','Petto e braccia',('Petto','Bicipiti','Tricipiti')),
           ('lower','Gambe e parte inferiore',('Gambe','Femorali','Glutei','Polpacci')))
 
@@ -52,37 +52,64 @@ def finished_history(con, catalog):
         earlier=age_hours(program[n+1]['ts']);later=age_hours(w['ts'])
         if earlier is not None and later is not None and earlier-later>28*24:run=n+1;break
     sessions = []
+    statuses={}
+    if con.execute("SELECT 1 FROM sqlite_master WHERE name='exercise_status'").fetchone():
+        for r in con.execute('SELECT workout_id,exercise,status FROM exercise_status ORDER BY id DESC'):
+            statuses.setdefault((r['workout_id'],key(r['exercise'])),r['status'])
     for w in all_sessions[:30]:
         exercises = [dict(r) for r in con.execute('''SELECT exercise,COUNT(DISTINCT set_no) sets
             FROM sets WHERE workout_id=? AND reps>0 GROUP BY exercise''',(w['id'],))]
+        for ex in exercises:ex['status']=statuses.get((w['id'],key(ex['exercise'])))
         sessions.append({'workout_id':w['id'],'ts':w['ts'],'exercises':exercises})
-    return {'finished_strength_sessions':total,'program_finished_sessions':program_total,'program_run_sessions':run,'program_start_workout_id':start,'sessions':sessions}
+    # Keep lightweight coverage for ALL finished program sessions. A bounded
+    # recent history must not lose an older group when a block spans many visits.
+    catalog_by_name={key(e['name']):e for e in catalog if e['group'] in GROUPS}
+    coverage={w['id']:set() for w in program}
+    performed={w['id']:set() for w in program}
+    for row in con.execute('''SELECT DISTINCT s.workout_id,s.exercise FROM sets s JOIN workouts w ON w.id=s.workout_id
+        WHERE w.id>? AND s.reps>0 AND EXISTS(SELECT 1 FROM workout_finish f WHERE f.workout_id=w.id)''',(start,)):
+        ex=catalog_by_name.get(key(row['exercise']))
+        if ex and row['workout_id'] in coverage:
+            performed[row['workout_id']].add(ex['group'])
+            if statuses.get((row['workout_id'],key(row['exercise'])))=='Completato':coverage[row['workout_id']].add(ex['group'])
+    coverage_sessions=[{'workout_id':w['id'],'ts':w['ts'],'groups':sorted(coverage[w['id']]),'performed_groups':sorted(performed[w['id']])} for w in reversed(program)]
+    return {'finished_strength_sessions':total,'program_finished_sessions':program_total,'program_run_sessions':run,'program_start_workout_id':start,'coverage_sessions':coverage_sessions,'sessions':sessions}
 
 
 def selection_policy(ctx, candidates, count):
+    candidates={id:e for id,e in candidates.items() if e['group'] in GROUPS}
     training = ctx.get('training',{})
     history = training.get('rotation_history',{})
     sessions = history.get('sessions',[])
     catalog = {key(e['name']):e for e in ctx.get('exercise_catalog',[]) if e['group'] in GROUPS}
     by_group = {g:[e['id'] for e in candidates.values() if e['group']==g] for g in GROUPS}
     available = [g for g in GROUPS if by_group[g]]
-    # A long interruption starts a new block instead of completing a stale cycle.
-    recent = bool(sessions and (h:=age_hours(sessions[0].get('ts'))) is not None and 0<=h<=28*24)
+    # Coverage, not a modulo-three counter, closes a block. Deferred groups
+    # survive low exercise counts, skipped work, long breaks and restarts.
     program_sessions=[s for s in sessions if s['workout_id']>history.get('program_start_workout_id',0)]
-    # Determine the most recent uninterrupted run when it fits in the bounded
-    # history; otherwise the persisted all-time count keeps cycle numbering stable.
-    run_count=history.get('program_run_sessions',history.get('program_finished_sessions',history.get('finished_strength_sessions',0)))
-    completed = run_count%3 if recent else 0
-    cycle = program_sessions[:completed]
-    covered = {catalog[key(x['exercise'])]['group'] for s in cycle for x in s['exercises'] if key(x['exercise']) in catalog}
-    missing = [g for g in available if g not in covered]
-    remaining = 3-completed
-    quota = min(count,ceil(len(missing)/remaining))
-    shortfall = max(0,len(missing)-count*remaining)
+    evidence=history.get('coverage_sessions')
+    if evidence is None:
+        evidence=[{'workout_id':s['workout_id'],'ts':s['ts'],'groups':sorted({catalog[key(x['exercise'])]['group'] for x in s['exercises'] if key(x['exercise']) in catalog and x.get('status','Completato')=='Completato'}),'performed_groups':sorted({catalog[key(x['exercise'])]['group'] for x in s['exercises'] if key(x['exercise']) in catalog})} for s in reversed(program_sessions)]
+    # Count against every enabled group, even when pain temporarily removes its
+    # candidates. Pain must suspend work without resetting or cancelling its debt.
+    target={e['group'] for e in ctx.get('exercise_catalog',[]) if e['group'] in GROUPS and e.get('enabled',True)}
+    covered=set();completed=0;block_number=1;last_groups=set()
+    for visit in evidence:
+        groups=set(visit['groups'])&target
+        covered.update(groups);completed+=1;last_groups=set(visit.get('performed_groups',groups))&target
+        if target and target<=covered:
+            covered=set();completed=0;block_number+=1;last_groups=set()
+    missing=[g for g in available if g not in covered]
+    suspended=sorted(target-set(available)-covered)
+    remaining=max(1,3-completed)
+    quota=min(count,ceil(len(missing)/remaining))
+    shortfall=max(0,len(missing)-count*remaining)
+    carry=next((id for id,_,groups in BLOCKS if last_groups and last_groups<=set(groups) and any(g in missing for g in groups)),None)
     options=[]
     for id,label,groups in BLOCKS:
         enabled=[g for g in groups if g in available]
         due=[g for g in enabled if g not in covered]
+        if id==carry:enabled=due
         if not due:continue
         ages=[]
         for g in enabled:
@@ -95,7 +122,7 @@ def selection_policy(ctx, candidates, count):
                         'hours_since_latest_work':round(min(ages),1),
                         'recent_work_warning':min(ages)<48,
                         'recovery_priority':round(sum(min(h,168) for h in ages)/len(ages),1)})
-    options.sort(key=lambda b:(b['recent_work_warning'],-b['recovery_priority'],-len(b['missing_groups'])))
+    options.sort(key=lambda b:(b['recent_work_warning'],b['id']!=carry,-b['recovery_priority'],-len(b['missing_groups'])))
     extra_sessions=max(0,len(options)-remaining)
     shortfall=max(shortfall,extra_sessions,max((len(b['missing_groups'])-count for b in options),default=0))
     # Completed work drives recovery/coverage. These are proposal-only duplicate
@@ -109,11 +136,19 @@ def selection_policy(ctx, candidates, count):
     for p in training.get('previous_proposals_not_completed_workouts',[])[:3]:
         h=age_hours(p.get('ts'))
         if p.get('mode')=='gemini' and p.get('decision')=='train' and h is not None and 0<=h<=7*24:
-            ids=sorted({e.get('id') for e in p.get('plan') or [] if isinstance(e,dict) and e.get('id') in candidates})
+            original=[e for e in p.get('plan') or [] if isinstance(e,dict) and not e.get('finisher') and e.get('group')!='Core']
+            ids=sorted({e.get('id') for e in original if e.get('id') in candidates})
             # A changed exclusion list must not turn a different old plan into a duplicate.
-            if len(ids)==len(p.get('plan') or []):duplicate_sets.append(ids)
+            if len(ids)==len(original):duplicate_sets.append(ids)
     blocked=sorted({tuple(ids) for ids in duplicate_sets if len(ids)==min(count,len(candidates)) and set(ids)<=set(candidates)})
     if len(candidates)<=count or len(blocked)>=comb(len(candidates),min(count,len(candidates))):blocked=[]
+    # A small carried-over group may have exhausted every possible combination.
+    # Do not make its debt impossible to complete merely by regenerating previews.
+    for focus in options:
+        pool={id for id,e in candidates.items() if e['group'] in focus['groups']}
+        size=focus['exercise_count']
+        local=[ids for ids in blocked if len(ids)==size and set(ids)<=pool]
+        if pool and len(local)>=comb(len(pool),size):blocked=[ids for ids in blocked if ids not in local]
     # Keep an exercise long enough to compare performance, then offer another
     # compatible variant after repeated exposures spanning at least a week.
     variation_due = {}
@@ -128,7 +163,7 @@ def selection_policy(ctx, candidates, count):
             repeated=exposures[0][0]&exposures[1][0]&set(by_group[g])
             alternatives=set(by_group[g])-repeated
             if repeated and alternatives:variation_due[g]=sorted(alternatives)
-    return {'cycle_session':completed+1,'cycle_length':3,'covered_groups':sorted(covered),
+    return {'cycle_session':completed+1,'cycle_length':3,'block_number':block_number,'completion_rule':'all_available_groups','carryover_focus_id':carry,'suspended_groups':suspended,'covered_groups':sorted(covered),
             'missing_groups':missing,'required_new_groups':quota,'available_groups':available,
             'unavailable_groups':[g for g in GROUPS if g not in available],
             'remaining_sessions':remaining,'coverage_shortfall':shortfall,
@@ -136,7 +171,7 @@ def selection_policy(ctx, candidates, count):
             'extra_sessions_needed':extra_sessions,'focus_options':options,
             'blocked_exercise_sets':[list(ids) for ids in blocked],
             'weekly_variants':variation_due,
-            'meaning':'Copertura dei gruppi principali del catalogo, da serie realmente salvate in sedute terminate. Le serie parziali svolte contano; gli esercizi saltati senza serie e le sole proposte non contano. Non certifica volume sufficiente o recupero fisiologico.'}
+            'meaning':'Copertura dei gruppi principali da esercizi canonici completati in sedute terminate. Il lavoro parziale conta per recupero e progressione, ma resta da completare. Core finale, proposte, cardio e salti non coprono gruppi principali. Il blocco prosegue finché tutti i gruppi disponibili sono coperti; i fastidi sospendono senza cancellare. Non certifica recupero fisiologico.'}
 
 
 class SelectionError(ValueError):
@@ -146,6 +181,8 @@ class SelectionError(ValueError):
 def validate_selection(plan, policy):
     groups={e['group'] for e in plan}
     options=policy.get('focus_options',[])
+    pending=next((b for b in options if b['id']==policy.get('carryover_focus_id') and not b['recent_work_warning']),None)
+    if pending and not groups<=set(pending['groups']):raise SelectionError('Prima completa i gruppi rinviati del focus '+pending['label']+': '+', '.join(pending['missing_groups']))
     focus=next((b for b in options if groups<=set(b['groups']) and len(groups&set(b['missing_groups']))>=b['required_new_groups']),None)
     if not focus:
         raise SelectionError('Scegli un solo focus disponibile e copri i suoi gruppi mancanti: '+str([{'id':b['id'],'groups':b['groups'],'required_new_groups':b['required_new_groups']} for b in options]))
