@@ -1,3 +1,10 @@
+## 0.10.104
+
+- Audio dei timer condiviso e riattivato dal tocco: gestione degli stati sospeso, interrotto e chiuso e delle richieste di attivazione rimaste in attesa. Nuovo pulsante Prova suono nella preparazione e nel recupero, senza iniziare o alterare la seduta.
+- Segnali programmati sugli ultimi cinque secondi e sulla fine di recupero, Plank e timer di mobilità/stretching. Pausa, ripresa, aggiunta tempo e salti annullano o riprogrammano i segnali; nessuna raffica di segnali scaduti al rientro. Conservati timer e pause esplicite dopo riapertura.
+- Riduzioni automatiche motivate da energia bassa dichiarata o difficoltà/sforzo alto registrato; i fastidi localizzati continuano a sospendere i gruppi interessati senza cancellarne la copertura. Una pausa lunga da sola non riduce il livello.
+- Le serie dell'ultima esecuzione completata restano la base se mancano ragioni per ridurre; una seduta parziale non abbassa questa base. Conservate preferenze esplicite, progressioni e controlli manuali.
+
 ## 0.10.103
 
 - Il numero scelto indica soltanto gli esercizi principali del focus: Core finale (plank o alternativa compatibile), cardio, mobilità e stretching restano separati dal conteggio e inclusi nel tempo totale.

@@ -2,6 +2,13 @@
 from coach_rotation_010102 import age_hours, key
 
 
+def series_policy(exercise, sessions, outcomes, energy, hard):
+    floor=next((len({r.get('set_no') for r in items if r.get('set_no') is not None}) for wid,items in sessions if outcomes.get((wid,key(exercise['name'])))=='Completato'),None)
+    return {'series_floor':min(floor,2 if exercise['id']=='bird_dog' else 4) if floor else None,
+            'reduction_allowed':energy=='Bassa' or hard,
+            'reduction_reason':'Energia bassa' if energy=='Bassa' else 'Difficoltà/sforzo alto registrato' if hard else None}
+
+
 def strength_progressions(ctx, energy='Normale', pain='Nessuno'):
     training=ctx.get('training',{});result={}
     outcomes={}
@@ -15,7 +22,7 @@ def strength_progressions(ctx, energy='Normale', pain='Nessuno'):
             sessions.setdefault(r['workout_id'],[]).append(r)
         latest=list(sessions.items())[:2]
         reps=10;rest=120 if e['group'] in ('Gambe','Femorali','Petto','Schiena') else 90
-        load=None;action='initial';policy='maintain';previous_sets=None
+        load=None;action='initial';policy='maintain';previous_sets=None;hard=False
         base_reps=reps;base_rest=rest
         reason='Nessuno storico utile: base di 10 ripetizioni. Conferma il carico prima di iniziare.'
         if latest:
@@ -32,11 +39,11 @@ def strength_progressions(ctx, energy='Normale', pain='Nessuno'):
                 return hard,easy and not hard
             hard,_=effort(wid,last);action='maintain'
             reason='Consolida il livello registrato: servono due sedute complete e facili allo stesso carico e target prima di aumentare.'
-            if hard or hours is not None and hours>28*24 or energy=='Bassa':
+            if hard or energy=='Bassa':
                 action='reduce';policy='reduce';reps=max(5,reps-1);rest=min(180,rest+15)
                 lower=sorted({r['weight'] for r in rows if r['weight']<load},reverse=True)
                 load=max(1,round(load)-1) if e['loadType']=='plates' else next(iter(lower),load)
-                reason='Sforzo alto, energia bassa o lunga interruzione: riduco il target e aggiungo 15 s di recupero, entro 180 s. Conferma il carico proposto.'
+                reason='Sforzo alto registrato o energia bassa dichiarata: riduco il target e aggiungo 15 s di recupero, entro 180 s. Conferma il carico proposto.'
             elif len(latest)==2 and hours is not None and 48<=hours<=28*24 and pain in ('Nessuno','',None):
                 comparable=all(len({r.get('set_no') for r in rs if r.get('set_no') is not None})>=2 and outcomes.get((w,key(e['name'])))=='Completato' and effort(w,rs)[1] and len({r['reps'] for r in rs})==1 and len({r['weight'] for r in rs})==1 and (h:=age_hours(rs[0].get('ts'))) is not None and 0<=h<=28*24 for w,rs in latest)
                 same=comparable and latest[1][1][0]['weight']==load and latest[1][1][0]['reps']==last[0]['reps']
@@ -64,5 +71,5 @@ def strength_progressions(ctx, energy='Normale', pain='Nessuno'):
             reps=custom.get('reps',base_reps)
             rest=custom.get('rest',base_rest)
             action='user';reason='Applico le indicazioni numeriche salvate nelle Note per il Coach; i carichi restano confermabili.'
-        result[e['id']]={'target':reps,'rest':rest,'suggested_load':load,'load_policy':policy,'action':action,'previous_sets':previous_sets,'reason':reason}
+        result[e['id']]={'target':reps,'rest':rest,'suggested_load':load,'load_policy':policy,'action':action,'previous_sets':previous_sets,'reason':reason,**series_policy(e,list(sessions.items()),outcomes,energy,hard)}
     return result

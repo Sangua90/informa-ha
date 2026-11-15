@@ -1,0 +1,11 @@
+# Timer audio and motivated reductions — 0.10.104
+
+Verification: 155 Python tests, 106 JavaScript tests including the actual 75-fragment Docker bundle, syntax/build contracts for 101 JavaScript files, Python compilation and the 50-entry catalog. Full production boot/endpoint smoke uses disposable data and mocked Gemini failover, including five visits with carried-over muscle coverage and separate Core finishers.
+
+Audio tests use a fake AudioContext with recorded oscillator schedules. They verify exactly five future countdown notes and the finish cue, one shared active context, cancellation/rearming on pause/resume/add/skip, interrupted/closed context recovery from a touch gesture, never-settled or rejected resume promises, expired background cues discarded without bursts, paused cold resume without audio, shared timed Plank and mobility cues, and an explicit sound-test action that leaves the timer unchanged. They do NOT certify audible output on a physical iPhone, nor background playback permitted by iOS.
+
+Intensity tests verify that low declared energy or recorded high difficulty can reduce work, moderate effort and a long break alone do not reduce it, previous completed series form a floor unless reduction is justified, partial work does not lower that floor, and the same rules reach AI validation, local preparation and substitution. Explicit numeric notes and manual weight changes remain available. Existing canonical segments, treadmill skip, recovery, Core count, muscle carryover, replacement and durable-session checks remain in the suite.
+
+Design references: WebKit reports document inconsistent audio resumption after returning to foreground (https://bugs.webkit.org/show_bug.cgi?id=263627) and AudioContext interruption problems (https://bugs.webkit.org/show_bug.cgi?id=273511). The app handles these states, supports touchend/click/keyboard activation, and provides a user-operated sound test without claiming that API success proves audibility.
+
+Main publication requires the exact source commit to pass real Docker amd64 and aarch64 builds. Home Assistant must have no active workout before installation; live data must remain unchanged. Any later live UI/audio check is reported separately from these automated tests.

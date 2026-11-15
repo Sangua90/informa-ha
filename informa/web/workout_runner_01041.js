@@ -20,26 +20,26 @@
  window.if1041SetWeight=function(id,value){const c=document.getElementById('if50ex_'+id),i=weightInput(c);if(!i)return;const v=String(value??'').replace(',','.');i.dataset.edited='1';c.querySelector('.if1041-weight-input')?.removeAttribute('data-edited');i.value=v;i.dispatchEvent(new Event('input',{bubbles:true}));i.dispatchEvent(new Event('change',{bubbles:true}));updateSummaryWeight(id)}
  window.if1041Weight=function(id,d){const c=document.getElementById('if50ex_'+id),e=exercise(id),i=weightInput(c);if(!i)return;let v=parseFloat(String(i.value||'0').replace(',','.'))||0;const step=stepFor(e);v=Math.max(e?.loadType==='plates'?1:0,Math.round((v+d*step)*10)/10);i.dataset.edited='1';c.querySelector('.if1041-weight-input')?.removeAttribute('data-edited');i.value=String(v);i.dispatchEvent(new Event('input',{bubbles:true}));i.dispatchEvent(new Event('change',{bubbles:true}));updateSummaryWeight(id)}
  const HOLD={id:null,n:null,left:0,end:0,running:false,timer:null,saving:false};
- function holdStop(){if(HOLD.timer)clearInterval(HOLD.timer);HOLD.timer=null;HOLD.running=false}
+ function holdStop(cancel=true){if(cancel)window.if1104Audio?.cancel('hold');if(HOLD.timer)clearInterval(HOLD.timer);HOLD.timer=null;HOLD.running=false}
  function holdValid(){return HOLD.id===current()&&stage(HOLD.id)!=='archived'&&exercise(HOLD.id)&&Number(currentRow(document.getElementById('if50ex_'+HOLD.id))?.querySelector('b')?.textContent)===HOLD.n}
  function holdLabel(){const b=document.querySelector('#if50ex_'+HOLD.id+' .if1046-series');if(b)b.textContent=(HOLD.running?'Pausa · ':HOLD.left>0?'Riprendi · ':'Salva serie · ')+HOLD.left+' s'}
- function holdTick(){if(!holdValid()){holdStop();HOLD.id=null;return}HOLD.left=Math.max(0,Math.ceil((HOLD.end-Date.now())/1000));holdLabel();if(!HOLD.left){holdStop();holdFinish()}}
- async function holdFinish(){if(HOLD.saving||!holdValid())return;HOLD.saving=true;try{await window.if50CompleteSet(HOLD.id,HOLD.n);if(document.getElementById('if50c_'+HOLD.id+'_'+HOLD.n)?.classList.contains('done')){holdStop();HOLD.id=null;draw()}}finally{HOLD.saving=false}}
+ function holdTick(){if(!holdValid()){holdStop();HOLD.id=null;return}HOLD.left=Math.max(0,Math.ceil((HOLD.end-Date.now())/1000));holdLabel();if(!HOLD.left){window.if1104Audio?.complete('hold');holdStop(false);holdFinish()}}
+ async function holdFinish(){if(HOLD.saving||!holdValid())return;HOLD.saving=true;try{await window.if50CompleteSet(HOLD.id,HOLD.n);if(document.getElementById('if50c_'+HOLD.id+'_'+HOLD.n)?.classList.contains('done')){holdStop(HOLD.left>0);HOLD.id=null;draw()}}finally{HOLD.saving=false}}
  window.if1041CompleteCurrent=function(id){const c=document.getElementById('if50ex_'+id),row=currentRow(c),check=row?.querySelector('.check');if(!check||check.disabled)return;
   const e=exercise(id);if(!window.if108Timed?.(e)||e.mobility||e.stretching){check.click();return}
   const n=Number(row.querySelector('b')?.textContent||1);
   if(HOLD.id!==id||HOLD.n!==n){holdStop();Object.assign(HOLD,{id,n,left:Math.max(1,Number(rowInputs(row).reps?.value)||e.seconds||30)})}
   if(HOLD.running){HOLD.left=Math.max(0,Math.ceil((HOLD.end-Date.now())/1000));holdStop();holdLabel();return}
   if(HOLD.left===0)return holdFinish();
-  HOLD.end=Date.now()+HOLD.left*1000;HOLD.running=true;
+  HOLD.end=Date.now()+HOLD.left*1000;HOLD.running=true;window.if1104Audio?.arm('hold',HOLD.end);
   HOLD.timer=setInterval(holdTick,200);holdLabel();
  }
 
 
  const TM={phase:0,running:false,end:0,left:0,timer:null,completed:false};
  window.if1041TimerSnapshot=()=>({hold:{id:HOLD.id,n:HOLD.n,end:HOLD.end,running:HOLD.running,left:HOLD.running?Math.max(0,Math.ceil((HOLD.end-Date.now())/1000)):HOLD.left},treadmill:{phase:TM.phase,end:TM.end,running:TM.running,left:TM.running?Math.max(0,Math.ceil((TM.end-Date.now())/1000)):TM.left,completed:TM.completed},plan:window.IF970_TREADMILL_PLAN});
- window.if1041RestoreTimers=function(s){holdStop();tmStop();if(s?.hold){Object.assign(HOLD,s.hold,{saving:false});if(HOLD.running)HOLD.timer=setInterval(holdTick,200)}if(s?.treadmill){Object.assign(TM,s.treadmill);if(TM.running)TM.timer=setInterval(tmTick,500)}if(s?.plan?.phases?.length)window.IF970_TREADMILL_PLAN=s.plan;draw()};
- window.if1041ResetTimers=function(){holdStop();Object.assign(HOLD,{id:null,n:null,left:0,end:0,saving:false});tmStop();Object.assign(TM,{phase:0,running:false,end:0,left:0,completed:false});window.IF970_TREADMILL_PLAN=null};
+ window.if1041RestoreTimers=function(s){holdStop();tmStop();if(s?.hold){Object.assign(HOLD,s.hold,{saving:false});if(HOLD.running){window.if1104Audio?.arm('hold',HOLD.end);HOLD.timer=setInterval(holdTick,200)}}if(s?.treadmill){Object.assign(TM,s.treadmill);if(TM.running)TM.timer=setInterval(tmTick,500)}if(s?.plan?.phases?.length)window.IF970_TREADMILL_PLAN=s.plan;draw()};
+ window.if1041ResetTimers=function(){window.if1104Audio?.clear();holdStop();Object.assign(HOLD,{id:null,n:null,left:0,end:0,saving:false});tmStop();Object.assign(TM,{phase:0,running:false,end:0,left:0,completed:false});window.IF970_TREADMILL_PLAN=null};
  function tmPlan(){return window.IF970_TREADMILL_PLAN?.phases||[]}
  function tmSec(p){return Math.max(1,Math.round((Number(p?.minutes)||1)*60))}
  function tmFmt(sec){sec=Math.max(0,Math.ceil(sec));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')}

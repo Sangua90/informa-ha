@@ -183,12 +183,12 @@ class AITrainingTest(unittest.TestCase):
         ctx['training']['effort_ratings'][0]['workout_id']=999
         self.assertEqual(self.module.bodyweight_progressions(ctx)['heel_taps']['target'],10)
 
-    def test_bodyweight_short_recovery_low_energy_or_pain_prevents_increase_and_long_break_reduces(self):
+    def test_bodyweight_short_recovery_or_pain_holds_low_energy_reduces_and_age_alone_holds(self):
         self.assertEqual(self.module.bodyweight_progressions(self.bodyweight_context(hours=12))['heel_taps']['action'],'maintain')
         ctx=self.bodyweight_context()
-        for energy,pain in [('Bassa','Nessuno'),('Normale','Schiena')]:
-            self.assertEqual(self.module.bodyweight_progressions(ctx,energy,pain)['heel_taps']['action'],'maintain')
-        self.assertEqual(self.module.bodyweight_progressions(self.bodyweight_context(hours=800))['heel_taps']['target'],8)
+        self.assertEqual(self.module.bodyweight_progressions(ctx,'Normale','Schiena')['heel_taps']['action'],'maintain')
+        self.assertEqual(self.module.bodyweight_progressions(ctx,'Bassa','Nessuno')['heel_taps']['target'],8)
+        self.assertEqual(self.module.bodyweight_progressions(self.bodyweight_context(hours=800))['heel_taps']['target'],10)
 
     def test_bodyweight_ceiling_stays_bounded_and_recommends_a_variant(self):
         for id,reps in [('heel_taps',20),('plank',60)]:

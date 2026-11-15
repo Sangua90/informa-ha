@@ -248,6 +248,25 @@ class StrengthProgressionTest(unittest.TestCase):
         ctx=self.strength_context();ctx['training']['set_history'][0]['weight']=6
         self.assertEqual(strength_progressions(ctx)['chest']['action'],'maintain')
 
+    def test_reducing_series_requires_low_energy_or_recorded_difficulty_not_an_old_date(self):
+        ctx=self.strength_context(effort=3,hours=900);p=strength_progressions(ctx)['chest']
+        self.assertEqual((p['target'],p['suggested_load'],p['series_floor'],p['reduction_allowed']),(10,5,3,False))
+        value=self.f.plan(ctx,('chest','dumbbell_curl'));value['items'][0]['sets']=1
+        plan=self.m.validate_plan(value,self.candidates,2,'Normale',45,ctx['coverage']['sources'],strength_targets=strength_progressions(ctx))
+        self.assertEqual(plan[0]['sets'],3)
+        for energy,effort in [('Bassa',3),('Normale',5)]:
+            current=self.strength_context(effort=effort);targets=strength_progressions(current,energy)
+            self.assertTrue(targets['chest']['reduction_allowed'])
+            plan=self.m.validate_plan(value,self.candidates,2,energy,45,ctx['coverage']['sources'],strength_targets=targets)
+            self.assertEqual(plan[0]['sets'],1)
+
+    def test_partial_last_visit_does_not_lower_the_previous_complete_series_floor(self):
+        ctx=self.strength_context(effort=3)
+        ctx['training']['set_history']=[r for r in ctx['training']['set_history'] if r['workout_id']==1 or r['set_no']==1]
+        ctx['training']['exercise_outcomes'][0]['status']='Parziale'
+        p=strength_progressions(ctx)['chest']
+        self.assertEqual((p['previous_sets'],p['series_floor'],p['reduction_allowed']),(1,3,False))
+
     def test_hard_work_reduces_target_and_adapts_rest_and_notes_win(self):
         ctx=self.strength_context(effort=5);p=strength_progressions(ctx)['chest']
         self.assertEqual((p['target'],p['suggested_load'],p['rest']),(9,4,135))

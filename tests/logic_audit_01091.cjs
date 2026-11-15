@@ -13,6 +13,17 @@ async function fixture(options={}){
  w.setTimeout=(fn,ms=0)=>{jobs.set(++seq,{fn,time:now+ms});return seq};w.clearTimeout=id=>jobs.delete(id);
  w.setInterval=(fn,ms)=>{jobs.set(++seq,{fn,time:now+ms,interval:ms});return seq};w.clearInterval=id=>jobs.delete(id);
  w.Date.now=()=>now;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;w.console={log(){},error(){},warn(){}};
+ if(options.audio){
+  w.audioContexts=[];w.audioNotes=[];
+  w.AudioContext=class{
+   constructor(){this.state=options.audioState||'suspended';this.created=now;this.destination={};w.audioContexts.push(this)}
+   get currentTime(){return (now-this.created)/1000}
+   resume(){if(w.audioPending)return new Promise(()=>{});if(w.audioReject)return Promise.reject(Error('gesture required'));this.state='running';return Promise.resolve()}
+   close(){this.state='closed';return Promise.resolve()}
+   createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}}}
+   createOscillator(){const note={context:this,cancelled:false};w.audioNotes.push(note);return {frequency:{setValueAtTime(value){note.frequency=value}},connect(){},disconnect(){},start:at=>{note.at=now+(at-this.currentTime)*1000},stop:at=>{if(at===undefined)note.cancelled=true}}}
+  };
+ }
  w.fetch=async(url,opts={})=>{
   const body=typeof opts.body==='string'?JSON.parse(opts.body):{};calls.push({url,body,method:opts.method||'GET'});
   if(w.deferNote&&url==='api/coach-notes'&&opts.method==='POST')await new Promise(resolve=>w.resolveNote=resolve);
@@ -558,5 +569,58 @@ test('local weekly variation prioritizes new variants while retaining enough exe
  const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};
  await f.generate();const main=f.plan.plan.filter(e=>!e.cardio&&!e.mobility&&!e.stretching&&!e.finisher);
  assert.equal(main.length,5);assert.ok(main.some(e=>e.id==='one_arm_dumbbell_row'));assert.ok(main.some(e=>e.id==='dumbbell_reverse_fly'));
+ }finally{f.close()}
+});
+
+
+test('timer audio: a real gesture unlocks one shared context and schedules exactly the last five seconds plus finish',async()=>{
+ const f=await fixture({audio:true});try{await f.generate();assert.equal(f.w.audioContexts.length,0);f.w.document.dispatchEvent(new f.w.Event('touchend',{bubbles:true}));await f.flush();assert.equal(f.w.audioContexts.length,1);
+ const at=f.clock();f.w.if950SetContext('chest',1);f.w.startTimer(8);f.w.go('recovery');await f.flush();
+ const tones=f.w.audioNotes.filter(n=>!n.cancelled);assert.deepEqual(tones.filter(n=>n.frequency===880).map(n=>Math.round(n.at-at)),[3000,4000,5000,6000,7000]);assert.equal(tones.filter(n=>n.frequency===660).length,1);assert.equal(tones.filter(n=>n.frequency===1040).length,1);
+ await f.advance(7500);assert.equal(f.w.audioNotes.length,7);assert.equal(f.w.audioContexts.length,1);
+ }finally{f.close()}
+});
+
+test('timer audio: pause and add-time cancel old notes; resuming schedules against the new deadline',async()=>{
+ const f=await fixture({audio:true});try{await f.generate();f.w.if950SetContext('chest',1);f.w.startTimer(8);await f.flush();await f.advance(2000);f.w.if950PauseRecovery();assert.ok(f.w.audioNotes.every(n=>n.cancelled));await f.advance(20000);assert.equal(f.w.audioNotes.filter(n=>!n.cancelled).length,0);
+ f.w.if950PauseRecovery();await f.flush();assert.equal(f.w.audioNotes.filter(n=>!n.cancelled&&n.frequency===880).length,5);f.w.if950AddRecovery();assert.ok(f.w.audioNotes.filter(n=>!n.cancelled).every(n=>n.at>=f.clock()+30000));f.w.if950SkipRecovery();assert.ok(f.w.audioNotes.every(n=>n.cancelled));
+ }finally{f.close()}
+});
+
+test('timer audio: interrupted context is recreated by touch and expired background cues never burst on return',async()=>{
+ const f=await fixture({audio:true});try{await f.generate();f.w.if950SetContext('chest',1);f.w.startTimer(10);await f.flush();const old=f.w.audioContexts[0];old.state='interrupted';old.onstatechange();assert.ok(f.w.audioNotes.every(n=>n.cancelled));f.jump(4000);f.w.document.dispatchEvent(new f.w.Event('touchend',{bubbles:true}));await f.flush();assert.equal(old.state,'closed');assert.equal(f.w.audioContexts.length,2);assert.equal(f.w.audioNotes.filter(n=>!n.cancelled&&n.frequency===880).length,5);
+ Object.defineProperty(f.w.document,'hidden',{configurable:true,value:true});f.w.document.dispatchEvent(new f.w.Event('visibilitychange'));assert.ok(f.w.audioNotes.every(n=>n.cancelled));f.jump(10000);Object.defineProperty(f.w.document,'hidden',{configurable:true,value:false});f.w.document.dispatchEvent(new f.w.Event('visibilitychange'));await f.flush();assert.equal(f.w.audioNotes.filter(n=>!n.cancelled).length,0);
+ }finally{f.close()}
+});
+
+test('timer audio: rejected resume is handled and explicit sound test resets audio without changing the timer',async()=>{
+ const f=await fixture({audio:true});try{await f.generate();f.w.audioReject=true;f.w.if950SetContext('chest',1);f.w.startTimer(20);await f.flush();assert.equal(f.w.audioNotes.length,0);assert.match(f.w.document.querySelector('[data-page=recovery] [data-if1104-status]').textContent,/Prova suono/);
+ const snapshot=f.w.if950RecoverySnapshot();f.w.audioReject=false;await f.w.if1104TestSound();await f.flush();assert.equal(f.w.audioContexts.length,2);assert.equal(f.w.if950RecoverySnapshot().end,snapshot.end);assert.match(f.w.document.querySelector('[data-page=recovery] [data-if1104-status]').textContent,/Segnale di prova inviato/);
+ }finally{f.close()}
+});
+
+test('timer audio: paused recovery restores silently; timed Plank and mobility use the same cancellable audio',async()=>{
+ let f=await fixture({audio:true});try{f.w.aiPlan=[{id:'plank',sets:2,reps:10,rest:20,repType:'seconds'}];await f.generate();f.w.if949Start('plank');f.w.if1041Primary('plank');await f.flush();assert.equal(f.w.audioNotes.filter(n=>!n.cancelled&&n.frequency===880).length,5);f.w.if1041Primary('plank');assert.ok(f.w.audioNotes.every(n=>n.cancelled));
+ f.w.if950SetContext('plank',1);f.w.startTimer(30);f.w.if950PauseRecovery();f.w.if1096Checkpoint();await f.advance();const storage=f.storage(),server=f.server;f.close();f=await fixture({audio:true,storage,server});f.w.if1096Resume();await f.advance();assert.equal(f.w.audioNotes.length,0);assert.equal(f.w.if950RecoverySnapshot().paused,true);
+ }finally{f.close()}
+ const extra=await fixture({audio:true});try{extra.plan.stretch_mode='Sì';await extra.generate();const e=extra.plan.plan.find(e=>e.mobility);extra.w.if978Side(e.id,0);await extra.flush();assert.equal(extra.w.audioNotes.filter(n=>!n.cancelled&&n.frequency===880).length,5);extra.w.if978Side(e.id,0);assert.ok(extra.w.audioNotes.every(n=>n.cancelled));extra.w.if978Side(e.id,0);await extra.flush();assert.equal(extra.w.audioNotes.filter(n=>!n.cancelled&&n.frequency===880).length,5);extra.w.if978ResetTimers();assert.ok(extra.w.audioNotes.every(n=>n.cancelled));
+ }finally{extra.close()}
+});
+
+
+test('series policy: local fallback and substitution preserve the completed baseline unless energy or difficulty allows reduction',async()=>{
+ const f=await fixture();try{
+ const api=f.w.api;f.w.api=async(url,opts)=>{if(url==='api/ai-workout-01089')throw Error('offline');return api(url,opts)};f.w.if1087Available=id=>id==='chest'||id==='lat';f.plan.time=20;
+ f.server.strength={chest:{target:10,rest:120,suggested_load:5,action:'maintain',series_floor:3,reduction_allowed:false,previous_sets:3,reason:'Mantieni'}};
+ await f.generate();assert.equal(f.plan.plan.find(e=>e.id==='chest').sets,3);await f.w.if50Discard();
+ f.plan.energy='Bassa';f.server.strength.chest={...f.server.strength.chest,action:'reduce',reduction_allowed:true,target:9,reason:'Energia bassa'};
+ await f.generate();assert.equal(f.plan.plan.find(e=>e.id==='chest').sets,2);assert.equal(f.plan.plan.find(e=>e.id==='chest').reps,9);
+ }finally{f.close()}
+});
+
+
+test('timer audio: a tap recovers a never-settled resume request from cold restore',async()=>{
+ const f=await fixture({audio:true});try{await f.generate();f.w.audioPending=true;f.w.if950SetContext('chest',1);f.w.startTimer(12);await f.flush();assert.equal(f.w.audioNotes.length,0);const old=f.w.audioContexts[0];
+ f.w.audioPending=false;f.w.document.dispatchEvent(new f.w.Event('touchend',{bubbles:true}));await f.flush();assert.equal(old.state,'closed');assert.equal(f.w.audioContexts.length,2);assert.equal(f.w.audioNotes.filter(n=>!n.cancelled&&n.frequency===880).length,5);
  }finally{f.close()}
 });

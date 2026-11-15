@@ -44,9 +44,9 @@
  };
 
  const card0=window.if50ExerciseCard;
- const sessions=new Map();window.if978ResetTimers=()=>sessions.clear();
+ const sessions=new Map();window.if978ResetTimers=()=>{for(const id of sessions.keys())window.if1104Audio?.cancel('extra:'+id);sessions.clear()};
  window.if978TimerSnapshot=()=>Object.fromEntries([...sessions].map(([id,s])=>[id,{done:[...s.done],index:s.index,end:s.end,left:s.index>=0&&!s.paused?Math.max(0,Math.ceil((s.end-Date.now())/1000)):s.left,paused:s.paused}]));
- window.if978RestoreTimers=function(saved){sessions.clear();for(const [id,value] of Object.entries(saved||{})){const s=session(id);if(s)Object.assign(s,value,{saving:false})}};
+ window.if978RestoreTimers=function(saved){sessions.clear();for(const [id,value] of Object.entries(saved||{})){const s=session(id);if(s){Object.assign(s,value,{saving:false});if(s.index>=0&&!s.paused)window.if1104Audio?.arm('extra:'+id,s.end)}}};
  function session(id){
   const ex=IF50.plan.find(e=>e.id===id);
   if(!ex||!(ex.mobility||ex.stretching))return null;
@@ -75,10 +75,11 @@
   const state=session(id);if(!state||state.saving||state.done[index]||(index>0&&!state.done[index-1]))return;
   if(state.index===index){state.paused=!state.paused;if(!state.paused)state.end=Date.now()+state.left*1000}
   else{state.index=index;state.left=Math.max(1,Number(state.ex.seconds)||90);state.end=Date.now()+state.left*1000;state.paused=false;window.if949Start?.(id)}
+  if(state.paused)window.if1104Audio?.cancel('extra:'+id);else window.if1104Audio?.arm('extra:'+id,state.end);
   paint(id);
  };
  setInterval(()=>{for(const [id,state] of sessions){
-  if(!(IF50.plan||[]).includes(state.ex)||JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}')[id]?.stage==='archived'){sessions.delete(id);continue}if(state.index>=0&&!state.paused){state.left=Math.max(0,Math.ceil((state.end-Date.now())/1000));if(!state.left){state.done[state.index]=true;state.index=-1}}
+  if(!(IF50.plan||[]).includes(state.ex)||JSON.parse(localStorage.getItem('informha_workout_flow_0949')||'{}')[id]?.stage==='archived'){window.if1104Audio?.cancel('extra:'+id);sessions.delete(id);continue}if(state.index>=0&&!state.paused){state.left=Math.max(0,Math.ceil((state.end-Date.now())/1000));if(!state.left){state.done[state.index]=true;state.index=-1}}
   paint(id);
  }},250);
  window.if978PruneStretching=function(){
