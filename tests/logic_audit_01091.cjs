@@ -512,3 +512,15 @@ test('AI assessment and validated progression survive legacy hydration and final
  f.w.if1041Weight('chest',1);f.w.if50RenderWorkout();await f.advance();assert.equal(f.w.document.getElementById('if50w_chest_1').value,'7');
  }finally{f.close()}
 });
+
+
+test('shared progression and split: cold resume retains targets for substitutions and source context',async()=>{
+ let f=await fixture();try{
+ f.server.strength={goblet_squat:{target:11,rest:105,suggested_load:7.5,action:'reps',previous_sets:2,reason:'Target conservato'}};
+ f.server.rotation={cycle_session:2,missing_groups:['Petto','Bicipiti','Tricipiti'],coverage_shortfall:0};
+ await f.generate();f.w.if1096Checkpoint();await f.advance();const storage=f.storage(),server=f.server;
+ f.close();f=await fixture({storage,server});f.w.if1096Resume();await f.advance();
+ assert.equal(f.plan.selectionPolicy.cycle_session,2);assert.equal(f.plan.strengthProgression.goblet_squat.target,11);
+ const replacement=f.w.if60ToPlan('goblet_squat');assert.equal(replacement.reps,11);assert.equal(replacement.rest,105);assert.equal(replacement.suggested_load,7.5);
+ }finally{f.close()}
+});
