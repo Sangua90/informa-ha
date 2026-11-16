@@ -594,8 +594,8 @@ test('timer audio: interrupted context is recreated by touch and expired backgro
 });
 
 test('timer audio: rejected resume is handled and explicit sound test resets audio without changing the timer',async()=>{
- const f=await fixture({audio:true});try{await f.generate();f.w.audioReject=true;f.w.if950SetContext('chest',1);f.w.startTimer(20);await f.flush();assert.equal(f.w.audioNotes.length,0);assert.match(f.w.document.querySelector('[data-page=recovery] [data-if1104-status]').textContent,/Prova suono/);
- const snapshot=f.w.if950RecoverySnapshot();f.w.audioReject=false;await f.w.if1104TestSound();await f.flush();assert.equal(f.w.audioContexts.length,2);assert.equal(f.w.if950RecoverySnapshot().end,snapshot.end);assert.match(f.w.document.querySelector('[data-page=recovery] [data-if1104-status]').textContent,/Segnale di prova inviato/);
+ const f=await fixture({audio:true});try{await f.generate();f.w.audioReject=true;f.w.if950SetContext('chest',1);f.w.startTimer(20);await f.flush();assert.equal(f.w.audioNotes.length,0);assert.match(f.w.document.querySelector('#if912SettingsSection [data-if1104-status]').textContent,/Prova suono/);
+ const snapshot=f.w.if950RecoverySnapshot();f.w.audioReject=false;await f.w.if1104TestSound();await f.flush();assert.equal(f.w.audioContexts.length,2);assert.equal(f.w.if950RecoverySnapshot().end,snapshot.end);assert.match(f.w.document.querySelector('#if912SettingsSection [data-if1104-status]').textContent,/Segnale di prova inviato/);
  }finally{f.close()}
 });
 

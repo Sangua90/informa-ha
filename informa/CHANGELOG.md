@@ -1,3 +1,7 @@
+## 0.10.105
+
+- Spostato Suoni timer con Prova suono in Altro, nella sezione Impostazioni. Rimosso dalla preparazione e dal recupero; segnali e comportamento dei timer invariati.
+
 ## 0.10.104
 
 - Audio dei timer condiviso e riattivato dal tocco: gestione degli stati sospeso, interrotto e chiuso e delle richieste di attivazione rimaste in attesa. Nuovo pulsante Prova suono nella preparazione e nel recupero, senza iniziare o alterare la seduta.
