@@ -1,3 +1,7 @@
+## 0.10.106
+
+- Suoni timer usa lo stesso pulsante delle altre impostazioni e apre una pagina dedicata con Prova suono e X per tornare indietro. Rimossa la scheda espandibile dal menu; audio e timer invariati.
+
 ## 0.10.105
 
 - Spostato Suoni timer con Prova suono in Altro, nella sezione Impostazioni. Rimosso dalla preparazione e dal recupero; segnali e comportamento dei timer invariati.
